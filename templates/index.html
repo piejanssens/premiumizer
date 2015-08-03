@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% set active_page = "home" %}
+{% block title %} - Home{% endblock %}
+{% block content %}
+<!-- Page Content -->
+<div id="premiumize_connect_error" class="alert alert-danger" role="alert" style="display:none;">
+  <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+  <span class="sr-only">Error:</span>
+  Cannot connect to premiumize.me. Check your premiumize account details in settings and if premiumize.me is up.
+</div>
+
+<div id="main_container" class="container">
+
+    <div class="row">
+        <div class="col-lg-12">
+            <h3><i class="fa fa-cloud-upload fa-2x"></i></h3>
+        </div>
+    </div>
+    <!-- /.row -->
+    <div class="row">
+  <div class="col-lg-6">
+	<div class="form-group">
+                <div class="icon-addon addon-fa pointer">
+                    <input type="text" placeholder="Drop or upload a .torrent" class="form-control pointer" id="torrent-input" onclick="document.getElementById('torrent-file-upload').click();">
+                    <label for="torrent" class="fa fa-file" rel="tooltip" title="torrent"></label>
+					<input type="file" id="torrent-file-upload" style="display:none" accept="application/x-bittorrent">
+				</div>
+            </div>
+  </div><!-- /.col-lg-6 -->
+  <div class="col-lg-6">
+	<div class="form-group">
+                <div class="icon-addon addon-fa">
+                    <input type="text" placeholder="Paste a magnet URI" class="form-control" id="magnet-input">
+                    <label for="magnet" class="fa fa-magnet" rel="tooltip" title="magnet"></label>
+                </div>
+            </div>
+  </div><!-- /.col-lg-6 -->
+</div><!-- /.row -->
+    <div id="loading_upload" class="row" style="display:none">
+        <div class="col-lg-12 text-center">
+                <i class="fa fa-cog fa-spin fa-5x"></i>
+                <p class="lead">Uploading Torrent</p>
+            </div>
+        </div>
+<hr>
+<div class="row">
+    <div class="col-lg-12">
+        <h3><i class="fa fa-server fa-2x"></i></h3>
+    </div>
+</div>
+
+       <div id="loading_download_tasks" class="row">
+        <div class="col-lg-12 text-center">
+                <i class="fa fa-cog fa-spin fa-5x"></i>
+                <p class="lead">Loading Download Tasks</p>
+            </div>
+        </div>
+
+     <div id="no_downloads" class="row" style="display:none">
+        <div class="col-lg-12 text-center">
+                <i class="fa fa-flag-checkered fa-5x"></i>
+                <p class="lead">No Downloads</p>
+            </div>
+        </div>
+
+<div id="download_section">
+
+</div>
+</div>
+    <!-- /.container -->
+{% endblock %}
+
+{% block js_footer %}
+{{ super() }}
+<script type="text/javascript" src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/control.js') }}"></script>
+{% endblock %}

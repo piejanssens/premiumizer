@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% block head %}
+    <title>Premiumizer {% block title %}{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="keywords" content="">
+    <meta name="author" content="">
+    <meta charset="utf-8">
+    <link href="static/css/bootstrap.min.css" rel="stylesheet" media="screen">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/font-awesome.min.css') }}">
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/animate.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-switch.min.css') }}">
+    {% endblock %}
+</head>
+<body>
+{% block navbar %}
+<nav class="navbar navbar-inverse navbar-static-top">
+    <div class="container-fluid">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="#">Premiumizer</a>
+        </div>
+        <div class="navbar-collapse collapse">
+            {% block barbuttons %}
+            <ul class="nav navbar-nav">
+                {% set navigation_bar = [
+                ('/', 'home', 'Home'),
+                ('/settings', 'settings', 'Settings'),
+                ('/about', 'about', 'About')
+                ] %}
+                {% for href, id, caption in navigation_bar %}
+                <li
+                {% if id == active_page %} class="active"{% endif
+                %}><a href="{{ href|e }}">{{ caption|e }}</a></li>
+                {% endfor %}
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+                <li class=""><a href="/logout">Log Out</a></li>
+            </ul>
+            {% endblock %}
+        </div>
+    </div>
+</nav>
+{% endblock %}
+<div class="container page">
+    <div class="content">
+        {% block content %}
+        {% endblock %}
+    </div>
+    <hr>
+</div>
+{% block js_footer %}
+<script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/bootstrap-switch.min.js') }}"></script>
+<script>$(".bootstrap_switch").bootstrapSwitch();</script>
+{% endblock %}
+</body>
+</html>
