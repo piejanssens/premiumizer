@@ -2,7 +2,7 @@
 server_port = 5000
 active_interval = 5
 idle_interval = 10
-debug_enabled = 1
+debug_enabled = 0
 
 [security]
 login_enabled = 0
@@ -15,8 +15,12 @@ pin =
 
 [downloads]
 download_enabled = 0
-download_location =
+download_location = c:/tmp
 download_categories = movie,tv,music
+
+[upload]
+watchdir_enabled = 0
+watchdir_location = c:/test
 
 [nzbtomedia]
 nzbtomedia_enabled = 0
