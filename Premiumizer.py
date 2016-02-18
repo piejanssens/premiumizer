@@ -12,6 +12,7 @@ sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), 'lib'
 import shelve
 import ConfigParser
 import requests
+import pyperclip 
 from threading import Thread, Timer, Event
 from werkzeug import secure_filename
 from flask import Flask, flash, request, redirect, url_for, render_template, send_from_directory
@@ -107,7 +108,6 @@ def watchdir():
             if result == win32con.WAIT_OBJECT_0:
                 new_path_contents = dict ([(f, None) for f in os.listdir (path_to_watch)])
                 added = [f for f in new_path_contents if not f in old_path_contents]
-                deleted = [f for f in old_path_contents if not f in new_path_contents]
                 if added:
                     logger.info('Uploading torrent to the cloud: %s', ", ".join (added))
                     filepath = upload_path + "/" + ''.join(added)
@@ -178,22 +178,22 @@ def get_download_stats(task):
 
 
 def download_file(task, full_path, url):
-    logger.info('Downloading file from: %s', full_path)
-    global downloader
-    downloader = SmartDL(url, full_path, progress_bar=False, logger=logger)
-    stat_job = scheduler.scheduler.add_job(get_download_stats, args=(task,), trigger='interval', seconds=1, max_instances=1, next_run_time=datetime.datetime.now())
-    downloader.start(blocking=True)
-    while not downloader.isFinished():
-        print('wrong! waiting for downloader before finished')
-    stat_job.remove()
-    if downloader.isSuccessful():
-        global total_size_downloaded
-        total_size_downloaded += downloader.get_dl_size()
-        logger.info('Finished downloading file from: %s', full_path)
-    else:
-        logger.error('Error while downloading file from: %s', full_path)
-        for e in downloader.get_errors():
-            logger.error(str(e))
+        logger.info('Downloading file from: %s', full_path)
+        global downloader
+        downloader = SmartDL(url, full_path, progress_bar=False, logger=logger)
+        stat_job = scheduler.scheduler.add_job(get_download_stats, args=(task,), trigger='interval', seconds=1, max_instances=1, next_run_time=datetime.datetime.now())
+        downloader.start(blocking=True)
+        while not downloader.isFinished():
+            print('wrong! waiting for downloader before finished')
+        stat_job.remove()
+        if downloader.isSuccessful():
+            global total_size_downloaded
+            total_size_downloaded += downloader.get_dl_size()
+            logger.info('Finished downloading file from: %s', full_path)
+        else:
+            logger.error('Error while downloading file from: %s', full_path)
+            for e in downloader.get_errors():
+                logger.error(str(e))
 
 #TODO continue log statements
 
@@ -209,6 +209,29 @@ def process_dir(task, path, new_name, dir_content):
             process_dir(task, new_path, clean_name(x), dir_content[x]['children'])
         elif type == 'file':
             download_file(task, new_path + '/' + clean_name(x), dir_content[x]['url'].replace('https', 'http', 1))
+
+
+def getlinks_task(task):
+    global downloading
+    payload = {'customer_id': prem_config.get('premiumize', 'customer_id'), 'pin': prem_config.get('premiumize', 'pin'), 'hash': task.hash}
+    r = requests.post("https://www.premiumize.me/torrent/browse", payload)
+    downloading = True
+    process_dir_links(task, clean_name(task.name), json.loads(r.content)['data']['content'])
+    task.update(local_status='finished', progress=100)
+    downloading = False
+
+
+def process_dir_links(task, new_name, dir_content):
+    if not dir_content:
+        return None
+    for x in dir_content:
+        type = dir_content[x]['type']
+        if type == 'dir':
+            process_dir_links(task, clean_name(x), dir_content[x]['children'])
+        elif type == 'file':
+            if dir_content[x]['url'].lower().endswith(('.mkv', 'mp4')) and dir_content[x]['size'] > 100000000:
+                logger.info('Link copied to clipboard for: %s', dir_content[x]['name'])
+                pyperclip.copy(dir_content[x]['url'])
 
 
 def download_task(task):
@@ -272,7 +295,9 @@ def parse_tasks(torrents):
                         task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], local_status='downloading')
                         scheduler.scheduler.add_job(download_task, args=(task,), replace_existing=True, max_instances=1)
                     elif task.local_status != 'downloading':
-                        task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], local_status='queued')
+                        task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], local_status='queued') 
+                elif prem_config.getboolean('downloads', 'copylink_toclipboard'):
+                    getlinks_task(task)
                 else:
                     task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], local_status='finished')
             else:
@@ -376,6 +401,10 @@ def settings():
             prem_config.set('downloads', 'download_enabled', 1)
         else:
             prem_config.set('downloads', 'download_enabled', 0)
+        if request.form.get('copylink_toclipboard '):
+            prem_config.set('downloads', 'copylink_toclipboard ', 1)
+        else:
+            prem_config.set('downloads', 'copylink_toclipboard ', 0)
         if request.form.get('watchdir_enabled'):
             prem_config.set('upload', 'watchdir_enabled', 1)
         else:
