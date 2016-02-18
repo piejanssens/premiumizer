@@ -22,6 +22,7 @@ if not PY2:
     range_type = range
     text_type = str
     string_types = (str,)
+    integer_types = (int,)
 
     iterkeys = lambda d: iter(d.keys())
     itervalues = lambda d: iter(d.values())
@@ -51,6 +52,7 @@ else:
     text_type = unicode
     range_type = xrange
     string_types = (str, unicode)
+    integer_types = (int, long)
 
     iterkeys = lambda d: d.iterkeys()
     itervalues = lambda d: d.itervalues()
@@ -82,69 +84,19 @@ else:
             return filename.encode('utf-8')
         return filename
 
-try:
-    next = next
-except NameError:
-    def next(it):
-        return it.next()
-
 
 def with_metaclass(meta, *bases):
+    """Create a base class with a metaclass."""
     # This requires a bit of explanation: the basic idea is to make a
-    # dummy metaclass for one level of class instanciation that replaces
-    # itself with the actual metaclass.  Because of internal type checks
-    # we also need to make sure that we downgrade the custom metaclass
-    # for one level to something closer to type (that's why __call__ and
-    # __init__ comes back from type etc.).
-    #
-    # This has the advantage over six.with_metaclass in that it does not
-    # introduce dummy classes into the final MRO.
-    class metaclass(meta):
-        __call__ = type.__call__
-        __init__ = type.__init__
+    # dummy metaclass for one level of class instantiation that replaces
+    # itself with the actual metaclass.
+    class metaclass(type):
         def __new__(cls, name, this_bases, d):
-            if this_bases is None:
-                return type.__new__(cls, name, (), d)
             return meta(name, bases, d)
-    return metaclass('temporary_class', None, {})
-
-
-try:
-    from collections import Mapping as mapping_types
-except ImportError:
-    import UserDict
-    mapping_types = (UserDict.UserDict, UserDict.DictMixin, dict)
-
-
-# common types.  These do exist in the special types module too which however
-# does not exist in IronPython out of the box.  Also that way we don't have
-# to deal with implementation specific stuff here
-class _C(object):
-    def method(self): pass
-def _func():
-    yield None
-function_type = type(_func)
-generator_type = type(_func())
-method_type = type(_C().method)
-code_type = type(_C.method.__code__)
-try:
-    raise TypeError()
-except TypeError:
-    _tb = sys.exc_info()[2]
-    traceback_type = type(_tb)
-    frame_type = type(_tb.tb_frame)
+    return type.__new__(metaclass, 'temporary_class', (), {})
 
 
 try:
     from urllib.parse import quote_from_bytes as url_quote
 except ImportError:
     from urllib import quote as url_quote
-
-
-try:
-    from thread import allocate_lock
-except ImportError:
-    try:
-        from threading import Lock as allocate_lock
-    except ImportError:
-        from dummy_thread import allocate_lock

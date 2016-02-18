@@ -89,11 +89,13 @@ def _items(mappingorseq):
 
 
 class BaseCache(object):
+
     """Baseclass for the cache systems.  All the cache systems implement this
     API or a superset of it.
 
     :param default_timeout: the default timeout (in seconds) that is used if no
-                            timeout is specified on :meth:`set`.
+                            timeout is specified on :meth:`set`. A timeout of 0
+                            indicates that the cache never expires.
     """
 
     def __init__(self, default_timeout=300):
@@ -148,7 +150,8 @@ class BaseCache(object):
         :param key: the key to set
         :param value: the value for the key
         :param timeout: the cache timeout for the key (if not specified,
-                        it uses the default timeout).
+                        it uses the default timeout). A timeout of 0 idicates
+                        that the cache never expires.
         :returns: ``True`` if key has been updated, ``False`` for backend
                   errors. Pickling errors, however, will raise a subclass of
                   ``pickle.PickleError``.
@@ -163,7 +166,8 @@ class BaseCache(object):
         :param key: the key to set
         :param value: the value for the key
         :param timeout: the cache timeout for the key or the default
-                        timeout if not specified.
+                        timeout if not specified. A timeout of 0 indicates
+                        that the cache never expires.
         :returns: Same as :meth:`set`, but also ``False`` for already
                   existing keys.
         :rtype: boolean
@@ -175,7 +179,8 @@ class BaseCache(object):
 
         :param mapping: a mapping with the keys/values to set.
         :param timeout: the cache timeout for the key (if not specified,
-                        it uses the default timeout).
+                        it uses the default timeout). A timeout of 0
+                        indicates tht the cache never expires.
         :returns: Whether all given keys have been set.
         :rtype: boolean
         """
@@ -194,6 +199,21 @@ class BaseCache(object):
         :rtype: boolean
         """
         return all(self.delete(key) for key in keys)
+
+    def has(self, key):
+        """Checks if a key exists in the cache without returning it. This is a
+        cheap operation that bypasses loading the actual data on the backend.
+
+        This method is optional and may not be implemented on all caches.
+
+        :param key: the key to check
+        """
+        raise NotImplementedError(
+            '%s doesn\'t have an efficient implementation of `has`. That '
+            'means it is impossible to check whether a key exists without '
+            'fully loading the key\'s data. Consider using `self.get` '
+            'explicitly if you don\'t care about performance.'
+        )
 
     def clear(self):
         """Clears the cache.  Keep in mind that not all caches support
@@ -231,6 +251,7 @@ class BaseCache(object):
 
 
 class NullCache(BaseCache):
+
     """A cache that doesn't cache.  This can be useful for unit testing.
 
     :param default_timeout: a dummy parameter that is ignored but exists
@@ -239,6 +260,7 @@ class NullCache(BaseCache):
 
 
 class SimpleCache(BaseCache):
+
     """Simple memory cache for single process environments.  This class exists
     mainly for the development server and is not 100% thread safe.  It tries
     to use as many atomic operations as possible and no locks for simplicity
@@ -247,7 +269,8 @@ class SimpleCache(BaseCache):
     :param threshold: the maximum number of items the cache stores before
                       it starts deleting some.
     :param default_timeout: the default timeout that is used if no timeout is
-                            specified on :meth:`~BaseCache.set`.
+                            specified on :meth:`~BaseCache.set`. A timeout of
+                            0 indicates that the cache never expires.
     """
 
     def __init__(self, threshold=500, default_timeout=300):
@@ -261,33 +284,38 @@ class SimpleCache(BaseCache):
             now = time()
             toremove = []
             for idx, (key, (expires, _)) in enumerate(self._cache.items()):
-                if expires <= now or idx % 3 == 0:
+                if (expires != 0 and expires <= now) or idx % 3 == 0:
                     toremove.append(key)
             for key in toremove:
                 self._cache.pop(key, None)
 
+    def _get_expiration(self, timeout):
+        if timeout is None:
+            timeout = self.default_timeout
+        if timeout > 0:
+            timeout = time() + timeout
+        return timeout
+
     def get(self, key):
         try:
             expires, value = self._cache[key]
-            if expires > time():
+            if expires == 0 or expires > time():
                 return pickle.loads(value)
         except (KeyError, pickle.PickleError):
             return None
 
     def set(self, key, value, timeout=None):
-        if timeout is None:
-            timeout = self.default_timeout
+        expires = self._get_expiration(timeout)
         self._prune()
-        self._cache[key] = (time() + timeout, pickle.dumps(value,
-            pickle.HIGHEST_PROTOCOL))
+        self._cache[key] = (expires, pickle.dumps(value,
+                                                  pickle.HIGHEST_PROTOCOL))
         return True
 
     def add(self, key, value, timeout=None):
-        if timeout is None:
-            timeout = self.default_timeout
+        expires = self._get_expiration(timeout)
         self._prune()
-        item = (time() + timeout, pickle.dumps(value,
-            pickle.HIGHEST_PROTOCOL))
+        item = (expires, pickle.dumps(value,
+                                      pickle.HIGHEST_PROTOCOL))
         if key in self._cache:
             return False
         self._cache.setdefault(key, item)
@@ -296,10 +324,18 @@ class SimpleCache(BaseCache):
     def delete(self, key):
         return self._cache.pop(key, None) is not None
 
+    def has(self, key):
+        try:
+            expires, value = self._cache[key]
+            return expires == 0 or expires > time()
+        except KeyError:
+            return False
 
 _test_memcached_key = re.compile(r'[^\x00-\x21\xff]{1,250}$').match
 
+
 class MemcachedCache(BaseCache):
+
     """A cache that uses memcached as backend.
 
     The first argument can either be an object that resembles the API of a
@@ -324,7 +360,8 @@ class MemcachedCache(BaseCache):
     :param servers: a list or tuple of server addresses or alternatively
                     a :class:`memcache.Client` or a compatible client.
     :param default_timeout: the default timeout that is used if no timeout is
-                            specified on :meth:`~BaseCache.set`.
+                            specified on :meth:`~BaseCache.set`. A timeout of
+                            0 indicates taht the cache never expires.
     :param key_prefix: a prefix that is added before all keys.  This makes it
                        possible to use the same memcached server for different
                        applications.  Keep in mind that
@@ -354,7 +391,11 @@ class MemcachedCache(BaseCache):
         return key
 
     def _normalize_timeout(self, timeout):
-        return int(time()) + timeout
+        if timeout is None:
+            timeout = self.default_timeout
+        if timeout > 0:
+            timeout = int(time()) + timeout
+        return timeout
 
     def get(self, key):
         key = self._normalize_key(key)
@@ -385,15 +426,11 @@ class MemcachedCache(BaseCache):
         return rv
 
     def add(self, key, value, timeout=None):
-        if timeout is None:
-            timeout = self.default_timeout
         key = self._normalize_key(key)
         timeout = self._normalize_timeout(timeout)
         return self._client.add(key, value, timeout)
 
     def set(self, key, value, timeout=None):
-        if timeout is None:
-            timeout = self.default_timeout
         key = self._normalize_key(key)
         timeout = self._normalize_timeout(timeout)
         return self._client.set(key, value, timeout)
@@ -403,8 +440,6 @@ class MemcachedCache(BaseCache):
         return [d[key] for key in keys]
 
     def set_many(self, mapping, timeout=None):
-        if timeout is None:
-            timeout = self.default_timeout
         new_mapping = {}
         for key, value in _items(mapping):
             key = self._normalize_key(key)
@@ -426,6 +461,12 @@ class MemcachedCache(BaseCache):
             if _test_memcached_key(key):
                 new_keys.append(key)
         return self._client.delete_multi(new_keys)
+
+    def has(self, key):
+        key = self._normalize_key(key)
+        if _test_memcached_key(key):
+            return self._client.append(key, '')
+        return False
 
     def clear(self):
         return self._client.flush_all()
@@ -467,6 +508,7 @@ GAEMemcachedCache = MemcachedCache
 
 
 class RedisCache(BaseCache):
+
     """Uses the Redis key-value store as a cache backend.
 
     The first argument can be either a string denoting address of the Redis
@@ -495,7 +537,8 @@ class RedisCache(BaseCache):
     :param password: password authentication for the Redis server.
     :param db: db (zero-based numeric index) on Redis Server to connect.
     :param default_timeout: the default timeout that is used if no timeout is
-                            specified on :meth:`~BaseCache.set`.
+                            specified on :meth:`~BaseCache.set`. A timeout of
+                            0 indicates that the cache never expires.
     :param key_prefix: A prefix that should be added to all keys.
 
     Any additional keyword arguments will be passed to ``redis.Redis``.
@@ -518,6 +561,13 @@ class RedisCache(BaseCache):
             self._client = host
         self.key_prefix = key_prefix or ''
 
+    def _get_expiration(self, timeout):
+        if timeout is None:
+            timeout = self.default_timeout
+        if timeout == 0:
+            timeout = -1
+        return timeout
+
     def dump_object(self, value):
         """Dumps an object into a string for redis.  By default it serializes
         integers as regular string and pickle dumps everything else.
@@ -528,7 +578,7 @@ class RedisCache(BaseCache):
         return b'!' + pickle.dumps(value)
 
     def load_object(self, value):
-        """The reversal of :meth:`dump_object`.  This might be callde with
+        """The reversal of :meth:`dump_object`.  This might be called with
         None.
         """
         if value is None:
@@ -553,15 +603,18 @@ class RedisCache(BaseCache):
         return [self.load_object(x) for x in self._client.mget(keys)]
 
     def set(self, key, value, timeout=None):
-        if timeout is None:
-            timeout = self.default_timeout
+        timeout = self._get_expiration(timeout)
         dump = self.dump_object(value)
-        return self._client.setex(name=self.key_prefix + key,
-                                  value=dump, time=timeout)
+        if timeout == -1:
+            result = self._client.set(name=self.key_prefix + key,
+                                      value=dump)
+        else:
+            result = self._client.setex(name=self.key_prefix + key,
+                                        value=dump, time=timeout)
+        return result
 
     def add(self, key, value, timeout=None):
-        if timeout is None:
-            timeout = self.default_timeout
+        timeout = self._get_expiration(timeout)
         dump = self.dump_object(value)
         return (
             self._client.setnx(name=self.key_prefix + key, value=dump) and
@@ -569,12 +622,18 @@ class RedisCache(BaseCache):
         )
 
     def set_many(self, mapping, timeout=None):
-        if timeout is None:
-            timeout = self.default_timeout
-        pipe = self._client.pipeline()
+        timeout = self._get_expiration(timeout)
+        # Use transaction=False to batch without calling redis MULTI
+        # which is not supported by twemproxy
+        pipe = self._client.pipeline(transaction=False)
+
         for key, value in _items(mapping):
             dump = self.dump_object(value)
-            pipe.setex(name=self.key_prefix + key, value=dump, time=timeout)
+            if timeout == -1:
+                pipe.set(name=self.key_prefix + key, value=dump)
+            else:
+                pipe.setex(name=self.key_prefix + key, value=dump,
+                           time=timeout)
         return pipe.execute()
 
     def delete(self, key):
@@ -586,6 +645,9 @@ class RedisCache(BaseCache):
         if self.key_prefix:
             keys = [self.key_prefix + key for key in keys]
         return self._client.delete(*keys)
+
+    def has(self, key):
+        return self._client.exists(self.key_prefix + key)
 
     def clear(self):
         status = False
@@ -605,6 +667,7 @@ class RedisCache(BaseCache):
 
 
 class FileSystemCache(BaseCache):
+
     """A cache that stores the items on the file system.  This cache depends
     on being the only user of the `cache_dir`.  Make absolutely sure that
     nobody but this cache stores files there or otherwise the cache will
@@ -614,14 +677,16 @@ class FileSystemCache(BaseCache):
     :param threshold: the maximum number of items the cache stores before
                       it starts deleting some.
     :param default_timeout: the default timeout that is used if no timeout is
-                            specified on :meth:`~BaseCache.set`.
+                            specified on :meth:`~BaseCache.set`. A timeout of
+                            0 indicates that the cache never expires.
     :param mode: the file mode wanted for the cache files, default 0600
     """
 
     #: used for temporary files by the FileSystemCache
     _fs_transaction_suffix = '.__wz_cache'
 
-    def __init__(self, cache_dir, threshold=500, default_timeout=300, mode=0o600):
+    def __init__(self, cache_dir, threshold=500, default_timeout=300,
+                 mode=0o600):
         BaseCache.__init__(self, default_timeout)
         self._path = cache_dir
         self._threshold = threshold
@@ -648,7 +713,7 @@ class FileSystemCache(BaseCache):
                     remove = False
                     with open(fname, 'rb') as f:
                         expires = pickle.load(f)
-                    remove = expires <= now or idx % 3 == 0
+                    remove = (expires != 0 and expires <= now) or idx % 3 == 0
 
                     if remove:
                         os.remove(fname)
@@ -665,7 +730,7 @@ class FileSystemCache(BaseCache):
 
     def _get_filename(self, key):
         if isinstance(key, text_type):
-            key = key.encode('utf-8') #XXX unicode review
+            key = key.encode('utf-8')  # XXX unicode review
         hash = md5(key).hexdigest()
         return os.path.join(self._path, hash)
 
@@ -673,7 +738,8 @@ class FileSystemCache(BaseCache):
         filename = self._get_filename(key)
         try:
             with open(filename, 'rb') as f:
-                if pickle.load(f) >= time():
+                pickle_time = pickle.load(f)
+                if pickle_time == 0 or pickle_time >= time():
                     return pickle.load(f)
                 else:
                     os.remove(filename)
@@ -689,14 +755,16 @@ class FileSystemCache(BaseCache):
 
     def set(self, key, value, timeout=None):
         if timeout is None:
-            timeout = self.default_timeout
+            timeout = int(time() + self.default_timeout)
+        elif timeout != 0:
+            timeout = int(time() + timeout)
         filename = self._get_filename(key)
         self._prune()
         try:
             fd, tmp = tempfile.mkstemp(suffix=self._fs_transaction_suffix,
                                        dir=self._path)
             with os.fdopen(fd, 'wb') as f:
-                pickle.dump(int(time() + timeout), f, 1)
+                pickle.dump(timeout, f, 1)
                 pickle.dump(value, f, pickle.HIGHEST_PROTOCOL)
             rename(tmp, filename)
             os.chmod(filename, self._mode)
@@ -712,3 +780,16 @@ class FileSystemCache(BaseCache):
             return False
         else:
             return True
+
+    def has(self, key):
+        filename = self._get_filename(key)
+        try:
+            with open(filename, 'rb') as f:
+                pickle_time = pickle.load(f)
+                if pickle_time == 0 or pickle_time >= time():
+                    return True
+                else:
+                    os.remove(filename)
+                    return False
+        except (IOError, OSError, pickle.PickleError):
+            return False

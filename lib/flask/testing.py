@@ -6,7 +6,7 @@
     Implements test support helpers.  This module is lazily imported
     and usually not used in production environments.
 
-    :copyright: (c) 2011 by Armin Ronacher.
+    :copyright: (c) 2015 by Armin Ronacher.
     :license: BSD, see LICENSE for more details.
 """
 
@@ -31,6 +31,8 @@ def make_test_environ_builder(app, path='/', base_url=None, *args, **kwargs):
             base_url += app_root.lstrip('/')
         if url.netloc:
             path = url.path
+            if url.query:
+                path += '?' + url.query
     return EnvironBuilder(path, base_url, *args, **kwargs)
 
 
@@ -51,6 +53,8 @@ class FlaskClient(Client):
         session transaction.  This can be used to modify the session that
         the test client uses.  Once the with block is left the session is
         stored back.
+
+        ::
 
             with client.session_transaction() as session:
                 session['value'] = 42

@@ -19,7 +19,7 @@ from operator import xor
 from itertools import starmap
 
 from werkzeug._compat import range_type, PY2, text_type, izip, to_bytes, \
-     string_types, to_native
+    string_types, to_native
 
 
 SALT_CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -106,6 +106,7 @@ def pbkdf2_bin(data, salt, iterations=DEFAULT_PBKDF2_ITERATIONS,
     mac = hmac.HMAC(data, None, hashfunc)
     if not keylen:
         keylen = mac.digest_size
+
     def _pseudorandom(x, mac=mac):
         h = mac.copy()
         h.update(x)
@@ -201,8 +202,8 @@ def _hash_internal(method, salt, password):
 
 
 def generate_password_hash(password, method='pbkdf2:sha1', salt_length=8):
-    """Hash a password with the given method and salt with with a string of
-    the given length.  The format of the string returned includes the method
+    """Hash a password with the given method and salt with a string of
+    the given length. The format of the string returned includes the method
     that was used so that :func:`check_password_hash` can check the hash.
 
     The format for the hashed string looks like this::
@@ -210,8 +211,8 @@ def generate_password_hash(password, method='pbkdf2:sha1', salt_length=8):
         method$salt$hash
 
     This method can **not** generate unsalted passwords but it is possible
-    to set the method to plain to enforce plaintext passwords.  If a salt
-    is used, hmac is used internally to salt the password.
+    to set param method='plain' in order to enforce plaintext passwords.
+    If a salt is used, hmac is used internally to salt the password.
 
     If PBKDF2 is wanted it can be enabled by setting the method to
     ``pbkdf2:method:iterations`` where iterations is optional::

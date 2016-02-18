@@ -1,7 +1,5 @@
 import re
-import warnings
 
-from collections import OrderedDict
 from .protocols.base import BaseProtocol
 from .exceptions import WebSocketError
 
@@ -43,35 +41,15 @@ class Resource(object):
     def __init__(self, apps=None):
         self.apps = apps if apps else []
 
-        if isinstance(apps, dict) and not isinstance(apps, OrderedDict):
-            warnings.warn("Using an unordered dictionary for the "
-                          "app list is discouraged and may lead to "
-                          "undefined behavior.", UserWarning)
-
-            # Convert to a list of tuples
-            # The order is undefined, which can be very bad, but this keeps
-            # backwards compatibility.
-            self.apps = [(path, app) for path, app in apps.iteritems()]
-
-    # An app can either be a standard WSGI application (an object we call with
-    # __call__(self, environ, start_response)) or a class we instantiate
-    # (and which can handle websockets). This function tells them apart.
-    # Override this if you have apps that can handle websockets but don't
-    # fulfill these criteria.
-    def _is_websocket_app(self, app):
-        return isinstance(app, type) and issubclass(app, WebSocketApplication)
-
-    def _app_by_path(self, environ_path, is_websocket_request):
+    def _app_by_path(self, environ_path):
         # Which app matched the current path?
-        for path, app in self.apps.items():
+
+        for path, app in self.apps.iteritems():
             if re.match(path, environ_path):
-                if is_websocket_request == self._is_websocket_app(app):
-                    return app
-        return None
+                return app
 
     def app_protocol(self, path):
-        # app_protocol will only be called for websocket apps
-        app = self._app_by_path(path, True)
+        app = self._app_by_path(path)
 
         if hasattr(app, 'protocol_name'):
             return app.protocol_name()
@@ -80,18 +58,17 @@ class Resource(object):
 
     def __call__(self, environ, start_response):
         environ = environ
-        is_websocket_call = 'wsgi.websocket' in environ
-        current_app = self._app_by_path(environ['PATH_INFO'], is_websocket_call)
+        current_app = self._app_by_path(environ['PATH_INFO'])
 
         if current_app is None:
             raise Exception("No apps defined")
 
-        if is_websocket_call:
+        if 'wsgi.websocket' in environ:
             ws = environ['wsgi.websocket']
             current_app = current_app(ws)
             current_app.ws = ws  # TODO: needed?
             current_app.handle()
-            # Always return something, calling WSGI middleware may rely on it
-            return []
+
+            return None
         else:
             return current_app(environ, start_response)

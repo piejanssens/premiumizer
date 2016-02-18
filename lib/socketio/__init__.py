@@ -64,6 +64,10 @@ def socketio_manage(environ, namespaces, request=None, error_handler=None,
     opening and closing the cookie-based session yourself if you want
     to keep its data in sync with the rest of your GET/POST calls.
     """
+    # NOTE: super-hacky exception prevention
+    if 'socketio' not in environ:
+        return # TODO: see below
+
     socket = environ['socketio']
     socket._set_environ(environ)
     socket._set_namespaces(namespaces)

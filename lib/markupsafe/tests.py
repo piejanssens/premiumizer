@@ -3,7 +3,7 @@ import gc
 import sys
 import unittest
 from markupsafe import Markup, escape, escape_silent
-from markupsafe._compat import text_type
+from markupsafe._compat import text_type, PY2
 
 
 class MarkupTestCase(unittest.TestCase):
@@ -61,10 +61,22 @@ class MarkupTestCase(unittest.TestCase):
         }, Markup(u'<em>&lt;foo&gt;:&lt;bar&gt;</em>'))
 
     def test_escaping(self):
-        # escaping and unescaping
+        # escaping
         assert escape('"<>&\'') == '&#34;&lt;&gt;&amp;&#39;'
         assert Markup("<em>Foo &amp; Bar</em>").striptags() == "Foo & Bar"
+
+    def test_unescape(self):
         assert Markup("&lt;test&gt;").unescape() == "<test>"
+        assert "jack & tavi are cooler than mike & russ" == \
+            Markup("jack & tavi are cooler than mike &amp; russ").unescape(), \
+            Markup("jack & tavi are cooler than mike &amp; russ").unescape()
+
+        # Test that unescape is idempotent
+        original = '&foo&#x3b;'
+        once = Markup(original).unescape()
+        twice = Markup(once).unescape()
+        expected = "&foo;"
+        assert expected == once == twice, (once, twice)
 
     def test_formatting(self):
         for actual, expected in (
@@ -120,6 +132,19 @@ class MarkupTestCase(unittest.TestCase):
         assert Markup('<p>User: {0:link}').format(user) == \
             Markup('<p>User: <a href="/user/1"><span class=user>foo</span></a>')
 
+    def test_formatting_with_objects(self):
+        class Stringable(object):
+            def __unicode__(self):
+                return u'строка'
+            if PY2:
+                def __str__(self):
+                    return 'some other value'
+            else:
+                __str__ = __unicode__
+
+        assert Markup('{s}').format(s=Stringable()) == \
+            Markup(u'строка')
+
     def test_all_set(self):
         import markupsafe as markup
         for item in markup.__all__:
@@ -158,8 +183,11 @@ class MarkupLeakTestCase(unittest.TestCase):
                 escape("<foo>")
                 escape(u"foo")
                 escape(u"<foo>")
+            if hasattr(sys, 'pypy_version_info'):
+                gc.collect()
             counts.add(len(gc.get_objects()))
-        assert len(counts) == 1, 'ouch, c extension seems to leak objects'
+        assert len(counts) == 1, 'ouch, c extension seems to ' \
+            'leak objects, got: ' + str(len(counts))
 
 
 def suite():

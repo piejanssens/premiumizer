@@ -49,7 +49,7 @@ class WebSocketHandler(WSGIHandler):
         try:
             self.server.clients[self.client_address] = Client(
                 self.client_address, self.websocket)
-            self.application(self.environ, lambda s, h, e=None: [])
+            self.application(self.environ, lambda s, h: [])
         finally:
             del self.server.clients[self.client_address]
             if not self.websocket.closed:

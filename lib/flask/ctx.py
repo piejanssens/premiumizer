@@ -5,11 +5,9 @@
 
     Implements the objects required to keep the context.
 
-    :copyright: (c) 2011 by Armin Ronacher.
+    :copyright: (c) 2015 by Armin Ronacher.
     :license: BSD, see LICENSE for more details.
 """
-
-from __future__ import with_statement
 
 import sys
 from functools import update_wrapper
@@ -17,8 +15,12 @@ from functools import update_wrapper
 from werkzeug.exceptions import HTTPException
 
 from .globals import _request_ctx_stack, _app_ctx_stack
-from .module import blueprint_is_module
 from .signals import appcontext_pushed, appcontext_popped
+from ._compat import BROKEN_PYPY_CTXMGR_EXIT, reraise
+
+
+# a singleton sentinel value for parameter defaults
+_sentinel = object()
 
 
 class _AppCtxGlobals(object):
@@ -26,6 +28,15 @@ class _AppCtxGlobals(object):
 
     def get(self, name, default=None):
         return self.__dict__.get(name, default)
+
+    def pop(self, name, default=_sentinel):
+        if default is _sentinel:
+            return self.__dict__.pop(name)
+        else:
+            return self.__dict__.pop(name, default)
+
+    def setdefault(self, name, default=None):
+        return self.__dict__.setdefault(name, default)
 
     def __contains__(self, item):
         return item in self.__dict__
@@ -163,14 +174,16 @@ class AppContext(object):
     def push(self):
         """Binds the app context to the current context."""
         self._refcnt += 1
+        if hasattr(sys, 'exc_clear'):
+            sys.exc_clear()
         _app_ctx_stack.push(self)
         appcontext_pushed.send(self.app)
 
-    def pop(self, exc=None):
+    def pop(self, exc=_sentinel):
         """Pops the app context."""
         self._refcnt -= 1
         if self._refcnt <= 0:
-            if exc is None:
+            if exc is _sentinel:
                 exc = sys.exc_info()[1]
             self.app.do_teardown_appcontext(exc)
         rv = _app_ctx_stack.pop()
@@ -184,6 +197,9 @@ class AppContext(object):
 
     def __exit__(self, exc_type, exc_value, tb):
         self.pop(exc_value)
+
+        if BROKEN_PYPY_CTXMGR_EXIT and exc_type is not None:
+            reraise(exc_type, exc_value, tb)
 
 
 class RequestContext(object):
@@ -204,8 +220,8 @@ class RequestContext(object):
     for you.  In debug mode the request context is kept around if
     exceptions happen so that interactive debuggers have a chance to
     introspect the data.  With 0.4 this can also be forced for requests
-    that did not fail and outside of `DEBUG` mode.  By setting
-    ``'flask._preserve_context'`` to `True` on the WSGI environment the
+    that did not fail and outside of ``DEBUG`` mode.  By setting
+    ``'flask._preserve_context'`` to ``True`` on the WSGI environment the
     context will not pop itself at the end of the request.  This is used by
     the :meth:`~flask.Flask.test_client` for example to implement the
     deferred cleanup functionality.
@@ -245,16 +261,6 @@ class RequestContext(object):
         self._after_request_functions = []
 
         self.match_request()
-
-        # XXX: Support for deprecated functionality.  This is going away with
-        # Flask 1.0
-        blueprint = self.request.blueprint
-        if blueprint is not None:
-            # better safe than sorry, we don't want to break code that
-            # already worked
-            bp = app.blueprints.get(blueprint)
-            if bp is not None and blueprint_is_module(bp):
-                self.request._is_old_module = True
 
     def _get_g(self):
         return _app_ctx_stack.top.g
@@ -296,7 +302,7 @@ class RequestContext(object):
         # information under debug situations.  However if someone forgets to
         # pop that context again we want to make sure that on the next push
         # it's invalidated, otherwise we run at risk that something leaks
-        # memory.  This is usually only a problem in testsuite since this
+        # memory.  This is usually only a problem in test suite since this
         # functionality is not active in production environments.
         top = _request_ctx_stack.top
         if top is not None and top.preserved:
@@ -312,6 +318,9 @@ class RequestContext(object):
         else:
             self._implicit_app_ctx_stack.append(None)
 
+        if hasattr(sys, 'exc_clear'):
+            sys.exc_clear()
+
         _request_ctx_stack.push(self)
 
         # Open the session at the moment that the request context is
@@ -322,7 +331,7 @@ class RequestContext(object):
         if self.session is None:
             self.session = self.app.make_null_session()
 
-    def pop(self, exc=None):
+    def pop(self, exc=_sentinel):
         """Pops the request context and unbinds it by doing that.  This will
         also trigger the execution of functions registered by the
         :meth:`~flask.Flask.teardown_request` decorator.
@@ -336,7 +345,7 @@ class RequestContext(object):
         if not self._implicit_app_ctx_stack:
             self.preserved = False
             self._preserved_exc = None
-            if exc is None:
+            if exc is _sentinel:
                 exc = sys.exc_info()[1]
             self.app.do_teardown_request(exc)
 
@@ -384,6 +393,9 @@ class RequestContext(object):
         # the context can be force kept alive for the test client.
         # See flask.testing for how this works.
         self.auto_pop(exc_value)
+
+        if BROKEN_PYPY_CTXMGR_EXIT and exc_type is not None:
+            reraise(exc_type, exc_value, tb)
 
     def __repr__(self):
         return '<%s \'%s\' [%s] of %s>' % (
