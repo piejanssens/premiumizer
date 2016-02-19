@@ -8,8 +8,7 @@ sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), 'lib'
 
 import shelve
 import ConfigParser
-import requests
-import pyperclip 
+import requests 
 from threading import Thread, Timer, Event
 from werkzeug import secure_filename
 from flask import Flask, flash, request, redirect, url_for, render_template, send_from_directory
@@ -24,7 +23,6 @@ from string import ascii_letters, digits
 import six
 import os
 from chardet import detect
-from pySmartDL import SmartDL
 import datetime
 import logging
 from logging.handlers import RotatingFileHandler
@@ -85,14 +83,46 @@ downloading = False
 downloader = None
 total_size_downloaded = None
 
-
+#
 class User(UserMixin):
     def __init__(self, userid, password):
         self.id = userid
         self.password = password
 
+def toUnicode(original, *args):
+    try:
+        if isinstance(original, unicode):
+            return original
+        else:
+            try:
+                return six.text_type(original, *args)
+            except:
+                try:
+                    detected = detect(original)
+                    try:
+                        if detected.get('confidence') > 0.8:
+                            return original.decode(detected.get('encoding'))
+                    except:
+                        pass
+
+                    return ek(original, *args)
+                except:
+                    raise
+    except:
+        logger.error('Unable to decode value "%s..." : %s ', (repr(original)[:20], traceback.format_exc()))
+        return 'ERROR DECODING STRING'
 
 
+def ek(original, *args):
+    if isinstance(original, (str, unicode)):
+        try:
+            return original.decode('UTF-8', 'ignore')
+        except UnicodeDecodeError:
+            raise
+    return original
+
+
+# watchdir
 def watchdir():
     print 'watchdir'
     path_to_watch = prem_config.get('upload', 'watchdir_location')
@@ -151,39 +181,7 @@ def watchdir_linux2():
     finally:
         i.remove_watch((prem_config.get('upload', 'watchdir_location')))
 
-def toUnicode(original, *args):
-    try:
-        if isinstance(original, unicode):
-            return original
-        else:
-            try:
-                return six.text_type(original, *args)
-            except:
-                try:
-                    detected = detect(original)
-                    try:
-                        if detected.get('confidence') > 0.8:
-                            return original.decode(detected.get('encoding'))
-                    except:
-                        pass
-
-                    return ek(original, *args)
-                except:
-                    raise
-    except:
-        logger.error('Unable to decode value "%s..." : %s ', (repr(original)[:20], traceback.format_exc()))
-        return 'ERROR DECODING STRING'
-
-
-def ek(original, *args):
-    if isinstance(original, (str, unicode)):
-        try:
-            return original.decode('UTF-8', 'ignore')
-        except UnicodeDecodeError:
-            raise
-    return original
-
-
+#
 def clean_name(original):
     valid_chars = "-_.() %s%s" % (ascii_letters, digits)
     cleaned_filename = unicodedata.normalize('NFKD', toUnicode(original)).encode('ASCII', 'ignore')
@@ -244,6 +242,7 @@ def process_dir(task, path, new_name, dir_content):
             download_file(task, new_path + '/' + clean_name(x), dir_content[x]['url'].replace('https', 'http', 1))
 
 
+# Copy links to clipboard        
 def getlinks_task(task):
     global downloading
     payload = {'customer_id': prem_config.get('premiumize', 'customer_id'), 'pin': prem_config.get('premiumize', 'pin'), 'hash': task.hash}
@@ -267,6 +266,7 @@ def process_dir_links(task, new_name, dir_content):
                 pyperclip.copy(dir_content[x]['url'])
 
 
+#                
 def download_task(task):
     global downloading
     base_path = prem_config.get('downloads', 'download_location')
@@ -396,6 +396,8 @@ def upload_magnet(magnet):
 def send_categories():
     emit('download_categories', {'data': prem_config.get('downloads', 'download_categories').split(',')})
 
+
+# Flask
 @app.route('/')
 @login_required
 def home():
@@ -549,6 +551,13 @@ def load_tasks():
         task.callback = socketio.emit
         tasks.append(task)
 
+# Load downloads module if enabled
+if prem_config.getboolean('downloads', 'download_enabled'):
+    from pySmartDL import SmartDL
+    
+# Load copylinks to clipboard module if enabled
+if prem_config.getboolean('downloads', 'copylink_toclipboard'):
+    import pyperclip
 
 # Start the watchdir thread if enabled
 if prem_config.getboolean('upload', 'watchdir_enabled'):
