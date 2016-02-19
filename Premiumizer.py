@@ -3,9 +3,6 @@
 import os, sys, json
 import time
 import logging
-import win32file
-import win32event
-import win32con
 
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), 'lib')))
 
@@ -94,7 +91,26 @@ class User(UserMixin):
         self.id = userid
         self.password = password
 
+
+
 def watchdir():
+    print 'watchdir'
+    path_to_watch = prem_config.get('upload', 'watchdir_location')
+    before = dict ([(f, None) for f in os.listdir (path_to_watch)])
+    while 1:
+      time.sleep ((prem_config.getint('global', 'idle_interval')))
+      after = dict ([(f, None) for f in os.listdir (path_to_watch)])
+      added = [f for f in after if not f in before]
+      if added:
+          time.sleep(2)
+          logger.info('Uploading torrent to the cloud: %s', ", ".join (added))
+          filepath = upload_path + "/" + ''.join(added)
+          upload_torrent(filepath)
+          logger.debug('Deleting torrent from the watchdir: %s', ", ".join (added))
+          os.remove(filepath)
+
+
+def watchdir_win32():
     path_to_watch = prem_config.get('upload', 'watchdir_location')
     change_handle = win32file.FindFirstChangeNotification (
         path_to_watch,
@@ -109,6 +125,7 @@ def watchdir():
                 new_path_contents = dict ([(f, None) for f in os.listdir (path_to_watch)])
                 added = [f for f in new_path_contents if not f in old_path_contents]
                 if added:
+                    time.sleep(2)
                     logger.info('Uploading torrent to the cloud: %s', ", ".join (added))
                     filepath = upload_path + "/" + ''.join(added)
                     upload_torrent(filepath)
@@ -117,6 +134,22 @@ def watchdir():
                 old_path_contents = new_path_contents
                 win32file.FindNextChangeNotification (change_handle)
     finally: win32file.FindCloseChangeNotification (change_handle)
+
+def watchdir_linux2():
+    i = inotify.adapters.Inotify()
+    i.add_watch((prem_config.get('upload', 'watchdir_location')))
+    try:
+        for event in i.event_gen():
+            if event is IN_CREATE:
+                time.sleep(2)
+                (header, type_names, watch_path, filename) = event
+                logger.info('Uploading torrent to the cloud: %s', filename)
+                filepath = upload_path + "/" + filename
+                upload_torrent(filepath)
+                os.remove(filepath)
+                logger.debug('Deleting torrent from the watchdir: %s', filename)
+    finally:
+        i.remove_watch((prem_config.get('upload', 'watchdir_location')))
 
 def toUnicode(original, *args):
     try:
@@ -517,9 +550,16 @@ def load_tasks():
         tasks.append(task)
 
 
-# start the watchdir if enabled
+# Start the watchdir thread if enabled
 if prem_config.getboolean('upload', 'watchdir_enabled'):
-    t = Thread(target=watchdir)
+    if sys.platform == 'win32':
+        import win32file, win32event, win32con
+        t = Thread(target=watchdir_win32)
+    #elif sys.platform == 'linux2':
+    #    import inotify.adapters
+    #    t = Thread(target=watchdir_linux2)
+    else:
+        t = Thread(target=watchdir)
     t.daemon = True
     t.start()
 # start the server with the 'run()' method
