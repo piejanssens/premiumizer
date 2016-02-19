@@ -290,7 +290,7 @@ def download_task(task):
 
 
 def update():
-    print('updating')
+    logger.debug('Updating')
     global update_interval
     idle = True
     payload = {'customer_id': prem_config.get('premiumize', 'customer_id'), 'pin': prem_config.get('premiumize', 'pin')}
