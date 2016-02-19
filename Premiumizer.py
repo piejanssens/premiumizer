@@ -31,6 +31,10 @@ from logging.handlers import RotatingFileHandler
 
 
 prem_config = ConfigParser.RawConfigParser()
+if  not os.path.isfile('settings.cfg'):
+    import shutil
+    shutil.copy('settings.cfg.tpl', 'settings.cfg')
+
 prem_config.read('settings.cfg')
 
 logger = logging.getLogger("Rotating Log")

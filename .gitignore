@@ -1,4 +1,5 @@
 #Premiumizer Specific
+settings.cfg
 premiumizer*log
 premiumizer.db
 tmp/
