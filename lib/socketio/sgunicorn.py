@@ -1,4 +1,5 @@
 import os
+import sys
 import gevent
 import time
 
@@ -48,6 +49,13 @@ class GeventSocketIOBaseWorker(GeventPyWSGIWorker):
 
         super(GeventSocketIOBaseWorker, self).__init__(
             age, ppid, socket, app, timeout, cfg, log)
+
+    def handle_quit(self, sig, frame):
+        self.alive = False
+        # worker_int callback
+        self.cfg.worker_int(self)
+        #gevent.sleep(0.1)
+        sys.exit(0)
 
     def run(self):
         if gunicorn_version >= (0, 17, 0):

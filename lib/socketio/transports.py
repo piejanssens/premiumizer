@@ -238,6 +238,10 @@ class XHRMultipartTransport(XHRPollingTransport):
 
 class WebsocketTransport(BaseTransport):
     def do_exchange(self, socket, request_method):
+        # NOTE: super-hacky exception prevention
+        if 'wsgi.websocket' not in self.handler.environ:
+            return # TODO: maybe return an actual http response?
+
         websocket = self.handler.environ['wsgi.websocket']
         websocket.send("1::")  # 'connect' packet
 

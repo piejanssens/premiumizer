@@ -15,8 +15,13 @@ pin =
 
 [downloads]
 download_enabled = 0
+copylink_toclipboard = 0
 download_location =
 download_categories = movie,tv,music
+
+[upload]
+watchdir_enabled = 0
+watchdir_location =
 
 [nzbtomedia]
 nzbtomedia_enabled = 0

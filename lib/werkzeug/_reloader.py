@@ -36,14 +36,17 @@ def _iter_module_files():
 def _find_observable_paths(extra_files=None):
     """Finds all paths that should be observed."""
     rv = set(os.path.abspath(x) for x in sys.path)
+
     for filename in extra_files or ():
         rv.add(os.path.dirname(os.path.abspath(filename)))
+
     for module in list(sys.modules.values()):
         fn = getattr(module, '__file__', None)
         if fn is None:
             continue
         fn = os.path.abspath(fn)
         rv.add(os.path.dirname(fn))
+
     return _find_common_roots(rv)
 
 
@@ -58,6 +61,7 @@ def _find_common_roots(paths):
         node.clear()
 
     rv = set()
+
     def _walk(node, path):
         for prefix, child in iteritems(node):
             _walk(child, path + (prefix,))
@@ -101,14 +105,18 @@ class ReloaderLoop(object):
                     if isinstance(value, text_type):
                         new_environ[key] = value.encode('iso-8859-1')
 
-            exit_code = subprocess.call(args, env=new_environ)
+            exit_code = subprocess.call(args, env=new_environ,
+                                        close_fds=False)
             if exit_code != 3:
                 return exit_code
 
     def trigger_reload(self, filename):
+        self.log_reload(filename)
+        sys.exit(3)
+
+    def log_reload(self, filename):
         filename = os.path.abspath(filename)
         _log('info', ' * Detected change in %r, reloading' % filename)
-        sys.exit(3)
 
 
 class StatReloaderLoop(ReloaderLoop):
@@ -117,7 +125,8 @@ class StatReloaderLoop(ReloaderLoop):
     def run(self):
         mtimes = {}
         while 1:
-            for filename in chain(_iter_module_files(), self.extra_files):
+            for filename in chain(_iter_module_files(),
+                                  self.extra_files):
                 try:
                     mtime = os.stat(filename).st_mtime
                 except OSError:
@@ -151,9 +160,18 @@ class WatchdogReloaderLoop(ReloaderLoop):
                     self.trigger_reload(filename)
 
         class _CustomHandler(FileSystemEventHandler):
+
             def on_created(self, event):
                 _check_modification(event.src_path)
+
             def on_modified(self, event):
+                _check_modification(event.src_path)
+
+            def on_moved(self, event):
+                _check_modification(event.src_path)
+                _check_modification(event.dest_path)
+
+            def on_deleted(self, event):
                 _check_modification(event.src_path)
 
         reloader_name = Observer.__name__.lower()
@@ -168,10 +186,11 @@ class WatchdogReloaderLoop(ReloaderLoop):
         self.should_reload = False
 
     def trigger_reload(self, filename):
-        # This is called inside an event handler, which means we can't throw
-        # SystemExit here. https://github.com/gorakhargosh/watchdog/issues/294
+        # This is called inside an event handler, which means throwing
+        # SystemExit has no effect.
+        # https://github.com/gorakhargosh/watchdog/issues/294
         self.should_reload = True
-        ReloaderLoop.trigger_reload(self, filename)
+        self.log_reload(filename)
 
     def run(self):
         watches = {}
@@ -187,9 +206,9 @@ class WatchdogReloaderLoop(ReloaderLoop):
                         watches[path] = observer.schedule(
                             self.event_handler, path, recursive=True)
                     except OSError:
-                        # "Path is not a directory". We could filter out
-                        # those paths beforehand, but that would cause
-                        # additional stat calls.
+                        # Clear this path from list of watches We don't want
+                        # the same error message showing again in the next
+                        # iteration.
                         watches[path] = None
                 to_delete.discard(path)
             for path in to_delete:

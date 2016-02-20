@@ -42,6 +42,18 @@
 <p>&nbsp;</p>
 <input type="text" class="form-control" placeholder="Download categories seperated by commas" name="download_categories" aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_categories') }}">
 <input type="text" class="form-control" placeholder="Download Location" name="download_location" aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_location') }}">
+
+<h3>Copy Links of MKV/MP4 > 100 MB to clipboard instead of downloading - disable above download option</h3>
+<div class="form-group">
+{% if settings.get('downloads', 'copylink_toclipboard') == 1 %}
+    <input type="checkbox" class="bootstrap_switch" name="copylink_toclipboard" data-size="small" checked>
+{% else %}
+    <input type="checkbox" class="bootstrap_switch" name="copylink_toclipboard" data-size="small">
+{% endif %}
+<p>&nbsp;</p>
+</div>
+
+<h3>Upload Torrents / Watchdir </h3><div class="form-group">{% if settings.get('upload', 'watchdir_enabled') == 1 %}<input type="checkbox" class="bootstrap_switch" name="watchdir_enabled" data-size="small" checked>{% else %}<input type="checkbox" class="bootstrap_switch" name="watchdir_enabled" data-size="small">{% endif %}<p>&nbsp;</p><input type="text" class="form-control" placeholder="Folder to Watch" name="watchdir_location" aria-describedby="basic-addon1" value="{{ settings.get('upload', 'watchdir_location') }}">
 </div>
 
 <h3>nzbToMedia</h3>
