@@ -1,189 +1,156 @@
-from socketio.defaultjson import default_json_dumps, default_json_loads
+import functools
+import json as _json
 
-MSG_TYPES = {
-    'disconnect': 0,
-    'connect': 1,
-    'heartbeat': 2,
-    'message': 3,
-    'json': 4,
-    'event': 5,
-    'ack': 6,
-    'error': 7,
-    'noop': 8,
-    }
+import six
 
-MSG_VALUES = dict((v, k) for k, v in MSG_TYPES.iteritems())
-
-ERROR_REASONS = {
-    'transport not supported': 0,
-    'client not handshaken': 1,
-    'unauthorized': 2
-    }
-
-REASONS_VALUES = dict((v, k) for k, v in ERROR_REASONS.iteritems())
-
-ERROR_ADVICES = {
-    'reconnect': 0,
-    }
-
-ADVICES_VALUES = dict((v, k) for k, v in ERROR_ADVICES.iteritems())
-
-socketio_packet_attributes = ['type', 'name', 'data', 'endpoint', 'args',
-                              'ackId', 'reason', 'advice', 'qs', 'id']
+(CONNECT, DISCONNECT, EVENT, ACK, ERROR, BINARY_EVENT, BINARY_ACK) = \
+    (0, 1, 2, 3, 4, 5, 6)
+packet_names = ['CONNECT', 'DISCONNECT', 'EVENT', 'ACK', 'ERROR',
+                'BINARY_EVENT', 'BINARY_ACK']
 
 
-def encode(data, json_dumps=default_json_dumps):
-    """
-    Encode an attribute dict into a byte string.
-    """
-    payload = ''
-    msg = str(MSG_TYPES[data['type']])
+class Packet(object):
+    """Socket.IO packet."""
 
-    if msg in ['0', '1']:
-        # '1::' [path] [query]
-        msg += '::' + data['endpoint']
-        if 'qs' in data and data['qs'] != '':
-            msg += ':' + data['qs']
+    json = _json
 
-    elif msg == '2':
-        # heartbeat
-        msg += '::'
+    def __init__(self, packet_type=EVENT, data=None, namespace=None, id=None,
+                 binary=None, encoded_packet=None):
+        self.packet_type = packet_type
+        self.data = data
+        self.namespace = namespace
+        self.id = id
+        if binary or (binary is None and self._data_is_binary(self.data)):
+            if self.packet_type == EVENT:
+                self.packet_type = BINARY_EVENT
+            elif self.packet_type == ACK:
+                self.packet_type = BINARY_ACK
+            else:
+                raise ValueError('Packet does not support binary payload.')
+        self.attachment_count = 0
+        if encoded_packet:
+            self.attachment_count = self.decode(encoded_packet)
 
-    elif msg in ['3', '4', '5']:
-        # '3:' [id ('+')] ':' [endpoint] ':' [data]
-        # '4:' [id ('+')] ':' [endpoint] ':' [json]
-        # '5:' [id ('+')] ':' [endpoint] ':' [json encoded event]
-        # The message id is an incremental integer, required for ACKs.
-        # If the message id is followed by a +, the ACK is not handled by
-        # socket.io, but by the user instead.
-        if msg == '3':
-            payload = data['data']
-        if msg == '4':
-            payload = json_dumps(data['data'])
-        if msg == '5':
-            d = {}
-            d['name'] = data['name']
-            if 'args' in data and data['args'] != []:
-                d['args'] = data['args']
-            payload = json_dumps(d)
-        if 'id' in data:
-            msg += ':' + str(data['id'])
-            if data['ack'] == 'data':
-                msg += '+'
-            msg += ':'
+    def encode(self):
+        """Encode the packet for transmission.
+
+        If the packet contains binary elements, this function returns a list
+        of packets where the first is the original packet with placeholders for
+        the binary components and the remaining ones the binary attachments.
+        """
+        encoded_packet = six.text_type(self.packet_type)
+        if self.packet_type == BINARY_EVENT or self.packet_type == BINARY_ACK:
+            data, attachments = self._deconstruct_binary(self.data)
+            encoded_packet += six.text_type(len(attachments)) + '-'
         else:
-            msg += '::'
-        if 'endpoint' not in data:
-            data['endpoint'] = ''
-        if payload != '':
-            msg += data['endpoint'] + ':' + payload
-        else:
-            msg += data['endpoint']
+            data = self.data
+            attachments = None
+        needs_comma = False
+        if self.namespace is not None and self.namespace != '/':
+            encoded_packet += self.namespace
+            needs_comma = True
+        if self.id is not None:
+            if needs_comma:
+                encoded_packet += ','
+                needs_comma = False
+            encoded_packet += six.text_type(self.id)
+        if data is not None:
+            if needs_comma:
+                encoded_packet += ','
+            encoded_packet += self.json.dumps(data, separators=(',', ':'))
+        if attachments is not None:
+            encoded_packet = [encoded_packet] + attachments
+        return encoded_packet
 
-    elif msg == '6':
-        # '6:::' [id] '+' [data]
-        msg += '::' + data.get('endpoint', '') + ':' + str(data['ackId'])
-        if 'args' in data and data['args'] != []:
-            msg += '+' + json_dumps(data['args'])
+    def decode(self, encoded_packet):
+        """Decode a transmitted package.
 
-    elif msg == '7':
-        # '7::' [endpoint] ':' [reason] '+' [advice]
-        msg += ':::'
-        if 'reason' in data and data['reason'] != '':
-            msg += str(ERROR_REASONS[data['reason']])
-        if 'advice' in data and data['advice'] != '':
-            msg += '+' + str(ERROR_ADVICES[data['advice']])
-        msg += data['endpoint']
-
-    # NoOp, used to close a poll after the polling duration time
-    elif msg == '8':
-        msg += '::'
-
-    return msg
-
-
-def decode(rawstr, json_loads=default_json_loads):
-    """
-    Decode a rawstr packet arriving from the socket into a dict.
-    """
-    decoded_msg = {}
-    split_data = rawstr.split(":", 3)
-    msg_type = split_data[0]
-    msg_id = split_data[1]
-    endpoint = split_data[2]
-
-    data = ''
-
-    if msg_id != '':
-        if "+" in msg_id:
-            msg_id = msg_id.split('+')[0]
-            decoded_msg['id'] = int(msg_id)
-            decoded_msg['ack'] = 'data'
-        else:
-            decoded_msg['id'] = int(msg_id)
-            decoded_msg['ack'] = True
-
-    # common to every message
-    msg_type_id = int(msg_type)
-    if msg_type_id in MSG_VALUES:
-        decoded_msg['type'] = MSG_VALUES[int(msg_type)]
-    else:
-        raise Exception("Unknown message type: %s" % msg_type)
-
-    decoded_msg['endpoint'] = endpoint
-
-    if len(split_data) > 3:
-        data = split_data[3]
-
-    if msg_type == "0":  # disconnect
-        pass
-
-    elif msg_type == "1":  # connect
-        decoded_msg['qs'] = data
-
-    elif msg_type == "2":  # heartbeat
-        pass
-
-    elif msg_type == "3":  # message
-        decoded_msg['data'] = data
-
-    elif msg_type == "4":  # json msg
-        decoded_msg['data'] = json_loads(data)
-
-    elif msg_type == "5":  # event
+        The return value indicates how many binary attachment packets are
+        necessary to fully decode the packet.
+        """
+        ep = encoded_packet
         try:
-            data = json_loads(data)
-        except ValueError, e:
-            print("Invalid JSON event message", data)
-            decoded_msg['args'] = []
-        else:
-            decoded_msg['name'] = data.pop('name')
-            if 'args' in data:
-                decoded_msg['args'] = data['args']
+            self.packet_type = int(ep[0:1])
+        except TypeError:
+            self.packet_type = ep
+            ep = ''
+        self.namespace = None
+        self.data = None
+        ep = ep[1:]
+        dash = (ep + '-').find('-')
+        comma = (ep + ',').find(',')
+        attachment_count = 0
+        if dash < comma:
+            attachment_count = int(ep[0:dash])
+            ep = ep[dash + 1:]
+        if ep and ep[0:1] == '/':
+            sep = ep.find(',')
+            if sep == -1:
+                self.namespace = ep
+                ep = ''
             else:
-                decoded_msg['args'] = []
+                self.namespace = ep[0:sep]
+                ep = ep[sep + 1:]
+        if ep and ep[0].isdigit():
+            self.id = 0
+            while ep[0].isdigit():
+                self.id = self.id * 10 + int(ep[0])
+                ep = ep[1:]
+        if ep:
+            self.data = self.json.loads(ep)
+        return attachment_count
 
-    elif msg_type == "6":  # ack
-        if '+' in data:
-            ackId, data = data.split('+')
-            decoded_msg['ackId'] = int(ackId)
-            decoded_msg['args'] = json_loads(data)
-        else:
-            decoded_msg['ackId'] = int(data)
-            decoded_msg['args'] = []
+    def reconstruct_binary(self, attachments):
+        """Reconstruct a decoded packet using the given list of binary
+        attachments.
+        """
+        self.data = self._reconstruct_binary_internal(self.data, attachments)
 
-    elif msg_type == "7":  # error
-        if '+' in data:
-            reason, advice = data.split('+')
-            decoded_msg['reason'] = REASONS_VALUES[int(reason)]
-            decoded_msg['advice'] = ADVICES_VALUES[int(advice)]
-        else:
-            decoded_msg['advice'] = ''
-            if data != '':
-                decoded_msg['reason'] = REASONS_VALUES[int(data)]
+    def _reconstruct_binary_internal(self, data, attachments):
+        if isinstance(data, list):
+            return [self._reconstruct_binary_internal(item, attachments)
+                    for item in data]
+        elif isinstance(data, dict):
+            if data.get('_placeholder') and 'num' in data:
+                return attachments[data['num']]
             else:
-                decoded_msg['reason'] = ''
-    elif msg_type == "8":  # noop
-        pass
+                return {key: self._reconstruct_binary_internal(value,
+                                                               attachments)
+                        for key, value in six.iteritems(data)}
+        else:
+            return data
 
-    return decoded_msg
+    def _deconstruct_binary(self, data):
+        """Extract binary components in the packet."""
+        attachments = []
+        data = self._deconstruct_binary_internal(data, attachments)
+        return data, attachments
+
+    def _deconstruct_binary_internal(self, data, attachments):
+        if isinstance(data, six.binary_type):
+            attachments.append(data)
+            return {'_placeholder': True, 'num': len(attachments) - 1}
+        elif isinstance(data, list):
+            return [self._deconstruct_binary_internal(item, attachments)
+                    for item in data]
+        elif isinstance(data, dict):
+            return {key: self._deconstruct_binary_internal(value, attachments)
+                    for key, value in six.iteritems(data)}
+        else:
+            return data
+
+    def _data_is_binary(self, data):
+        """Check if the data contains binary components."""
+        if isinstance(data, six.binary_type):
+            return True
+        elif isinstance(data, list):
+            return functools.reduce(
+                lambda a, b: a or b, [self._data_is_binary(item)
+                                      for item in data], False)
+        elif isinstance(data, dict):
+            return functools.reduce(
+                lambda a, b: a or b, [self._data_is_binary(item)
+                                      for item in six.itervalues(data)],
+                False)
+        else:
+            return False
