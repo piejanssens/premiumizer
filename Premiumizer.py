@@ -29,7 +29,6 @@ from logging.handlers import RotatingFileHandler
 
 # "https://www.premiumize.me/static/api/torrent.html"
 
-
 prem_config = ConfigParser.RawConfigParser()
 if  not os.path.isfile('settings.cfg'):
     import shutil
@@ -247,7 +246,7 @@ def process_dir(task, path, new_name, dir_content):
 
 
 # Copy links to clipboard        
-def getlinks_task(task):
+def get_links(task):
     global downloading
     payload = {'customer_id': prem_config.get('premiumize', 'customer_id'), 'pin': prem_config.get('premiumize', 'pin'), 'hash': task.hash}
     r = requests.post("https://www.premiumize.me/torrent/browse", payload)
@@ -268,7 +267,6 @@ def process_dir_links(task, new_name, dir_content):
             if dir_content[x]['url'].lower().endswith(('.mkv', 'mp4')) and dir_content[x]['size'] > 100000000:
                 logger.info('Link copied to clipboard for: %s', dir_content[x]['name'])
                 pyperclip.copy(dir_content[x]['url'])
-
 
 #                
 def download_task(task):
@@ -334,7 +332,7 @@ def parse_tasks(torrents):
                     elif task.local_status != 'downloading':
                         task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], local_status='queued') 
                 elif prem_config.getboolean('downloads', 'copylink_toclipboard'):
-                    getlinks_task(task)
+                    get_links(task)
                 else:
                     task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], local_status='finished')
             else:
