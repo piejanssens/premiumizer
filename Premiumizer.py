@@ -1,5 +1,4 @@
 #from gevent import monkey; monkey.patch_thread(threading=True, _threading_local=True, Event=False)
-
 import os, sys, json
 import time
 import logging
@@ -244,8 +243,7 @@ def process_dir(task, path, new_name, dir_content):
             process_dir(task, new_path, clean_name(x), dir_content[x]['children'])
         elif type == 'file':
             download_file(task, new_path + '/' + clean_name(x), dir_content[x]['url'].replace('https', 'http', 1))
-
-
+    
 # Copy links to clipboard        
 def getlinks_task(task):
     global downloading
@@ -268,7 +266,6 @@ def process_dir_links(task, new_name, dir_content):
             if dir_content[x]['url'].lower().endswith(('.mkv', 'mp4')) and dir_content[x]['size'] > 100000000:
                 logger.info('Link copied to clipboard for: %s', dir_content[x]['name'])
                 pyperclip.copy(dir_content[x]['url'])
-
 
 #                
 def download_task(task):
@@ -427,42 +424,49 @@ def upload():
 @login_required
 def settings():
     if request.method == 'POST':
-        global prem_config
-        if request.form.get('debug_enabled'):
-            prem_config.set('global', 'debug_enabled', 1)
+        if 'Reboot' in request.form.values():
+            from subprocess import Popen
+            Popen(['python', 'restart.py'], shell=False,stdin=None,stdout=None,stderr=None,close_fds=True)
+            sys.exit()
+        elif 'Shutdown' in request.form.values():
+            sys.exit()
         else:
-            prem_config.set('global', 'debug_enabled', 0)
-        if request.form.get('login_enabled'):
-            prem_config.set('security', 'login_enabled', 1)
-        else:
-            prem_config.set('security', 'login_enabled', 0)
-        if request.form.get('download_enabled'):
-            prem_config.set('downloads', 'download_enabled', 1)
-        else:
-            prem_config.set('downloads', 'download_enabled', 0)
-        if request.form.get('copylink_toclipboard '):
-            prem_config.set('downloads', 'copylink_toclipboard ', 1)
-        else:
-            prem_config.set('downloads', 'copylink_toclipboard ', 0)
-        if request.form.get('watchdir_enabled'):
-            prem_config.set('upload', 'watchdir_enabled', 1)
-        else:
-            prem_config.set('upload', 'watchdir_enabled', 0)
-        if request.form.get('nzbtomedia_enabled'):
-            prem_config.set('nzbtomedia', 'nzbtomedia_enabled', 1)
-        else:
-            prem_config.set('nzbtomedia', 'nzbtomedia_enabled', 0)
-        prem_config.set('global', 'server_port', request.form.get('server_port'))
-        prem_config.set('security', 'username',  request.form.get('username'))
-        prem_config.set('security', 'password',  request.form.get('password'))
-        prem_config.set('premiumize', 'customer_id',  request.form.get('customer_id'))
-        prem_config.set('premiumize', 'pin',  request.form.get('pin'))
-        prem_config.set('downloads', 'download_categories',  request.form.get('download_categories'))
-        prem_config.set('downloads', 'download_location',  request.form.get('download_location'))
-        prem_config.set('upload', 'watchdir_location',  request.form.get('watchdir_location'))
-        prem_config.set('nzbtomedia', 'nzbtomedia_location',  request.form.get('nzbtomedia_location'))
-        with open('settings.cfg', 'w') as configfile:    # save
-            prem_config.write(configfile)
+            global prem_config
+            if request.form.get('debug_enabled'):
+                prem_config.set('global', 'debug_enabled', 1)
+            else:
+                prem_config.set('global', 'debug_enabled', 0)
+            if request.form.get('login_enabled'):
+                prem_config.set('security', 'login_enabled', 1)
+            else:
+                prem_config.set('security', 'login_enabled', 0)
+            if request.form.get('download_enabled'):
+                prem_config.set('downloads', 'download_enabled', 1)
+            else:
+                prem_config.set('downloads', 'download_enabled', 0)
+            if request.form.get('copylink_toclipboard'):
+                prem_config.set('downloads', 'copylink_toclipboard ', 1)
+            else:
+                prem_config.set('downloads', 'copylink_toclipboard ', 0)
+            if request.form.get('watchdir_enabled'):
+                prem_config.set('upload', 'watchdir_enabled', 1)
+            else:
+                prem_config.set('upload', 'watchdir_enabled', 0)
+            if request.form.get('nzbtomedia_enabled'):
+                prem_config.set('nzbtomedia', 'nzbtomedia_enabled', 1)
+            else:
+                prem_config.set('nzbtomedia', 'nzbtomedia_enabled', 0)
+            prem_config.set('global', 'server_port', request.form.get('server_port'))
+            prem_config.set('security', 'username',  request.form.get('username'))
+            prem_config.set('security', 'password',  request.form.get('password'))
+            prem_config.set('premiumize', 'customer_id',  request.form.get('customer_id'))
+            prem_config.set('premiumize', 'pin',  request.form.get('pin'))
+            prem_config.set('downloads', 'download_categories',  request.form.get('download_categories'))
+            prem_config.set('downloads', 'download_location',  request.form.get('download_location'))
+            prem_config.set('upload', 'watchdir_location',  request.form.get('watchdir_location'))
+            prem_config.set('nzbtomedia', 'nzbtomedia_location',  request.form.get('nzbtomedia_location'))
+            with open('settings.cfg', 'w') as configfile:    # save
+                prem_config.write(configfile)
     return render_template('settings.html', settings=prem_config)
 
 @app.route('/login', methods=["GET", "POST"])
@@ -520,9 +524,8 @@ def delete_task(message):
 
 
 @socketio.on('connect')
-def test_message(message):
+def test_message():
     emit('hello_client', {'data': 'Server says hello!'})
-
 
 @socketio.on('disconnect')
 def test_disconnect():
