@@ -524,9 +524,8 @@ def delete_task(message):
 
 
 @socketio.on('connect')
-def test_message(message):
+def test_message():
     emit('hello_client', {'data': 'Server says hello!'})
-
 
 @socketio.on('disconnect')
 def test_disconnect():
