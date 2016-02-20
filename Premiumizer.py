@@ -440,7 +440,7 @@ def settings():
             prem_config.set('downloads', 'download_enabled', 1)
         else:
             prem_config.set('downloads', 'download_enabled', 0)
-        if request.form.get('copylink_toclipboard '):
+        if request.form.get('copylink_toclipboard'):
             prem_config.set('downloads', 'copylink_toclipboard ', 1)
         else:
             prem_config.set('downloads', 'copylink_toclipboard ', 0)
