@@ -50,7 +50,7 @@ logger.info('Running at %s', runningdir)
 if not os.path.isfile(runningdir+'settings.cfg'):
     import shutil
     shutil.copy(runningdir+'settings.cfg.tpl', runningdir+'settings.cfg')
-prem_config.read(runningdir+'settings.cfg'))
+prem_config.read(runningdir+'settings.cfg')
 
 if prem_config.getboolean('global', 'debug_enabled'):
     logger.setLevel(logging.DEBUG)
@@ -553,7 +553,7 @@ if prem_config.getboolean('downloads', 'copylink_toclipboard'):
 # Start the watchdog if watchdir is enabled
 if prem_config.getboolean('upload', 'watchdir_enabled'):
     observer = Observer()
-    observer.schedule(MyHandler(), path=prem_config.get('upload', 'watchdir_location'))
+    observer.schedule(MyHandler(), path=prem_config.get('upload', 'watchdir_location'), recursive=True)
     observer.start()
 
 # start the server with the 'run()' method
