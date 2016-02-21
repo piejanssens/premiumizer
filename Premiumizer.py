@@ -8,8 +8,7 @@ sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), 'lib'
 
 import shelve
 import ConfigParser
-import requests 
-from threading import Thread, Timer, Event
+import requests
 from werkzeug import secure_filename
 from flask import Flask, flash, request, redirect, url_for, render_template, send_from_directory
 from flask.ext.login import LoginManager, login_required, login_user, logout_user, UserMixin
@@ -17,7 +16,6 @@ from flask.ext.socketio import SocketIO, emit
 from flask_apscheduler import APScheduler, views
 from apscheduler.schedulers.gevent import GeventScheduler
 from DownloadTask import DownloadTask
-#pip install greenlet, apscheduler
 import unicodedata
 from string import ascii_letters, digits
 import six
@@ -26,15 +24,14 @@ from chardet import detect
 import datetime
 import logging
 from logging.handlers import RotatingFileHandler
+from watchdog.observers import Observer
+from watchdog.events import PatternMatchingEventHandler
+import hashlib, bencode
 
+#pip install greenlet, apscheduler, watchdog
 # "https://www.premiumize.me/static/api/torrent.html"
 
 prem_config = ConfigParser.RawConfigParser()
-if  not os.path.isfile('settings.cfg'):
-    import shutil
-    shutil.copy('settings.cfg.tpl', 'settings.cfg')
-
-prem_config.read('settings.cfg')
 
 logger = logging.getLogger("Rotating Log")
 
@@ -47,12 +44,20 @@ formatter = logging.Formatter('%(asctime)s %(levelname)s : %(message)s')
 syslog.setFormatter(formatter)
 logger.addHandler(syslog)
 
+logger.info('Logger Initialized')
+
+runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0] + '/'
+logger.info('Running at %s', runningdir)
+if not os.path.isfile(runningdir+'settings.cfg'):
+    import shutil
+    shutil.copy(runningdir+'settings.cfg.tpl', runningdir+'settings.cfg')
+
+prem_config.read(runningdir+'settings.cfg')
+
 if prem_config.getboolean('global', 'debug_enabled'):
     logger.setLevel(logging.DEBUG)
 else:
     logger.setLevel(logging.INFO)
-
-logger.info('Logger Initialized')
 
 if prem_config.getboolean('downloads', 'download_enabled'):
     download_path = prem_config.get('downloads', 'download_location')
@@ -123,66 +128,6 @@ def ek(original, *args):
         except UnicodeDecodeError:
             raise
     return original
-
-
-# watchdir
-def watchdir():
-    print 'watchdir'
-    path_to_watch = prem_config.get('upload', 'watchdir_location')
-    before = dict ([(f, None) for f in os.listdir (path_to_watch)])
-    while 1:
-      time.sleep ((prem_config.getint('global', 'idle_interval')))
-      after = dict ([(f, None) for f in os.listdir (path_to_watch)])
-      added = [f for f in after if not f in before]
-      if added:
-          time.sleep(2)
-          logger.info('Uploading torrent to the cloud: %s', ", ".join (added))
-          filepath = upload_path + "/" + ''.join(added)
-          upload_torrent(filepath)
-          logger.debug('Deleting torrent from the watchdir: %s', ", ".join (added))
-          os.remove(filepath)
-
-
-def watchdir_win32():
-    path_to_watch = prem_config.get('upload', 'watchdir_location')
-    change_handle = win32file.FindFirstChangeNotification (
-        path_to_watch,
-        0,
-        win32con.FILE_NOTIFY_CHANGE_FILE_NAME
-    )
-    try:
-        old_path_contents = dict ([(f, None) for f in os.listdir (path_to_watch)])
-        while 1:
-            result = win32event.WaitForSingleObject (change_handle, 500)
-            if result == win32con.WAIT_OBJECT_0:
-                new_path_contents = dict ([(f, None) for f in os.listdir (path_to_watch)])
-                added = [f for f in new_path_contents if not f in old_path_contents]
-                if added:
-                    time.sleep(2)
-                    logger.info('Uploading torrent to the cloud: %s', ", ".join (added))
-                    filepath = upload_path + "/" + ''.join(added)
-                    upload_torrent(filepath)
-                    os.remove(filepath)
-                    logger.debug('Deleting torrent from the watchdir: %s', ", ".join (added))
-                old_path_contents = new_path_contents
-                win32file.FindNextChangeNotification (change_handle)
-    finally: win32file.FindCloseChangeNotification (change_handle)
-
-def watchdir_linux2():
-    i = inotify.adapters.Inotify()
-    i.add_watch((prem_config.get('upload', 'watchdir_location')))
-    try:
-        for event in i.event_gen():
-            if event is IN_CREATE:
-                time.sleep(2)
-                (header, type_names, watch_path, filename) = event
-                logger.info('Uploading torrent to the cloud: %s', filename)
-                filepath = upload_path + "/" + filename
-                upload_torrent(filepath)
-                os.remove(filepath)
-                logger.debug('Deleting torrent from the watchdir: %s', filename)
-    finally:
-        i.remove_watch((prem_config.get('upload', 'watchdir_location')))
 
 #
 def clean_name(original):
@@ -317,7 +262,7 @@ def parse_tasks(torrents):
             idle = False
         task = get_task(torrent['hash'].encode("utf-8"))
         if not task:
-            task = DownloadTask(socketio.emit, torrent['hash'].encode("utf-8"), torrent['size'], torrent['name'], 'tv') #TODO
+            task = DownloadTask(socketio.emit, torrent['hash'].encode("utf-8"), torrent['size'], torrent['name'], '')
             task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], speed=torrent['speed_down'])
             tasks.append(task)
         elif task.local_status != 'finished':
@@ -364,8 +309,8 @@ def get_task(hash):
     return None
 
 
-def add_task(hash, name, category):
-    tasks.append(DownloadTask(0,0,hash,name,'upload',category))
+def add_task(hash, category):
+    tasks.append(DownloadTask(0,0,hash,'','upload',category))
 
 
 def upload_torrent(filename):
@@ -397,6 +342,45 @@ def upload_magnet(magnet):
 
 def send_categories():
     emit('download_categories', {'data': prem_config.get('downloads', 'download_categories').split(',')})
+
+
+class MyHandler(PatternMatchingEventHandler):
+    patterns = ["*.torrent"]
+
+    def process(self, event):
+        """
+        event.event_type
+            'modified' | 'created' | 'moved' | 'deleted'
+        event.is_directory
+            True | False
+        event.src_path
+            path/to/observed/file
+        """
+
+        if event.event_type == 'created' and event.is_directory == False:
+            path = event.src_path
+            logger.debug('New torrent file detected at: %s', path)
+            logger.info('Uploading torrent to the cloud: %s', path)
+            if upload_torrent(event.src_path):
+                # Open torrent file to get hash
+                torrent_file = open(sys.argv[1], "rb")
+                metainfo = bencode.bdecode(torrent_file.read())
+                info = metainfo['info']
+                hash = hashlib.sha1(bencode.bencode(info)).hexdigest()
+                dirname = os.path.dirname(path)
+                if dirname in prem_config.get('downloads', 'download_categories').split(','):
+                    category = dirname
+                else:
+                    category = ''
+                add_task(hash, category)
+                logger.debug('Deleting torrent from the watchdir: %s', path)
+                os.remove(path)
+
+    def on_modified(self, event):
+        self.process(event)
+
+    def on_created(self, event):
+        self.process(event)
 
 
 # Flask
@@ -561,18 +545,12 @@ if prem_config.getboolean('downloads', 'download_enabled'):
 if prem_config.getboolean('downloads', 'copylink_toclipboard'):
     import pyperclip
 
-# Start the watchdir thread if enabled
+# Start the watchdog if watchdir is enabled
 if prem_config.getboolean('upload', 'watchdir_enabled'):
-    if sys.platform == 'win32':
-        import win32file, win32event, win32con
-        t = Thread(target=watchdir_win32)
-    #elif sys.platform == 'linux2':
-    #    import inotify.adapters
-    #    t = Thread(target=watchdir_linux2)
-    else:
-        t = Thread(target=watchdir)
-    t.daemon = True
-    t.start()
+    observer = Observer()
+    observer.schedule(MyHandler(), path=prem_config.get('upload', 'watchdir_location'))
+    observer.start()
+
 # start the server with the 'run()' method
 if __name__ == '__main__':
     load_tasks()
