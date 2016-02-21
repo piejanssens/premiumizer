@@ -30,8 +30,6 @@ import hashlib, bencode
 #pip install greenlet, apscheduler, watchdog
 # "https://www.premiumize.me/static/api/torrent.html"
 
-prem_config = ConfigParser.RawConfigParser()
-
 logger = logging.getLogger("Rotating Log")
 
 # add a rotating handler
@@ -42,21 +40,20 @@ syslog = logging.StreamHandler()
 formatter = logging.Formatter('%(asctime)s %(levelname)s : %(message)s')
 syslog.setFormatter(formatter)
 logger.addHandler(syslog)
+logger.setLevel(logging.INFO)
 
 logger.info('Logger Initialized')
 
+prem_config = ConfigParser.RawConfigParser()
 runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0] + '/'
 logger.info('Running at %s', runningdir)
 if not os.path.isfile(runningdir+'settings.cfg'):
     import shutil
     shutil.copy(runningdir+'settings.cfg.tpl', runningdir+'settings.cfg')
-
-prem_config.read(runningdir+'settings.cfg')
+prem_config.read(runningdir+'settings.cfg'))
 
 if prem_config.getboolean('global', 'debug_enabled'):
     logger.setLevel(logging.DEBUG)
-else:
-    logger.setLevel(logging.INFO)
 
 if prem_config.getboolean('downloads', 'download_enabled'):
     download_path = prem_config.get('downloads', 'download_location')
