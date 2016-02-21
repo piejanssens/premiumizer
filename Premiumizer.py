@@ -256,6 +256,8 @@ def getlinks_task(task):
 
 
 def process_dir_links(task, new_name, dir_content):
+    size = (int(prem_config.get('downloads', 'copylink_toclipboard_size')) * 1000000)
+    ext = prem_config.get('downloads', 'copylink_toclipboard_ext')
     if not dir_content:
         return None
     for x in dir_content:
@@ -263,7 +265,7 @@ def process_dir_links(task, new_name, dir_content):
         if type == 'dir':
             process_dir_links(task, clean_name(x), dir_content[x]['children'])
         elif type == 'file':
-            if dir_content[x]['url'].lower().endswith(('.mkv', 'mp4')) and dir_content[x]['size'] > 100000000:
+            if dir_content[x]['url'].lower().endswith(tuple(ext)) and dir_content[x]['size'] >= size:
                 logger.info('Link copied to clipboard for: %s', dir_content[x]['name'])
                 pyperclip.copy(dir_content[x]['url'])
 
@@ -424,7 +426,7 @@ def upload():
 @login_required
 def settings():
     if request.method == 'POST':
-        if 'Reboot' in request.form.values():
+        if 'Restart' in request.form.values():
             from subprocess import Popen
             Popen(['python', 'restart.py'], shell=False,stdin=None,stdout=None,stderr=None,close_fds=True)
             sys.exit()
@@ -463,6 +465,8 @@ def settings():
             prem_config.set('premiumize', 'pin',  request.form.get('pin'))
             prem_config.set('downloads', 'download_categories',  request.form.get('download_categories'))
             prem_config.set('downloads', 'download_location',  request.form.get('download_location'))
+            prem_config.set('downloads', 'copylink_toclipboard_ext',  request.form.get('copylink_toclipboard_ext'))
+            prem_config.set('downloads', 'copylink_toclipboard_size',  request.form.get('copylink_toclipboard_size'))
             prem_config.set('upload', 'watchdir_location',  request.form.get('watchdir_location'))
             prem_config.set('nzbtomedia', 'nzbtomedia_location',  request.form.get('nzbtomedia_location'))
             with open('settings.cfg', 'w') as configfile:    # save
