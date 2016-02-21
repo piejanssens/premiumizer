@@ -4,6 +4,9 @@ premiumizer*log
 premiumizer.db
 tmp/
 
+#PyCharm
+.idea/*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
