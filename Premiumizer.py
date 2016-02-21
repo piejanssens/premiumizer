@@ -426,7 +426,7 @@ def upload():
 @login_required
 def settings():
     if request.method == 'POST':
-        if 'Reboot' in request.form.values():
+        if 'Restart' in request.form.values():
             from subprocess import Popen
             Popen(['python', 'restart.py'], shell=False,stdin=None,stdout=None,stderr=None,close_fds=True)
             sys.exit()
