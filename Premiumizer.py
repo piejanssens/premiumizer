@@ -44,6 +44,7 @@ logger.setLevel(logging.INFO)
 
 logger.info('Logger Initialized')
 
+# Check settings.cfg
 prem_config = ConfigParser.RawConfigParser()
 runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0] + '/'
 logger.info('Running at %s', runningdir)
@@ -67,6 +68,7 @@ if prem_config.getboolean('upload', 'watchdir_enabled'):
         logger.info('Creating Upload Path at %s', upload_path)
         os.makedirs(upload_path)
 
+#
 logger.info('Initializing Flask')
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24)
