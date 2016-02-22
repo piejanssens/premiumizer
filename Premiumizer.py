@@ -1,5 +1,4 @@
 #from gevent import monkey; monkey.patch_thread(threading=True, _threading_local=True, Event=False)
-
 import os, sys, json
 import time
 import logging
@@ -26,39 +25,53 @@ import logging
 from logging.handlers import RotatingFileHandler
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
-import hashlib, bencode
+import hashlib
+from bencode import bencode
 
 #pip install greenlet, apscheduler, watchdog
 # "https://www.premiumize.me/static/api/torrent.html"
 
+# Initialize settings
 prem_config = ConfigParser.RawConfigParser()
-
-logger = logging.getLogger("Rotating Log")
-
-# add a rotating handler
-logger.addHandler(RotatingFileHandler('premiumizer.log', maxBytes=(20*1024), backupCount=5))
-
-# add a formatter
-syslog = logging.StreamHandler()
-formatter = logging.Formatter('%(asctime)s %(levelname)s : %(message)s')
-syslog.setFormatter(formatter)
-logger.addHandler(syslog)
-
-logger.info('Logger Initialized')
-
 runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0] + '/'
-logger.info('Running at %s', runningdir)
 if not os.path.isfile(runningdir+'settings.cfg'):
     import shutil
     shutil.copy(runningdir+'settings.cfg.tpl', runningdir+'settings.cfg')
-
 prem_config.read(runningdir+'settings.cfg')
 
+
+# Initialize logging
+logger = logging.getLogger("Rotating Log")
 if prem_config.getboolean('global', 'debug_enabled'):
     logger.setLevel(logging.DEBUG)
 else:
     logger.setLevel(logging.INFO)
+formatter = logging.Formatter("%(asctime)s %(levelname)s : %(message)s")
 
+if prem_config.getboolean('global', 'logfile_enabled'):
+    handler = logging.handlers.RotatingFileHandler('premiumizer.log', maxBytes=(20*1024), backupCount=5)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+syslog = logging.StreamHandler()
+syslog.setFormatter(formatter)
+logger.addHandler(syslog)
+
+logger.info('Logger Initialized')
+logger.info('Running at %s', runningdir)
+
+def handle_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+sys.excepthook = handle_exception
+
+
+# Check paths
+logger.debug('Checking paths')
 if prem_config.getboolean('downloads', 'download_enabled'):
     download_path = prem_config.get('downloads', 'download_location')
     if not os.path.exists(download_path):
@@ -70,13 +83,15 @@ if prem_config.getboolean('upload', 'watchdir_enabled'):
     if not os.path.exists(upload_path):
         logger.info('Creating Upload Path at %s', upload_path)
         os.makedirs(upload_path)
+logger.debug('Checking paths done')
 
-logger.info('Initializing Flask')
+#
+logger.debug('Initializing Flask')
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24)
-app.config.update(
-    DEBUG = prem_config.getboolean('global', 'debug_enabled'),
-)
+#app.config.update(
+#    DEBUG = prem_config.getboolean('global', 'debug_enabled'), # disabled for now to not use werkzeug
+#)
 
 socketio = SocketIO(app)
 
@@ -84,14 +99,18 @@ app.config['LOGIN_DISABLED'] = not prem_config.getboolean('security', 'login_ena
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+logger.debug('Flask initialized')
 
+# Initializer Database
+logger.debug('Initialize Database')
 db = shelve.open('premiumizer.db')
 tasks = []
 downloading = False
 downloader = None
 total_size_downloaded = None
-
+logger.debug('Database initialized')
 #
+
 class User(UserMixin):
     def __init__(self, userid, password):
         self.id = userid
@@ -141,6 +160,7 @@ def notify_nzbtomedia(task):
     full_path = prem_config.get('nzbtomedia', 'nzbtomedia_location')
     if os.path.isfile(full_path):
         os.system(full_path, task.download_location + ' ' + task.name + ' ' + task.category + ' ' + task.hash)
+        logger.info('Send to nzbtomedia: %s', task.name)
     else:
         logger.error('Error unable to locate nzbToMedia.py')
 
@@ -188,8 +208,7 @@ def process_dir(task, path, new_name, dir_content):
             process_dir(task, new_path, clean_name(x), dir_content[x]['children'])
         elif type == 'file':
             download_file(task, new_path + '/' + clean_name(x), dir_content[x]['url'].replace('https', 'http', 1))
-
-
+    
 # Copy links to clipboard        
 def get_links(task):
     global downloading
@@ -202,6 +221,8 @@ def get_links(task):
 
 
 def process_dir_links(task, new_name, dir_content):
+    size = (int(prem_config.get('downloads', 'copylink_toclipboard_size')) * 1000000)
+    ext = prem_config.get('downloads', 'copylink_toclipboard_ext')
     if not dir_content:
         return None
     for x in dir_content:
@@ -209,7 +230,7 @@ def process_dir_links(task, new_name, dir_content):
         if type == 'dir':
             process_dir_links(task, clean_name(x), dir_content[x]['children'])
         elif type == 'file':
-            if dir_content[x]['url'].lower().endswith(('.mkv', 'mp4')) and dir_content[x]['size'] > 100000000:
+            if dir_content[x]['url'].lower().endswith(tuple(ext)) and dir_content[x]['size'] >= size:
                 logger.info('Link copied to clipboard for: %s', dir_content[x]['name'])
                 pyperclip.copy(dir_content[x]['url'])
 
@@ -363,8 +384,8 @@ class MyHandler(PatternMatchingEventHandler):
             logger.info('Uploading torrent to the cloud: %s', path)
             if upload_torrent(event.src_path):
                 # Open torrent file to get hash
-                torrent_file = open(sys.argv[1], "rb")
-                metainfo = bencode.bdecode(torrent_file.read())
+                torrent_file = event.src_path
+                metainfo = bencode.bdecode(open(torrent_file, 'rb').read())
                 info = metainfo['info']
                 hash = hashlib.sha1(bencode.bencode(info)).hexdigest()
                 dirname = os.path.dirname(path)
@@ -409,42 +430,55 @@ def upload():
 @login_required
 def settings():
     if request.method == 'POST':
-        global prem_config
-        if request.form.get('debug_enabled'):
-            prem_config.set('global', 'debug_enabled', 1)
+        if 'Restart' in request.form.values():
+            from subprocess import Popen
+            Popen(['python', 'restart.py'], shell=False,stdin=None,stdout=None,stderr=None,close_fds=True)
+            sys.exit()
+        elif 'Shutdown' in request.form.values():
+            sys.exit()
         else:
-            prem_config.set('global', 'debug_enabled', 0)
-        if request.form.get('login_enabled'):
-            prem_config.set('security', 'login_enabled', 1)
-        else:
-            prem_config.set('security', 'login_enabled', 0)
-        if request.form.get('download_enabled'):
-            prem_config.set('downloads', 'download_enabled', 1)
-        else:
-            prem_config.set('downloads', 'download_enabled', 0)
-        if request.form.get('copylink_toclipboard '):
-            prem_config.set('downloads', 'copylink_toclipboard ', 1)
-        else:
-            prem_config.set('downloads', 'copylink_toclipboard ', 0)
-        if request.form.get('watchdir_enabled'):
-            prem_config.set('upload', 'watchdir_enabled', 1)
-        else:
-            prem_config.set('upload', 'watchdir_enabled', 0)
-        if request.form.get('nzbtomedia_enabled'):
-            prem_config.set('nzbtomedia', 'nzbtomedia_enabled', 1)
-        else:
-            prem_config.set('nzbtomedia', 'nzbtomedia_enabled', 0)
-        prem_config.set('global', 'server_port', request.form.get('server_port'))
-        prem_config.set('security', 'username',  request.form.get('username'))
-        prem_config.set('security', 'password',  request.form.get('password'))
-        prem_config.set('premiumize', 'customer_id',  request.form.get('customer_id'))
-        prem_config.set('premiumize', 'pin',  request.form.get('pin'))
-        prem_config.set('downloads', 'download_categories',  request.form.get('download_categories'))
-        prem_config.set('downloads', 'download_location',  request.form.get('download_location'))
-        prem_config.set('upload', 'watchdir_location',  request.form.get('watchdir_location'))
-        prem_config.set('nzbtomedia', 'nzbtomedia_location',  request.form.get('nzbtomedia_location'))
-        with open('settings.cfg', 'w') as configfile:    # save
-            prem_config.write(configfile)
+            global prem_config
+            if request.form.get('debug_enabled'):
+                prem_config.set('global', 'debug_enabled', 1)
+            else:
+                prem_config.set('global', 'debug_enabled', 0)
+            if request.form.get('logfile_enabled'):
+                prem_config.set('global', 'logfile_enabled', 1)
+            else:
+                prem_config.set('global', 'logfile_enabled', 0)
+            if request.form.get('login_enabled'):
+                prem_config.set('security', 'login_enabled', 1)
+            else:
+                prem_config.set('security', 'login_enabled', 0)
+            if request.form.get('download_enabled'):
+                prem_config.set('downloads', 'download_enabled', 1)
+            else:
+                prem_config.set('downloads', 'download_enabled', 0)
+            if request.form.get('copylink_toclipboard'):
+                prem_config.set('downloads', 'copylink_toclipboard ', 1)
+            else:
+                prem_config.set('downloads', 'copylink_toclipboard ', 0)
+            if request.form.get('watchdir_enabled'):
+                prem_config.set('upload', 'watchdir_enabled', 1)
+            else:
+                prem_config.set('upload', 'watchdir_enabled', 0)
+            if request.form.get('nzbtomedia_enabled'):
+                prem_config.set('nzbtomedia', 'nzbtomedia_enabled', 1)
+            else:
+                prem_config.set('nzbtomedia', 'nzbtomedia_enabled', 0)
+            prem_config.set('global', 'server_port', request.form.get('server_port'))
+            prem_config.set('security', 'username',  request.form.get('username'))
+            prem_config.set('security', 'password',  request.form.get('password'))
+            prem_config.set('premiumize', 'customer_id',  request.form.get('customer_id'))
+            prem_config.set('premiumize', 'pin',  request.form.get('pin'))
+            prem_config.set('downloads', 'download_categories',  request.form.get('download_categories'))
+            prem_config.set('downloads', 'download_location',  request.form.get('download_location'))
+            prem_config.set('downloads', 'copylink_toclipboard_ext',  request.form.get('copylink_toclipboard_ext'))
+            prem_config.set('downloads', 'copylink_toclipboard_size',  request.form.get('copylink_toclipboard_size'))
+            prem_config.set('upload', 'watchdir_location',  request.form.get('watchdir_location'))
+            prem_config.set('nzbtomedia', 'nzbtomedia_location',  request.form.get('nzbtomedia_location'))
+            with open('settings.cfg', 'w') as configfile:    # save
+                prem_config.write(configfile)
     return render_template('settings.html', settings=prem_config)
 
 @app.route('/login', methods=["GET", "POST"])
@@ -502,9 +536,8 @@ def delete_task(message):
 
 
 @socketio.on('connect')
-def test_message(message):
+def test_message():
     emit('hello_client', {'data': 'Server says hello!'})
-
 
 @socketio.on('disconnect')
 def test_disconnect():
@@ -547,10 +580,12 @@ if prem_config.getboolean('downloads', 'copylink_toclipboard'):
 
 # Start the watchdog if watchdir is enabled
 if prem_config.getboolean('upload', 'watchdir_enabled'):
+    logger.debug('Initializing watchdog')
     observer = Observer()
-    observer.schedule(MyHandler(), path=prem_config.get('upload', 'watchdir_location'))
+    observer.schedule(MyHandler(), path=prem_config.get('upload', 'watchdir_location'), recursive=True)
     observer.start()
-
+    logger.debug('Watchdog initialized')
+    
 # start the server with the 'run()' method
 if __name__ == '__main__':
     load_tasks()
