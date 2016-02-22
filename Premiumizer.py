@@ -25,7 +25,8 @@ import logging
 from logging.handlers import RotatingFileHandler
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
-import hashlib, bencode
+import hashlib
+from bencode import bencode
 
 #pip install greenlet, apscheduler, watchdog
 # "https://www.premiumize.me/static/api/torrent.html"
@@ -362,8 +363,8 @@ class MyHandler(PatternMatchingEventHandler):
             logger.info('Uploading torrent to the cloud: %s', path)
             if upload_torrent(event.src_path):
                 # Open torrent file to get hash
-                torrent_file = open(sys.argv[1], "rb")
-                metainfo = bencode.bdecode(torrent_file.read())
+                torrent_file = event.src_path
+                metainfo = bencode.bdecode(open(torrent_file, 'rb').read())
                 info = metainfo['info']
                 hash = hashlib.sha1(bencode.bencode(info)).hexdigest()
                 dirname = os.path.dirname(path)
