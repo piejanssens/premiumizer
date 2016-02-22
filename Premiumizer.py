@@ -77,7 +77,7 @@ if prem_config.getboolean('downloads', 'download_enabled'):
     if not os.path.exists(download_path):
         logger.info('Creating Download Path at %s', download_path)
         os.makedirs(download_path)
-        
+
 if prem_config.getboolean('upload', 'watchdir_enabled'):
     upload_path = prem_config.get('upload', 'watchdir_location')
     if not os.path.exists(upload_path):
@@ -103,7 +103,7 @@ logger.debug('Flask initialized')
 
 # Initializer Database
 logger.debug('Initialize Database')
-db = shelve.open('premiumizer.db')
+db = shelve.open(runningdir + 'premiumizer.db')
 tasks = []
 downloading = False
 downloader = None
@@ -177,22 +177,22 @@ def get_download_stats(task):
 
 
 def download_file(task, full_path, url):
-        logger.info('Downloading file from: %s', full_path)
-        global downloader
-        downloader = SmartDL(url, full_path, progress_bar=False, logger=logger)
-        stat_job = scheduler.scheduler.add_job(get_download_stats, args=(task,), trigger='interval', seconds=1, max_instances=1, next_run_time=datetime.datetime.now())
-        downloader.start(blocking=True)
-        while not downloader.isFinished():
-            print('wrong! waiting for downloader before finished')
-        stat_job.remove()
-        if downloader.isSuccessful():
-            global total_size_downloaded
-            total_size_downloaded += downloader.get_dl_size()
-            logger.info('Finished downloading file from: %s', full_path)
-        else:
-            logger.error('Error while downloading file from: %s', full_path)
-            for e in downloader.get_errors():
-                logger.error(str(e))
+    logger.info('Downloading file from: %s', full_path)
+    global downloader
+    downloader = SmartDL(url, full_path, progress_bar=False, logger=logger)
+    stat_job = scheduler.scheduler.add_job(get_download_stats, args=(task,), trigger='interval', seconds=1, max_instances=1, next_run_time=datetime.datetime.now())
+    downloader.start(blocking=True)
+    while not downloader.isFinished():
+        print('wrong! waiting for downloader before finished')
+    stat_job.remove()
+    if downloader.isSuccessful():
+        global total_size_downloaded
+        total_size_downloaded += downloader.get_dl_size()
+        logger.info('Finished downloading file from: %s', full_path)
+    else:
+        logger.error('Error while downloading file from: %s', full_path)
+        for e in downloader.get_errors():
+            logger.error(str(e))
 
 #TODO continue log statements
 
@@ -330,8 +330,8 @@ def get_task(hash):
     return None
 
 
-def add_task(hash, category):
-    tasks.append(DownloadTask(0,0,hash,'','upload',category))
+def add_task(hash, name, category):
+    tasks.append(DownloadTask(None, hash, 0, name, category))
 
 
 def upload_torrent(filename):
@@ -343,6 +343,7 @@ def upload_torrent(filename):
         torrents = response_content['torrents']
         parse_tasks(torrents)
         if not prem_config.getboolean('upload', 'watchdir_enabled'):
+            logger.debug('Upload successful - Deleting torrent from the watchdir: %s', path)
             os.remove(filename)
         return True
     else:
@@ -387,15 +388,14 @@ class MyHandler(PatternMatchingEventHandler):
                 torrent_file = event.src_path
                 metainfo = bencode.bdecode(open(torrent_file, 'rb').read())
                 info = metainfo['info']
+                name = info['name']
                 hash = hashlib.sha1(bencode.bencode(info)).hexdigest()
-                dirname = os.path.dirname(path)
+                dirname = os.path.basename(os.path.normpath(os.path.dirname(path)))
                 if dirname in prem_config.get('downloads', 'download_categories').split(','):
                     category = dirname
                 else:
                     category = ''
-                add_task(hash, category)
-                logger.debug('Deleting torrent from the watchdir: %s', path)
-                os.remove(path)
+                add_task(hash, name, category)
 
     def on_modified(self, event):
         self.process(event)
