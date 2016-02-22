@@ -10,6 +10,15 @@
 {% else %}
     <input type="checkbox" class="form-control bootstrap_switch" name="debug_enabled" data-size="small" data-label-text="Debug Mode">
 {% endif %}
+</div>
+<div class="form-group">
+{% if settings.get('global', 'logfile_enabled') == 1 %}
+    <input type="checkbox" class="form-control bootstrap_switch" name="logfile_enabled" data-size="small" data-label-text="Enable Logfile to premiumizer.log" checked>
+{% else %}
+    <input type="checkbox" class="form-control bootstrap_switch" name="logfile_enabled" data-size="small" data-label-text="Enable Logfile to premiumizer.log">
+{% endif %}
+</div>
+<div class="form-group">
 <p>&nbsp;</p>
 <input type="number" class="form-control" placeholder="Server Port" aria-describedby="basic-addon1" name="server_port" value="{{ settings.get('global', 'server_port') }}">
 </div>

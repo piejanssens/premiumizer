@@ -31,31 +31,14 @@ from bencode import bencode
 #pip install greenlet, apscheduler, watchdog
 # "https://www.premiumize.me/static/api/torrent.html"
 
-logger = logging.getLogger("Rotating Log")
-
-# add a rotating handler
-logger.addHandler(RotatingFileHandler('premiumizer.log', maxBytes=(20*1024), backupCount=5))
-
-# add a formatter
-syslog = logging.StreamHandler()
-formatter = logging.Formatter('%(asctime)s %(levelname)s : %(message)s')
-syslog.setFormatter(formatter)
-logger.addHandler(syslog)
-logger.setLevel(logging.INFO)
-
-logger.info('Logger Initialized')
-
 # Check settings.cfg
 prem_config = ConfigParser.RawConfigParser()
 runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0] + '/'
-logger.info('Running at %s', runningdir)
 if not os.path.isfile(runningdir+'settings.cfg'):
     import shutil
     shutil.copy(runningdir+'settings.cfg.tpl', runningdir+'settings.cfg')
 prem_config.read(runningdir+'settings.cfg')
 
-if prem_config.getboolean('global', 'debug_enabled'):
-    logger.setLevel(logging.DEBUG)
 
 if prem_config.getboolean('downloads', 'download_enabled'):
     download_path = prem_config.get('downloads', 'download_location')
@@ -68,6 +51,26 @@ if prem_config.getboolean('upload', 'watchdir_enabled'):
     if not os.path.exists(upload_path):
         logger.info('Creating Upload Path at %s', upload_path)
         os.makedirs(upload_path)
+
+# logging
+logger = logging.getLogger("Rotating Log")
+if prem_config.getboolean('global', 'debug_enabled'):
+    logger.setLevel(logging.DEBUG)
+else:
+    logger.setLevel(logging.INFO)
+formatter = logging.Formatter("%(asctime)s %(levelname)s : %(message)s")
+
+if prem_config.getboolean('global', 'logfile_enabled'):
+    handler = logging.handlers.RotatingFileHandler('premiumizer.log', maxBytes=(20*1024), backupCount=5)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+syslog = logging.StreamHandler()
+syslog.setFormatter(formatter)
+logger.addHandler(syslog)
+
+logger.info('Logger Initialized')
+logger.info('Running at %s', runningdir)
 
 #
 logger.info('Initializing Flask')
@@ -421,6 +424,10 @@ def settings():
                 prem_config.set('global', 'debug_enabled', 1)
             else:
                 prem_config.set('global', 'debug_enabled', 0)
+            if request.form.get('logfile_enabled'):
+                prem_config.set('global', 'logfile_enabled', 1)
+            else:
+                prem_config.set('global', 'logfile_enabled', 0)
             if request.form.get('login_enabled'):
                 prem_config.set('security', 'login_enabled', 1)
             else:

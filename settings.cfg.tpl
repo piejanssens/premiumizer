@@ -2,7 +2,8 @@
 server_port = 5000
 active_interval = 5
 idle_interval = 120
-debug_enabled = 1
+debug_enabled = 0
+logfile_enabled = 1
 
 [security]
 login_enabled = 0
