@@ -177,7 +177,7 @@ def get_download_stats(task):
 
 
 def download_file(task, full_path, url):
-    logger.info('Downloading file from: %s', full_path)
+    logger.info('Downloading file: %s', full_path)
     global downloader
     downloader = SmartDL(url, full_path, progress_bar=False, logger=logger)
     stat_job = scheduler.scheduler.add_job(get_download_stats, args=(task,), trigger='interval', seconds=1, max_instances=1, next_run_time=datetime.datetime.now())
@@ -188,7 +188,7 @@ def download_file(task, full_path, url):
     if downloader.isSuccessful():
         global total_size_downloaded
         total_size_downloaded += downloader.get_dl_size()
-        logger.info('Finished downloading file from: %s', full_path)
+        logger.info('Finished downloading file: %s', full_path)
     else:
         logger.error('Error while downloading file from: %s', full_path)
         for e in downloader.get_errors():
