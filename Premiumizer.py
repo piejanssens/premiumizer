@@ -342,9 +342,7 @@ def upload_torrent(filename):
     if response_content['status'] == "success":
         torrents = response_content['torrents']
         parse_tasks(torrents)
-        if not prem_config.getboolean('upload', 'watchdir_enabled'):
-            logger.debug('Upload successful - Deleting torrent: %s', filename)
-            os.remove(filename)
+        logger.debug('Upload successful: %s', filename)
         return True
     else:
         return False
@@ -396,7 +394,7 @@ class MyHandler(PatternMatchingEventHandler):
                 else:
                     category = ''
                 add_task(hash, name, category)
-                logger.debug('Upload successful - Deleting torrent: %s', path)
+                logger.debug('Deleting torrent from watchdir: %s', path)
                 os.remove(path)
 
     def on_modified(self, event):
