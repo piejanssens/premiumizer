@@ -42,13 +42,13 @@ prem_config.read(runningdir+'settings.cfg')
 
 # Initialize logging
 if prem_config.getboolean('global', 'debug_enabled'):
-    logger = logging.getLogger()
+    logger = logging.getLogger('')
     logger.setLevel(logging.DEBUG)
 else:
     logger = logging.getLogger("Rotating log")
     logger.setLevel(logging.INFO)
 
-formatter = logging.Formatter("%(asctime)s %(levelname)s : %(message)s")
+formatter = logging.Formatter('%(asctime)-20s %(name)-41s: %(levelname)-8s : %(message)s',datefmt='%m-%d %H:%M:%S')
 
 if prem_config.getboolean('global', 'logfile_enabled'):
     handler = logging.handlers.RotatingFileHandler('premiumizer.log', maxBytes=(20*1024), backupCount=5)
@@ -59,10 +59,6 @@ syslog = logging.StreamHandler()
 syslog.setFormatter(formatter)
 logger.addHandler(syslog)
 
-
-logger.info('Logger Initialized')
-logger.info('Running at %s', runningdir)
-
 def handle_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
@@ -71,6 +67,9 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
 
 sys.excepthook = handle_exception
+
+logger.info('Logger Initialized')
+logger.info('Running at %s', runningdir)
 
 
 # Check paths
