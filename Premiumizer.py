@@ -27,9 +27,12 @@ from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 import hashlib
 from bencode import bencode
+from pySmartDL import SmartDL
+import pyperclip
 
 #pip install greenlet, apscheduler, watchdog
 # "https://www.premiumize.me/static/api/torrent.html"
+
 
 
 print '------------------------------------------------------------------------------------------------------------'
@@ -232,6 +235,7 @@ def get_download_stats(task):
 
 
 def download_file(task, full_path, url):
+    logger.debug('def download_file started')
     logger.info('Downloading file: %s', full_path)
     global downloader
     downloader = SmartDL(url, full_path, progress_bar=False, logger=logger)
@@ -250,47 +254,39 @@ def download_file(task, full_path, url):
             logger.error(str(e))
 
 #TODO continue log statements
-
+        
 def process_dir(task, path, new_name, dir_content):
+    logger.debug('def processing dir started')
+    ext = prem_config.get('downloads', 'download_ext').split(',')
+    size = (int(prem_config.get('downloads', 'download_size')) * 1000000)
     if not dir_content:
         return None
     new_path = os.path.join(path, new_name)
-    if not os.path.exists(new_path):
-        os.makedirs(new_path)
     for x in dir_content:
         type = dir_content[x]['type']
         if type == 'dir':
             process_dir(task, new_path, clean_name(x), dir_content[x]['children'])
         elif type == 'file':
-            download_file(task, new_path + '/' + clean_name(x), dir_content[x]['url'].replace('https', 'http', 1))
-    
-# Copy links to clipboard        
-def get_links(task):
-    global downloading
-    payload = {'customer_id': prem_config.get('premiumize', 'customer_id'), 'pin': prem_config.get('premiumize', 'pin'), 'hash': task.hash}
-    r = requests.post("https://www.premiumize.me/torrent/browse", payload)
-    downloading = True
-    process_dir_links(task, clean_name(task.name), json.loads(r.content)['data']['content'])
-    task.update(local_status='finished', progress=100)
-    downloading = False
+            if ext == '*' and dir_content[x]['size'] >= size:
+                if prem_config.getboolean('downloads', 'download_enabled'):
+                    if not os.path.exists(new_path):
+                        os.makedirs(new_path)
+                    download_file(task, new_path + '/' + clean_name(x), dir_content[x]['url'].replace('https', 'http', 1))
+                elif prem_config.getboolean('downloads', 'copylink_toclipboard'):
+                    logger.info('Link copied to clipboard for: %s', dir_content[x]['name'])
+                    pyperclip.copy(dir_content[x]['url'])
+            elif dir_content[x]['url'].lower().endswith(tuple(ext)) and dir_content[x]['size'] >= size:
+                if prem_config.getboolean('downloads', 'download_enabled'):
+                    if not os.path.exists(new_path):
+                        os.makedirs(new_path)
+                    download_file(task, new_path + '/' + clean_name(x), dir_content[x]['url'].replace('https', 'http', 1))
+                elif prem_config.getboolean('downloads', 'copylink_toclipboard'):
+                    logger.info('Link copied to clipboard for: %s', dir_content[x]['name'])
+                    pyperclip.copy(dir_content[x]['url'])
 
-
-def process_dir_links(task, new_name, dir_content):
-    size = (int(prem_config.get('downloads', 'copylink_toclipboard_size')) * 1000000)
-    ext = prem_config.get('downloads', 'copylink_toclipboard_ext')
-    if not dir_content:
-        return None
-    for x in dir_content:
-        type = dir_content[x]['type']
-        if type == 'dir':
-            process_dir_links(task, clean_name(x), dir_content[x]['children'])
-        elif type == 'file':
-            if dir_content[x]['url'].lower().endswith(tuple(ext)) and dir_content[x]['size'] >= size:
-                logger.info('Link copied to clipboard for: %s', dir_content[x]['name'])
-                pyperclip.copy(dir_content[x]['url'])
-
-#                
+# 
 def download_task(task):
+    logger.debug('def download task started')
     global downloading
     base_path = prem_config.get('downloads', 'download_location')
     if task.category:
@@ -328,6 +324,7 @@ def update():
 
 
 def parse_tasks(torrents):
+    logger.debug('def parse_task started')
     hashes_online = []
     hashes_local = []
     idle = True
@@ -345,15 +342,12 @@ def parse_tasks(torrents):
             if task.cloud_status == 'uploading':
                 task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], name=torrent['name'], size=torrent['size'])
             elif task.cloud_status == 'finished' and task.local_status != 'finished':
-                if prem_config.getboolean('downloads', 'download_enabled') and task.category \
-                        and task.category in prem_config.get('downloads', 'download_categories').split(','):
+                if (prem_config.getboolean('downloads', 'download_enabled') and task.category in prem_config.get('downloads', 'download_categories').split(',')) or prem_config.getboolean('downloads', 'copylink_toclipboard'):
                     if not downloading:
                         task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], local_status='downloading')
                         scheduler.scheduler.add_job(download_task, args=(task,), replace_existing=True, max_instances=1)
                     elif task.local_status != 'downloading':
-                        task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], local_status='queued') 
-                elif prem_config.getboolean('downloads', 'copylink_toclipboard'):
-                    get_links(task)
+                        task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], local_status='queued')
                 else:
                     task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], local_status='finished')
             else:
@@ -457,13 +451,13 @@ class MyHandler(PatternMatchingEventHandler):
 
     def on_created(self, event):
         self.process(event)
-        
+
 def load_tasks():
     for hash in db.keys():
         task = db[hash.encode("utf-8")]
         task.callback = socketio.emit
         tasks.append(task)
-        
+
 def watchdir():
     try:
         logger.debug('Initializing watchdog')
@@ -548,8 +542,8 @@ def settings():
             prem_config.set('premiumize', 'pin',  request.form.get('pin'))
             prem_config.set('downloads', 'download_categories',  request.form.get('download_categories'))
             prem_config.set('downloads', 'download_location',  request.form.get('download_location'))
-            prem_config.set('downloads', 'copylink_toclipboard_ext',  request.form.get('copylink_toclipboard_ext'))
-            prem_config.set('downloads', 'copylink_toclipboard_size',  request.form.get('copylink_toclipboard_size'))
+            prem_config.set('downloads', 'download_ext',  request.form.get('download_ext'))
+            prem_config.set('downloads', 'download_size',  request.form.get('download_size'))
             prem_config.set('upload', 'watchdir_location',  request.form.get('watchdir_location'))
             prem_config.set('nzbtomedia', 'nzbtomedia_location',  request.form.get('nzbtomedia_location'))
             with open('settings.cfg', 'w') as configfile:    # save
@@ -642,7 +636,7 @@ def change_category(message):
 # Start the watchdog if watchdir is enabled
 if prem_config.getboolean('upload', 'watchdir_enabled'):
     watchdir()
-
+    
 # start the server with the 'run()' method
 if __name__ == '__main__':
     try:
