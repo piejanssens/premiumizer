@@ -54,7 +54,23 @@ syslog = logging.StreamHandler()
 syslog.setFormatter(formatter)
 logger.addHandler(syslog)
 
+# Logging filters for debugging
+log_apscheduler = 1
+log_flask = 1
+class Filter(logging.Filter):
+    def __init__(self, *Filter):
+        self.Filter = [logging.Filter(name) for name in Filter]
 
+    def filter(self, record):
+        return not any(f.filter(record) for f in self.Filter)
+if not log_apscheduler:
+    syslog.addFilter(Filter('apscheduler'))
+
+if not log_flask:
+    syslog.addFilter(Filter('engineio', 'socketio', 'geventwebsocket.handler', 'requests.packages.urllib3.connectionpool'))
+
+
+# Catch uncaught exceptions in log
 def handle_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
@@ -65,6 +81,8 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 sys.excepthook = handle_exception
 
 logger.info('Logger Initialized')
+
+# Enable logfile
 if prem_config.getboolean('global', 'logfile_enabled'):
     logger.info('Logfile Initialized')
     handler = logging.handlers.RotatingFileHandler('premiumizer.log', maxBytes=(20*1024), backupCount=5)
