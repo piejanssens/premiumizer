@@ -106,10 +106,10 @@ def checkPaths():
             logger.info('Creating Upload Path at %s', upload_path)
             os.makedirs(upload_path)
     
-    if prem_config.getboolean('nzbtomedia', 'nzbtomedia_enabled')
+    if prem_config.getboolean('nzbtomedia', 'nzbtomedia_enabled'):
         nzbtomedia_file = prem_config.get('nzbtomedia', 'nzbtomedia_location')
         if not os.path.isfile(nzbtomedia_file):
-        logger.error('Error unable to locate nzbToMedia.py')
+            logger.error('Error unable to locate nzbToMedia.py')
     logger.debug('Checking paths done')
 
     
