@@ -423,7 +423,19 @@ class MyHandler(PatternMatchingEventHandler):
 
     def on_created(self, event):
         self.process(event)
-
+        
+def load_tasks():
+    for hash in db.keys():
+        task = db[hash.encode("utf-8")]
+        task.callback = socketio.emit
+        tasks.append(task)
+        
+def watchdir():
+    logger.debug('Initializing watchdog')
+    observer = Observer()
+    observer.schedule(MyHandler(), path=prem_config.get('upload', 'watchdir_location'), recursive=True)
+    observer.start()
+    logger.info('Watchdog initialized')
 
 # Flask
 @app.route('/')
@@ -481,6 +493,7 @@ def settings():
                 prem_config.set('downloads', 'copylink_toclipboard ', 0)
             if request.form.get('watchdir_enabled'):
                 prem_config.set('upload', 'watchdir_enabled', 1)
+                watchdir()
             else:
                 prem_config.set('upload', 'watchdir_enabled', 0)
             if request.form.get('nzbtomedia_enabled'):
@@ -585,28 +598,10 @@ def change_category(message):
     task = get_task(data['hash'])
     task.update(category=data['category'])
 
-def load_tasks():
-    for hash in db.keys():
-        task = db[hash.encode("utf-8")]
-        task.callback = socketio.emit
-        tasks.append(task)
-
-# Load downloads module if enabled
-if prem_config.getboolean('downloads', 'download_enabled'):
-    from pySmartDL import SmartDL
-    
-# Load copylinks to clipboard module if enabled
-if prem_config.getboolean('downloads', 'copylink_toclipboard'):
-    import pyperclip
-
 # Start the watchdog if watchdir is enabled
 if prem_config.getboolean('upload', 'watchdir_enabled'):
-    logger.debug('Initializing watchdog')
-    observer = Observer()
-    observer.schedule(MyHandler(), path=prem_config.get('upload', 'watchdir_location'), recursive=True)
-    observer.start()
-    logger.info('Watchdog initialized')
-    
+    watchdir()
+
 # start the server with the 'run()' method
 if __name__ == '__main__':
     load_tasks()
