@@ -5,7 +5,7 @@ premiumizer.db
 tmp/
 
 #PyCharm
-.idea/*
+.idea/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -38,9 +38,10 @@ var/
 *.manifest
 *.spec
 
-# Installer logs
+# PIP
 pip-log.txt
 pip-delete-this-directory.txt
+virtualenv/
 
 # Unit test / coverage reports
 htmlcov/

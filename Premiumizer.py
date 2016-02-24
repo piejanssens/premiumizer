@@ -1,7 +1,6 @@
-#from gevent import monkey; monkey.patch_thread(threading=True, _threading_local=True, Event=False)
+#! /usr/bin/env python
+
 import os, sys, json
-import time
-import logging
 
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), 'lib')))
 
@@ -18,7 +17,6 @@ from DownloadTask import DownloadTask
 import unicodedata
 from string import ascii_letters, digits
 import six
-import os
 from chardet import detect
 import datetime
 import logging
@@ -30,7 +28,7 @@ from bencode import bencode
 from pySmartDL import SmartDL
 import pyperclip
 
-#pip install greenlet, apscheduler, watchdog
+
 # "https://www.premiumize.me/static/api/torrent.html"
 
 
