@@ -41,11 +41,13 @@ prem_config.read(runningdir+'settings.cfg')
 
 
 # Initialize logging
-logger = logging.getLogger("Rotating Log")
 if prem_config.getboolean('global', 'debug_enabled'):
+    logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 else:
+    logger = logging.getLogger("Rotating log")
     logger.setLevel(logging.INFO)
+
 formatter = logging.Formatter("%(asctime)s %(levelname)s : %(message)s")
 
 if prem_config.getboolean('global', 'logfile_enabled'):
@@ -56,6 +58,7 @@ if prem_config.getboolean('global', 'logfile_enabled'):
 syslog = logging.StreamHandler()
 syslog.setFormatter(formatter)
 logger.addHandler(syslog)
+
 
 logger.info('Logger Initialized')
 logger.info('Running at %s', runningdir)
@@ -89,9 +92,9 @@ logger.debug('Checking paths done')
 logger.debug('Initializing Flask')
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24)
-#app.config.update(
-#    DEBUG = prem_config.getboolean('global', 'debug_enabled'), # disabled for now to not use werkzeug
-#)
+app.config.update(
+    DEBUG = prem_config.getboolean('global', 'debug_enabled'),
+)
 
 socketio = SocketIO(app)
 
@@ -584,7 +587,7 @@ if prem_config.getboolean('upload', 'watchdir_enabled'):
     observer = Observer()
     observer.schedule(MyHandler(), path=prem_config.get('upload', 'watchdir_location'), recursive=True)
     observer.start()
-    logger.debug('Watchdog initialized')
+    logger.info('Watchdog initialized')
     
 # start the server with the 'run()' method
 if __name__ == '__main__':
@@ -593,4 +596,4 @@ if __name__ == '__main__':
     scheduler.init_app(app)
     scheduler.scheduler.add_job(update, 'interval', id='update', seconds=prem_config.getint('global', 'active_interval'), max_instances=1)
     scheduler.start()
-    socketio.run(app, port=prem_config.getint('global', 'server_port'))
+    socketio.run(app, port=prem_config.getint('global', 'server_port'), use_reloader=False)

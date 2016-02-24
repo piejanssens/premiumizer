@@ -226,12 +226,12 @@ reloader_loops = {
     'watchdog': WatchdogReloaderLoop,
 }
 
-#try:
-#    __import__('watchdog.observers')
-#except ImportError:
-reloader_loops['auto'] = reloader_loops['stat']
-#else:
-#    reloader_loops['auto'] = reloader_loops['watchdog']
+try:
+    __import__('watchdog.observers')
+except ImportError:
+    reloader_loops['auto'] = reloader_loops['stat']
+else:
+    reloader_loops['auto'] = reloader_loops['watchdog']
 
 
 def run_with_reloader(main_func, extra_files=None, interval=1,
