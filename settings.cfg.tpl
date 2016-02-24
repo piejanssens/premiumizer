@@ -19,9 +19,8 @@ download_enabled = 0
 download_location =
 download_categories = movie,tv,music
 copylink_toclipboard = 0
-copylink_toclipboard_ext =
-copylink_toclipboard_size =
-
+download_ext = *
+download_size = 0
 
 [upload]
 watchdir_enabled = 0

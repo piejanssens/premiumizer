@@ -1,6 +1,6 @@
 #Premiumizer Specific
 settings.cfg
-premiumizer*log
+premiumizer*log*
 premiumizer.db
 tmp/
 

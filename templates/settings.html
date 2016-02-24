@@ -54,7 +54,7 @@
 </div>
 
 <h3>Copy Links to clipboard to catch (Jdownloader)  -  Disable above download option</h3>
-<h5>Input extensions as followed: '.mkv', '.mp4'</h5>
+<h5>Input extensions as followed: .mkv,.mp4,.avi</h5>
 <div class="form-group">
 {% if settings.get('downloads', 'copylink_toclipboard') == 1 %}
     <input type="checkbox" class="bootstrap_switch" name="copylink_toclipboard" data-size="small" checked>
@@ -62,8 +62,8 @@
     <input type="checkbox" class="bootstrap_switch" name="copylink_toclipboard" data-size="small">
 {% endif %}
 <p>&nbsp;</p>
-<input type="text" class="form-control" placeholder="Extensions to copy links for" name="copylink_toclipboard_ext" aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'copylink_toclipboard_ext') }}">
-<input type="text" class="form-control" placeholder="Minimum size in MB to copy links for" name="copylink_toclipboard_size" aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'copylink_toclipboard_size') }}">
+<input type="text" class="form-control" placeholder="Extensions to download, * for everything" name="download_ext" aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_ext') }}">
+<input type="text" class="form-control" placeholder="Minimum size in MB to copy links for, 0 for all" name="download_size" aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_size') }}">
 </div>
 
 <h3>Upload Torrents / Watchdir </h3><div class="form-group">{% if settings.get('upload', 'watchdir_enabled') == 1 %}<input type="checkbox" class="bootstrap_switch" name="watchdir_enabled" data-size="small" checked>{% else %}<input type="checkbox" class="bootstrap_switch" name="watchdir_enabled" data-size="small">{% endif %}<p>&nbsp;</p><input type="text" class="form-control" placeholder="Folder to Watch" name="watchdir_location" aria-describedby="basic-addon1" value="{{ settings.get('upload', 'watchdir_location') }}">
