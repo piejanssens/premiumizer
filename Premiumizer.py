@@ -24,7 +24,7 @@ from logging.handlers import RotatingFileHandler
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 import hashlib
-from bencode import bencode
+import bencode
 from pySmartDL import SmartDL
 import pyperclip
 
@@ -415,37 +415,24 @@ class MyHandler(PatternMatchingEventHandler):
     patterns = ["*.torrent"]
 
     def process(self, event):
-        """
-        event.event_type
-            'modified' | 'created' | 'moved' | 'deleted'
-        event.is_directory
-            True | False
-        event.src_path
-            path/to/observed/file
-        """
-
         if event.event_type == 'created' and event.is_directory == False:
-            path = event.src_path
-            logger.debug('New torrent file detected at: %s', path)
-            logger.info('Uploading torrent to the cloud: %s', path)
-            if upload_torrent(event.src_path):
-                # Open torrent file to get hash
-                torrent_file = event.src_path
-                metainfo = bencode.bdecode(open(torrent_file, 'rb').read())
-                info = metainfo['info']
-                name = info['name']
-                hash = hashlib.sha1(bencode.bencode(info)).hexdigest()
-                dirname = os.path.basename(os.path.normpath(os.path.dirname(path)))
-                if dirname in prem_config.get('downloads', 'download_categories').split(','):
-                    category = dirname
-                else:
-                    category = ''
-                add_task(hash, name, category)
-                logger.debug('Deleting torrent from watchdir: %s', path)
-                os.remove(path)
-
-    def on_modified(self, event):
-        self.process(event)
+            torrent_file = event.src_path
+            logger.debug('New torrent file detected at: %s', torrent_file)
+            # Open torrent file to get hash
+            metainfo = bencode.bdecode(open(torrent_file, 'rb').read())
+            info = metainfo['info']
+            name = info['name']
+            hash = hashlib.sha1(bencode.bencode(info)).hexdigest()
+            dirname = os.path.basename(os.path.normpath(os.path.dirname(torrent_file)))
+            if dirname in prem_config.get('downloads', 'download_categories').split(','):
+                category = dirname
+            else:
+                category = ''
+            add_task(hash, name, category)
+            logger.info('Uploading torrent to the cloud: %s', torrent_file)
+            upload_torrent(event.src_path)
+            logger.debug('Deleting torrent from watchdir: %s', torrent_file)
+            os.remove(torrent_file)
 
     def on_created(self, event):
         self.process(event)
