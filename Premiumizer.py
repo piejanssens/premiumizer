@@ -92,20 +92,28 @@ logger.info('Running at %s', runningdir)
 
 
 # Check paths
-logger.debug('Checking paths')
-if prem_config.getboolean('downloads', 'download_enabled'):
-    download_path = prem_config.get('downloads', 'download_location')
-    if not os.path.exists(download_path):
-        logger.info('Creating Download Path at %s', download_path)
-        os.makedirs(download_path)
+def checkPaths():
+    logger.debug('Checking paths')
+    if prem_config.getboolean('downloads', 'download_enabled'):
+        download_path = prem_config.get('downloads', 'download_location')
+        if not os.path.exists(download_path):
+            logger.info('Creating Download Path at %s', download_path)
+            os.makedirs(download_path)
 
-if prem_config.getboolean('upload', 'watchdir_enabled'):
-    upload_path = prem_config.get('upload', 'watchdir_location')
-    if not os.path.exists(upload_path):
-        logger.info('Creating Upload Path at %s', upload_path)
-        os.makedirs(upload_path)
-logger.debug('Checking paths done')
+    if prem_config.getboolean('upload', 'watchdir_enabled'):
+        upload_path = prem_config.get('upload', 'watchdir_location')
+        if not os.path.exists(upload_path):
+            logger.info('Creating Upload Path at %s', upload_path)
+            os.makedirs(upload_path)
+    
+    if prem_config.getboolean('nzbtomedia', 'nzbtomedia_enabled')
+        nzbtomedia_file = prem_config.get('nzbtomedia', 'nzbtomedia_location')
+        if not os.path.isfile(nzbtomedia_file):
+        logger.error('Error unable to locate nzbToMedia.py')
+    logger.debug('Checking paths done')
 
+    
+checkPaths()
 #
 logger.debug('Initializing Flask')
 app = Flask(__name__)
@@ -485,10 +493,12 @@ def settings():
                 prem_config.set('security', 'login_enabled', 0)
             if request.form.get('download_enabled'):
                 prem_config.set('downloads', 'download_enabled', 1)
+                checkPaths()
             else:
                 prem_config.set('downloads', 'download_enabled', 0)
             if request.form.get('copylink_toclipboard'):
                 prem_config.set('downloads', 'copylink_toclipboard ', 1)
+                checkPaths()
             else:
                 prem_config.set('downloads', 'copylink_toclipboard ', 0)
             if request.form.get('watchdir_enabled'):
@@ -497,6 +507,7 @@ def settings():
             else:
                 prem_config.set('upload', 'watchdir_enabled', 0)
             if request.form.get('nzbtomedia_enabled'):
+                checkPaths()
                 prem_config.set('nzbtomedia', 'nzbtomedia_enabled', 1)
             else:
                 prem_config.set('nzbtomedia', 'nzbtomedia_enabled', 0)
