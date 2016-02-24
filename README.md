@@ -4,9 +4,7 @@ Premiumizer is a download management tool for premiumize.me cloud downloads.
 
   - Web interface to manage premiumize.me cloud downloads
   - Category based automatic downloader of finished cloud tasks to local file system
-  - Integrates with CouchPotato (coming up)
-  - Integrates with SickRage (coming up)
-  - Integrates with HeadPhones (coming up)
+  - Integrates with SickRage, CouchPotato, ... (BlackHole)
   - Integrates with nzbToMedia (post processing)
 
 ## About premiumize.me
@@ -29,11 +27,23 @@ If premiumizer is running on a different PC replace localhost with that computer
 
 ## Installation
 ### Synology
-Package coming soon.
+Package coming soon(ish).
+
 ### Windows, Linux, OS X
-1. Clone the official premiumizer github repo (this allows easy updating)
-2. Run Premiumize.py
-3. Google on how you can turn it into a service and run it in background
+
+Requirement: git, Python 2.7 (with pip+virtualenv)
+
+OS X: Install [brew](http://brew.sh/), use brew to install python
+
+1. ```git clone https://github.com/piejanssens/premiumizer.git```
+2. ```cd premiumizer```
+3. ```virtualenv virtualenv```
+4. ```source virtualenv/bin/activate```
+5. ```pip install requirements.txt```
+6. ```./premiumizer.py```
+
+Now use your browser to access [http://localhost:5000/](http://localhost:5000/).
+Extra: Google how you can turn it into a service and run it in background
 
 ## Updating
 There is no automatic updater in place yet. You need to "git pull" the latest changes.
