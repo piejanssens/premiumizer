@@ -50,14 +50,10 @@ else:
 
 formatter = logging.Formatter('%(asctime)-20s %(name)-41s: %(levelname)-8s : %(message)s',datefmt='%m-%d %H:%M:%S')
 
-if prem_config.getboolean('global', 'logfile_enabled'):
-    handler = logging.handlers.RotatingFileHandler('premiumizer.log', maxBytes=(20*1024), backupCount=5)
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
 syslog = logging.StreamHandler()
 syslog.setFormatter(formatter)
 logger.addHandler(syslog)
+
 
 def handle_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
@@ -69,6 +65,11 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 sys.excepthook = handle_exception
 
 logger.info('Logger Initialized')
+if prem_config.getboolean('global', 'logfile_enabled'):
+    logger.info('Logfile Initialized')
+    handler = logging.handlers.RotatingFileHandler('premiumizer.log', maxBytes=(20*1024), backupCount=5)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 logger.info('Running at %s', runningdir)
 
 
