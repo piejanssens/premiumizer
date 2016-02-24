@@ -31,6 +31,12 @@ from bencode import bencode
 #pip install greenlet, apscheduler, watchdog
 # "https://www.premiumize.me/static/api/torrent.html"
 
+
+print '------------------------------------------------------------------------------------------------------------'
+print '|                                                                                                           |'
+print '-------------------------------------------WELCOME TO PREMIUMIZER-------------------------------------------'
+print '|                                                                                                           |'
+print '------------------------------------------------------------------------------------------------------------'
 # Initialize settings
 prem_config = ConfigParser.RawConfigParser()
 runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0] + '/'
@@ -41,20 +47,59 @@ prem_config.read(runningdir+'settings.cfg')
 
 
 # Initialize logging
+syslog = logging.StreamHandler()
 if prem_config.getboolean('global', 'debug_enabled'):
     logger = logging.getLogger('')
     logger.setLevel(logging.DEBUG)
+    formatterdebug = logging.Formatter('%(asctime)-20s %(name)-41s: %(levelname)-8s : %(message)s',datefmt='%m-%d %H:%M:%S')
+    syslog.setFormatter(formatterdebug)
+    logger.addHandler(syslog)
+    print '------------------------------------------------------------------------------------------------------------'
+    print '|                                                                                                           |'
+    print '------------------------PREMIUMIZER IS RUNNING IN DEBUG MODE, THIS IS NOT RECOMMENDED-----------------------'
+    print '|                                                                                                           |'
+    print '------------------------------------------------------------------------------------------------------------'
+    logger.info('----------------------------------')
+    logger.info('----------------------------------')
+    logger.info('----------------------------------')
+    logger.info('DEBUG Logger Initialized')
+    handler = logging.handlers.RotatingFileHandler('premiumizerDEBUG.log', maxBytes=(20*1024), backupCount=5)
+    handler.setFormatter(formatterdebug)
+    logger.addHandler(handler)
+    logger.info('DEBUG Logfile Initialized')
 else:
     logger = logging.getLogger("Rotating log")
     logger.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)-s: %(levelname)-s : %(message)s',datefmt='%m-%d %H:%M:%S')
+    syslog.setFormatter(formatter)
+    logger.addHandler(syslog)
+    logger.info('-------------------------------------------------------------------------------------')
+    logger.info('-------------------------------------------------------------------------------------')
+    logger.info('-------------------------------------------------------------------------------------')
+    logger.info('Logger Initialized')
+    if prem_config.getboolean('global', 'logfile_enabled'):
+        handler = logging.handlers.RotatingFileHandler('premiumizer.log', maxBytes=(20*1024), backupCount=5)
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+        logger.info('Logfile Initialized')
 
-formatter = logging.Formatter('%(asctime)-20s %(name)-41s: %(levelname)-8s : %(message)s',datefmt='%m-%d %H:%M:%S')
+# Catch uncaught exceptions in log, this is not working for expections from threads ?
+def uncaught_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
 
-syslog = logging.StreamHandler()
-syslog.setFormatter(formatter)
-logger.addHandler(syslog)
+    logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
 
-# Logging filters for debugging
+def handle_exception(ex):
+    if ex[0] is KeyboardInterrupt:
+        return
+
+    logger.error("Uncaught exception", exc_info=(ex[0], ex[1], ex[2]))
+
+sys.excepthook = uncaught_exception
+
+# Logging filters for debugging, default is 1
 log_apscheduler = 1
 log_flask = 1
 class Filter(logging.Filter):
@@ -70,26 +115,7 @@ if not log_flask:
     syslog.addFilter(Filter('engineio', 'socketio', 'geventwebsocket.handler', 'requests.packages.urllib3.connectionpool'))
 
 
-# Catch uncaught exceptions in log
-def handle_exception(exc_type, exc_value, exc_traceback):
-    if issubclass(exc_type, KeyboardInterrupt):
-        sys.__excepthook__(exc_type, exc_value, exc_traceback)
-        return
-
-    logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
-
-sys.excepthook = handle_exception
-
-logger.info('Logger Initialized')
-
-# Enable logfile
-if prem_config.getboolean('global', 'logfile_enabled'):
-    logger.info('Logfile Initialized')
-    handler = logging.handlers.RotatingFileHandler('premiumizer.log', maxBytes=(20*1024), backupCount=5)
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
 logger.info('Running at %s', runningdir)
-
 
 # Check paths
 def checkPaths():
@@ -439,11 +465,15 @@ def load_tasks():
         tasks.append(task)
         
 def watchdir():
-    logger.debug('Initializing watchdog')
-    observer = Observer()
-    observer.schedule(MyHandler(), path=prem_config.get('upload', 'watchdir_location'), recursive=True)
-    observer.start()
-    logger.info('Watchdog initialized')
+    try:
+        logger.debug('Initializing watchdog')
+        observer = Observer()
+        observer.schedule(MyHandler(), path=prem_config.get('upload', 'watchdir_location'), recursive=True)
+        observer.start()
+        logger.info('Watchdog initialized')
+    except:
+        ex = sys.exc_info()
+        handle_exception(ex)
 
 # Flask
 @app.route('/')
@@ -615,9 +645,13 @@ if prem_config.getboolean('upload', 'watchdir_enabled'):
 
 # start the server with the 'run()' method
 if __name__ == '__main__':
-    load_tasks()
-    scheduler = APScheduler(GeventScheduler())
-    scheduler.init_app(app)
-    scheduler.scheduler.add_job(update, 'interval', id='update', seconds=prem_config.getint('global', 'active_interval'), max_instances=1)
-    scheduler.start()
-    socketio.run(app, port=prem_config.getint('global', 'server_port'), use_reloader=False)
+    try:
+        load_tasks()
+        scheduler = APScheduler(GeventScheduler())
+        scheduler.init_app(app)
+        scheduler.scheduler.add_job(update, 'interval', id='update', seconds=prem_config.getint('global', 'active_interval'), max_instances=1)
+        scheduler.start()
+        socketio.run(app, port=prem_config.getint('global', 'server_port'), use_reloader=False)
+    except:
+        ex = sys.exc_info()
+        handle_exception(ex)
