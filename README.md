@@ -38,27 +38,31 @@ Windows:
 Installation:
 1.
 Download premiumizer unzip/rename to c:\premiumizer
+```
 https://github.com/piejanssens/premiumizer/archive/master.zip
-
+```
 2.
 Download python 2.7.11 install to default location: C:\python27
+```
 https://www.python.org/ftp/python/2.7.11/python-2.7.11.msi
+```
 
 3.
 Open command prompt (winkey + R, type cmd) & input:
-
+```
 C:\Python27\Scripts\pip.exe install virtualenv
 C:\Python27\Scripts\virtualenv.exe c:\premiumizer\env
 C:\premiumizer\env\Scripts\activate.bat
 pip install -r C:\premiumizer\requirements.txt
-
+```
 
 Running:
 Open command prompt or create .bat file:
-
+```
 c:\premiumizer\env\Scripts\activate.bat
 cd C:\premiumizer
-python premiumizer.py```
+python premiumizer.py
+```
 
 OS X: Install [brew](http://brew.sh/), use brew to install python
 
