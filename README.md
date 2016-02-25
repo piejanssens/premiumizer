@@ -58,6 +58,7 @@ pip install -r C:\premiumizer\requirements.txt
 ```
 
 Running:
+
 Open command prompt or create .bat file:
 ```
 c:\premiumizer\env\Scripts\activate.bat
