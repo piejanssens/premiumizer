@@ -38,9 +38,9 @@ Windows:
 Installation:
 
 
-Download premiumizer unzip/rename to c:\premiumizer
+Install Git & make sure u select Use git from the windows command prompt:
 ```
-https://github.com/piejanssens/premiumizer/archive/master.zip
+https://git-scm.com/download/win
 ```
 
 Download python 2.7.11 install to default location: C:\python27
@@ -51,6 +51,7 @@ https://www.python.org/ftp/python/2.7.11/python-2.7.11.msi
 
 Open command prompt (winkey + R, type cmd) & input:
 ```
+git clone https://github.com/piejanssens/premiumizer.git c:\premiumizer
 C:\Python27\Scripts\pip.exe install virtualenv
 C:\Python27\Scripts\virtualenv.exe c:\premiumizer\env
 C:\premiumizer\env\Scripts\activate.bat
