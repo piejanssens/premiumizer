@@ -81,7 +81,7 @@ Now use your browser to access [http://localhost:5000/](http://localhost:5000/).
 Extra: Google how you can turn it into a service and run it in background
 
 ## Updating
-There is no automatic updater in place yet. You need to "git pull" the latest changes.
+Use update from settings page, Premiumizer will restart & check for updates.
 
 ## Settings
 Once you can access the premiumizer web interface make sure you head over to the settings page.
