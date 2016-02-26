@@ -62,7 +62,7 @@
     <input type="checkbox" class="bootstrap_switch" name="copylink_toclipboard" data-size="small">
 {% endif %}
 <p>&nbsp;</p>
-<input type="text" class="form-control" placeholder="Extensions to download, * for everything" name="download_ext" aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_ext') }}">
+<input type="text" class="form-control" placeholder="Extensions to download, leave blank for everything" name="download_ext" aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_ext') }}">
 <input type="text" class="form-control" placeholder="Minimum size in MB to copy links for, 0 for all" name="download_size" aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_size') }}">
 </div>
 
@@ -79,12 +79,17 @@
 <p>&nbsp;</p>
 <input type="text" class="form-control" placeholder="path to nzbToMedia.py" name="nzbtomedia_location" aria-describedby="basic-addon1" value="{{ settings.get('nzbtomedia', 'nzbtomedia_location') }}">
 </div>
-<hr>
+<h3>Update</h3>
+<h5>Premiumizer will restart & update</h5>
+<div>
+<input type="submit" name="submit" value="Update">
+</div>
+
+<hr></hr>
 <div class="form-group pull-right">
 <button type="submit" class="btn btn-default">Save</button>
 <input type="submit" name="submit" value="Restart">
 <input type="submit" name="submit" value="Shutdown">
-
 </div>
 </form>
 {% endblock %}

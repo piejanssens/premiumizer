@@ -29,3 +29,9 @@ watchdir_location =
 [nzbtomedia]
 nzbtomedia_enabled = 0
 nzbtomedia_location =
+
+[update]
+#Do not change these values#
+updated = 1
+config_version = 1.0
+req_version = 1.0

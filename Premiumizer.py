@@ -1,5 +1,4 @@
 #! /usr/bin/env python
-#test
 import os, sys, json
 
 sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), 'lib')))
@@ -87,14 +86,14 @@ else:
 
 # Catch uncaught exceptions in log, this is not working for expections from threads ?
 def uncaught_exception(exc_type, exc_value, exc_traceback):
-    if issubclass(exc_type, KeyboardInterrupt):
+    if issubclass(exc_type, SystemExit, KeyboardInterrupt):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
 
     logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
 
 def handle_exception(ex):
-    if ex[0] is KeyboardInterrupt:
+    if ex[0] is KeyboardInterrupt or SystemExit:
         return
 
     logger.error("Uncaught exception", exc_info=(ex[0], ex[1], ex[2]))
@@ -122,6 +121,19 @@ logger.info('Running at %s', runningdir)
 # Check paths
 def checkPaths():
     logger.debug('Checking paths')
+    if prem_config.getboolean('update', 'updated'):
+        logger.info('Premiumizer has been updated!!')
+        logger.info('*************************************************************************************')
+        logger.info('---------------------------Premiumizer has been updated!!----------------------------')
+        logger.info('*************************************************************************************')
+        if os.path.isfile(runningdir+'settings.cfg.old'):
+            logger.info('*************************************************************************************')
+            logger.info('-------Settings file has been updated/wiped, old settings file renamed to .old-------')
+            logger.info('*************************************************************************************')
+        prem_config.set('update', 'updated', 0)
+        with open('settings.cfg', 'w') as configfile:
+            prem_config.write(configfile)
+        
     if prem_config.getboolean('downloads', 'download_enabled'):
         download_path = prem_config.get('downloads', 'download_location')
         if not os.path.exists(download_path):
@@ -257,7 +269,7 @@ def download_file(task, full_path, url):
 def process_dir(task, path, new_name, dir_content):
     logger.debug('def processing dir started')
     ext = prem_config.get('downloads', 'download_ext').split(',')
-    size = (int(prem_config.get('downloads', 'download_size')) * 1000000)
+    size = (prem_config.getint('downloads', 'download_size') * 1000000)
     if not dir_content:
         return None
     new_path = os.path.join(path, new_name)
@@ -266,7 +278,7 @@ def process_dir(task, path, new_name, dir_content):
         if type == 'dir':
             process_dir(task, new_path, clean_name(x), dir_content[x]['children'])
         elif type == 'file':
-            if ext == '*' and dir_content[x]['size'] >= size:
+            if ext == None and dir_content[x]['size'] >= size:
                 if prem_config.getboolean('downloads', 'download_enabled'):
                     if not os.path.exists(new_path):
                         os.makedirs(new_path)
@@ -490,15 +502,23 @@ def upload():
     return 'OK'
 
 
+
 @app.route('/settings', methods=["POST", "GET"])
 @login_required
 def settings():
     if request.method == 'POST':
         if 'Restart' in request.form.values():
+            logger.info('Restarting')
             from subprocess import Popen
-            Popen(['python', 'restart.py'], shell=False,stdin=None,stdout=None,stderr=None,close_fds=True)
+            Popen(['python', 'utils.py', '--restart'], shell=False,stdin=None,stdout=None,stderr=None,close_fds=True)
             sys.exit()
         elif 'Shutdown' in request.form.values():
+            logger.info('Shutdown recieved')
+            sys.exit()
+        elif 'Update' in request.form.values():
+            logger.info('Update - will restart')
+            from subprocess import Popen
+            Popen(['python', 'utils.py', '--update'], shell=False,stdin=None,stdout=None,stderr=None,close_fds=True)
             sys.exit()
         else:
             global prem_config

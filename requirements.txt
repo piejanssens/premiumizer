@@ -24,3 +24,4 @@ werkzeug==0.11.4
 itsdangerous==0.24
 six==1.10.0
 --pre gevent==1.1rc5
+https://github.com/msiemens/PyGitUp/archive/master.zip
