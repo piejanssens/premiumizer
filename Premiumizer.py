@@ -267,7 +267,7 @@ def download_file(task, full_path, url):
 #TODO continue log statements
         
 def process_dir(task, path, new_name, dir_content):
-    logger.debug('def processing dir started')
+    logger.debug('def processing_dir started')
     ext = prem_config.get('downloads', 'download_ext').split(',')
     size = (prem_config.getint('downloads', 'download_size') * 1000000)
     if not dir_content:
@@ -297,7 +297,7 @@ def process_dir(task, path, new_name, dir_content):
 
 # 
 def download_task(task):
-    logger.debug('def download task started')
+    logger.debug('def download_task started')
     global downloading
     base_path = prem_config.get('downloads', 'download_location')
     if task.category:
@@ -384,6 +384,7 @@ def parse_tasks(torrents):
 
 
 def get_task(hash):
+    logger.debug('def get_task started')
     for task in tasks:
         if task.hash == hash:
             return task
@@ -391,10 +392,12 @@ def get_task(hash):
 
 
 def add_task(hash, name, category):
+    logger.debug('def add_task started')
     tasks.append(DownloadTask(None, hash, 0, name, category))
 
 
 def upload_torrent(filename):
+    logger.debug('def upload_torrent started')
     payload = {'customer_id': prem_config.get('premiumize', 'customer_id'), 'pin': prem_config.get('premiumize', 'pin')}
     files = {'file': open(filename, 'rb')}
     r = requests.post("https://www.premiumize.me/torrent/add", payload, files=files)
@@ -409,6 +412,7 @@ def upload_torrent(filename):
 
 
 def upload_magnet(magnet):
+    logger.debug('def upload_magnet started')
     payload = {'customer_id': prem_config.get('premiumize', 'customer_id'), 'pin': prem_config.get('premiumize', 'pin'), 'url': magnet}
     r = requests.post("https://www.premiumize.me/torrent/add", payload)
     response_content = json.loads(r.content)
@@ -421,6 +425,7 @@ def upload_magnet(magnet):
 
 
 def send_categories():
+    logger.debug('def send_categories started')
     emit('download_categories', {'data': prem_config.get('downloads', 'download_categories').split(',')})
 
 
