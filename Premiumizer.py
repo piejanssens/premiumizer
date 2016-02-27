@@ -118,22 +118,26 @@ if not log_flask:
 
 logger.info('Running at %s', runningdir)
 
+
+# Check if premiumizer has been updated
+if prem_config.getboolean('update', 'updated'):
+    logger.info('Premiumizer has been updated!!')
+    logger.info('*************************************************************************************')
+    logger.info('---------------------------Premiumizer has been updated!!----------------------------')
+    logger.info('*************************************************************************************')
+    if os.path.isfile(runningdir+'settings.cfg.old'):
+        logger.info('*************************************************************************************')
+        logger.info('-------Settings file has been updated/wiped, old settings file renamed to .old-------')
+        logger.info('*************************************************************************************')
+    prem_config.set('update', 'updated', 0)
+    with open('settings.cfg', 'w') as configfile:
+        prem_config.write(configfile)
+
+
+
 # Check paths
 def checkPaths():
     logger.debug('Checking paths')
-    if prem_config.getboolean('update', 'updated'):
-        logger.info('Premiumizer has been updated!!')
-        logger.info('*************************************************************************************')
-        logger.info('---------------------------Premiumizer has been updated!!----------------------------')
-        logger.info('*************************************************************************************')
-        if os.path.isfile(runningdir+'settings.cfg.old'):
-            logger.info('*************************************************************************************')
-            logger.info('-------Settings file has been updated/wiped, old settings file renamed to .old-------')
-            logger.info('*************************************************************************************')
-        prem_config.set('update', 'updated', 0)
-        with open('settings.cfg', 'w') as configfile:
-            prem_config.write(configfile)
-        
     if prem_config.getboolean('downloads', 'download_enabled'):
         download_path = prem_config.get('downloads', 'download_location')
         if not os.path.exists(download_path):
