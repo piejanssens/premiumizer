@@ -23,7 +23,7 @@ def update():
             prem_config.write(configfile)
     if prem_config.getfloat('update', 'config_version') < default_config.getfloat('update', 'config_version'):
         import shutil
-        os.rename(runningdir+'settings.cfg', runningdir+'settings.cfg.old')
+        shutil.copy(runningdir+'settings.cfg', runningdir+'settings.cfg.old')
         shutil.copy(runningdir+'settings.cfg.tpl', runningdir+'settings.cfg')
     execfile('premiumizer.py', globals(), globals())
 
