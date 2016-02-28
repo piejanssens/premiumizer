@@ -86,17 +86,11 @@ else:
 
 # Catch uncaught exceptions in log, this is not working for expections from threads ?
 def uncaught_exception(exc_type, exc_value, exc_traceback):
-    if issubclass(exc_type, SystemExit, KeyboardInterrupt):
+    if issubclass(exc_type, SystemExit or KeyboardInterrupt):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
 
     logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
-
-def handle_exception(ex):
-    if ex[0] is KeyboardInterrupt or SystemExit:
-        return
-
-    logger.error("Uncaught exception", exc_info=(ex[0], ex[1], ex[2]))
 
 sys.excepthook = uncaught_exception
 
@@ -473,8 +467,8 @@ def watchdir():
         observer.start()
         logger.info('Watchdog initialized')
     except:
-        ex = sys.exc_info()
-        handle_exception(ex)
+        sys.excepthook
+
 
 # Flask
 @app.route('/')
@@ -662,5 +656,4 @@ if __name__ == '__main__':
         scheduler.start()
         socketio.run(app, port=prem_config.getint('global', 'server_port'), use_reloader=False)
     except:
-        ex = sys.exc_info()
-        handle_exception(ex)
+        sys.excepthook
