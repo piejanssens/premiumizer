@@ -165,12 +165,12 @@ function update_task(task) {
         var files = $(this).prop('files');
         if (files.length > 0) {
             var file = files[0];
-	    var file2 = String(file);
-	    var fileExtension = file2.replace(/^.*\./, '');
-            if (fileExtension == '.torrent') {
+	    var fileName = file.name;
+	    var fileExt = '.' + fileName.split('.').pop();
+            if (fileExt == '.torrent') {
                 uploadTorrent(file);
             } else {
-                alert(fileExtension);
+                alert('Nope, not a torrent file...');
             }
         }
         $('#torrent-file-upload[type="file"]').val(null);
@@ -191,7 +191,9 @@ function update_task(task) {
     $('#torrent-input').on('drop', function (e) {
         e.preventDefault();
         var file = e.originalEvent.dataTransfer.files[0];
-        if (file.type == 'application/x-bittorrent') {
+	var fileName = file.name;
+	var fileExt = '.' + fileName.split('.').pop();
+        if (fileExt == '.torrent') {
             uploadTorrent(file);
         } else {
             alert('Nope, not a torrent file...');
