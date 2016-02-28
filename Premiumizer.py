@@ -466,6 +466,15 @@ def watchdir():
         observer.schedule(MyHandler(), path=prem_config.get('upload', 'watchdir_location'), recursive=True)
         observer.start()
         logger.info('Watchdog initialized')
+        for dirpath, dirs, files in os.walk(prem_config.get('upload', 'watchdir_location')):
+            for filename in files:
+                fname = os.path.join(dirpath,filename)
+                if fname.endswith('.torrent'):
+                    fname2 = fname.replace('.torrent', '2.torrent')
+                    import shutil
+                    shutil.copy(fname, fname2)
+                    os.remove(fname)
+                    time.sleep(5)
     except:
         sys.excepthook
 
