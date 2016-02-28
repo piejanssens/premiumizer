@@ -1,9 +1,9 @@
-import requests
 import time
+
+import requests
 
 
 class DownloadTask:
-
     def __init__(self, callback, hash, size, name, category):
         self.progress = None
         self.speed = None
@@ -20,7 +20,7 @@ class DownloadTask:
         self.eta = None
         self.callback = callback
 
-    def update(self,  **kwargs):
+    def update(self, **kwargs):
         self.previous_timestamp = self.timestamp
         self.timestamp = int(time.time())
         if 'progress' in kwargs:
@@ -60,4 +60,5 @@ class DownloadTask:
             return False
 
     def get_json(self):
-        return {'progress': self.progress, 'speed': self.speed, 'size': self.size, 'hash':self.hash, 'name':self.name, 'cloud_status': self.cloud_status, 'local_status': self.local_status, 'category': self.category}
+        return {'progress': self.progress, 'speed': self.speed, 'size': self.size, 'hash': self.hash, 'name': self.name,
+                'cloud_status': self.cloud_status, 'local_status': self.local_status, 'category': self.category}

@@ -1,37 +1,35 @@
 #! /usr/bin/env python
-import os, sys, json
-
-sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), 'lib')))
-
-import shelve
 import ConfigParser
+import datetime
+import time
+import hashlib
+import json
+import logging
+import os
+import shelve
+import sys
+import unicodedata
+from logging.handlers import RotatingFileHandler
+from string import ascii_letters, digits
+
+import bencode
+import pyperclip
 import requests
-from werkzeug import secure_filename
+import six
+from apscheduler.schedulers.gevent import GeventScheduler
+from chardet import detect
 from flask import Flask, flash, request, redirect, url_for, render_template, send_from_directory
 from flask.ext.login import LoginManager, login_required, login_user, logout_user, UserMixin
 from flask.ext.socketio import SocketIO, emit
-from flask_apscheduler import APScheduler, views
-from apscheduler.schedulers.gevent import GeventScheduler
-from DownloadTask import DownloadTask
-import unicodedata
-from string import ascii_letters, digits
-import six
-from chardet import detect
-import datetime
-import logging
-from logging.handlers import RotatingFileHandler
-from watchdog.observers import Observer
-from watchdog.events import PatternMatchingEventHandler
-import hashlib
-import bencode
+from flask_apscheduler import APScheduler
 from pySmartDL import SmartDL
-import pyperclip
+from watchdog.events import PatternMatchingEventHandler
+from watchdog.observers import Observer
+from werkzeug import secure_filename
 
-
+from DownloadTask import DownloadTask
 
 # "https://www.premiumize.me/static/api/torrent.html"
-
-
 
 print '------------------------------------------------------------------------------------------------------------'
 print '|                                                                                                           |'
@@ -41,18 +39,19 @@ print '-------------------------------------------------------------------------
 # Initialize settings
 prem_config = ConfigParser.RawConfigParser()
 runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0] + '/'
-if not os.path.isfile(runningdir+'settings.cfg'):
+if not os.path.isfile(runningdir + 'settings.cfg'):
     import shutil
-    shutil.copy(runningdir+'settings.cfg.tpl', runningdir+'settings.cfg')
-prem_config.read(runningdir+'settings.cfg')
 
+    shutil.copy(runningdir + 'settings.cfg.tpl', runningdir + 'settings.cfg')
+prem_config.read(runningdir + 'settings.cfg')
 
 # Initialize logging
 syslog = logging.StreamHandler()
 if prem_config.getboolean('global', 'debug_enabled'):
     logger = logging.getLogger('')
     logger.setLevel(logging.DEBUG)
-    formatterdebug = logging.Formatter('%(asctime)-20s %(name)-41s: %(levelname)-8s : %(message)s',datefmt='%m-%d %H:%M:%S')
+    formatterdebug = logging.Formatter('%(asctime)-20s %(name)-41s: %(levelname)-8s : %(message)s',
+                                       datefmt='%m-%d %H:%M:%S')
     syslog.setFormatter(formatterdebug)
     logger.addHandler(syslog)
     print '------------------------------------------------------------------------------------------------------------'
@@ -64,14 +63,15 @@ if prem_config.getboolean('global', 'debug_enabled'):
     logger.info('----------------------------------')
     logger.info('----------------------------------')
     logger.info('DEBUG Logger Initialized')
-    handler = logging.handlers.RotatingFileHandler('premiumizerDEBUG.log', maxBytes=(20*1024), backupCount=5)
+    handler = logging.handlers.RotatingFileHandler(runningdir + 'premiumizerDEBUG.log', maxBytes=(20 * 1024),
+                                                   backupCount=5)
     handler.setFormatter(formatterdebug)
     logger.addHandler(handler)
     logger.info('DEBUG Logfile Initialized')
 else:
     logger = logging.getLogger("Rotating log")
     logger.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)-s: %(levelname)-s : %(message)s',datefmt='%m-%d %H:%M:%S')
+    formatter = logging.Formatter('%(asctime)-s: %(levelname)-s : %(message)s', datefmt='%m-%d %H:%M:%S')
     syslog.setFormatter(formatter)
     logger.addHandler(syslog)
     logger.info('-------------------------------------------------------------------------------------')
@@ -79,12 +79,14 @@ else:
     logger.info('-------------------------------------------------------------------------------------')
     logger.info('Logger Initialized')
     if prem_config.getboolean('global', 'logfile_enabled'):
-        handler = logging.handlers.RotatingFileHandler('premiumizer.log', maxBytes=(20*1024), backupCount=5)
+        handler = logging.handlers.RotatingFileHandler(runningdir + 'premiumizer.log', maxBytes=(20 * 1024),
+                                                       backupCount=5)
         handler.setFormatter(formatter)
         logger.addHandler(handler)
         logger.info('Logfile Initialized')
 
-# Catch uncaught exceptions in log, this is not working for expections from threads ?
+
+# Catch uncaught exceptions in log
 def uncaught_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, SystemExit or KeyboardInterrupt):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
@@ -92,26 +94,30 @@ def uncaught_exception(exc_type, exc_value, exc_traceback):
 
     logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
 
+
 sys.excepthook = uncaught_exception
 
 # Logging filters for debugging, default is 1
 log_apscheduler = 1
 log_flask = 1
+
+
 class Filter(logging.Filter):
     def __init__(self, *Filter):
         self.Filter = [logging.Filter(name) for name in Filter]
 
     def filter(self, record):
         return not any(f.filter(record) for f in self.Filter)
+
+
 if not log_apscheduler:
     syslog.addFilter(Filter('apscheduler'))
 
 if not log_flask:
-    syslog.addFilter(Filter('engineio', 'socketio', 'geventwebsocket.handler', 'requests.packages.urllib3.connectionpool'))
-
+    syslog.addFilter(
+        Filter('engineio', 'socketio', 'geventwebsocket.handler', 'requests.packages.urllib3.connectionpool'))
 
 logger.info('Running at %s', runningdir)
-
 
 # Check if premiumizer has been updated
 if prem_config.getboolean('update', 'updated'):
@@ -119,18 +125,17 @@ if prem_config.getboolean('update', 'updated'):
     logger.info('*************************************************************************************')
     logger.info('---------------------------Premiumizer has been updated!!----------------------------')
     logger.info('*************************************************************************************')
-    if os.path.isfile(runningdir+'settings.cfg.old'):
+    if os.path.isfile(runningdir + 'settings.cfg.old'):
         logger.info('*************************************************************************************')
         logger.info('-------Settings file has been updated/wiped, old settings file renamed to .old-------')
         logger.info('*************************************************************************************')
     prem_config.set('update', 'updated', 0)
-    with open('settings.cfg', 'w') as configfile:
+    with open(runningdir+'settings.cfg', 'w') as configfile:
         prem_config.write(configfile)
 
 
-
 # Check paths
-def checkPaths():
+def check_paths():
     logger.debug('Checking paths')
     if prem_config.getboolean('downloads', 'download_enabled'):
         download_path = prem_config.get('downloads', 'download_location')
@@ -143,21 +148,21 @@ def checkPaths():
         if not os.path.exists(upload_path):
             logger.info('Creating Upload Path at %s', upload_path)
             os.makedirs(upload_path)
-    
+
     if prem_config.getboolean('nzbtomedia', 'nzbtomedia_enabled'):
         nzbtomedia_file = prem_config.get('nzbtomedia', 'nzbtomedia_location')
         if not os.path.isfile(nzbtomedia_file):
             logger.error('Error unable to locate nzbToMedia.py')
     logger.debug('Checking paths done')
 
-    
-checkPaths()
+
+check_paths()
 #
 logger.debug('Initializing Flask')
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24)
 app.config.update(
-    DEBUG = prem_config.getboolean('global', 'debug_enabled'),
+    DEBUG=prem_config.getboolean('global', 'debug_enabled'),
 )
 
 socketio = SocketIO(app)
@@ -176,12 +181,15 @@ downloading = False
 downloader = None
 total_size_downloaded = None
 logger.debug('Database initialized')
+
+
 #
 
 class User(UserMixin):
     def __init__(self, userid, password):
         self.id = userid
         self.password = password
+
 
 def toUnicode(original, *args):
     try:
@@ -215,6 +223,7 @@ def ek(original, *args):
             raise
     return original
 
+
 #
 def clean_name(original):
     valid_chars = "-_.() %s%s" % (ascii_letters, digits)
@@ -235,12 +244,12 @@ def notify_nzbtomedia(task):
 def get_download_stats(task):
     logger.debug('Updating Download Stats')
     if downloader and downloader.get_status() == 'downloading':
-         size_downloaded = total_size_downloaded + downloader.get_dl_size()
-         progress = round(float(size_downloaded) * 100 / task.size, 1)
-         speed = downloader.get_speed(human=True)
-         task.update(speed=speed, progress=progress)
+        size_downloaded = total_size_downloaded + downloader.get_dl_size()
+        progress = round(float(size_downloaded) * 100 / task.size, 1)
+        speed = downloader.get_speed(human=True)
+        task.update(speed=speed, progress=progress)
     else:
-        logger.debug('Want to update stats, but downloader doesn\'t exist yet.')
+        logger.debug('Want to update stats, but downloader does not exist yet.')
 
 
 def download_file(task, full_path, url):
@@ -248,7 +257,8 @@ def download_file(task, full_path, url):
     logger.info('Downloading file: %s', full_path)
     global downloader
     downloader = SmartDL(url, full_path, progress_bar=False, logger=logger)
-    stat_job = scheduler.scheduler.add_job(get_download_stats, args=(task,), trigger='interval', seconds=1, max_instances=1, next_run_time=datetime.datetime.now())
+    stat_job = scheduler.scheduler.add_job(get_download_stats, args=(task,), trigger='interval', seconds=1,
+                                           max_instances=1, next_run_time=datetime.datetime.now())
     downloader.start(blocking=True)
     while not downloader.isFinished():
         print('wrong! waiting for downloader before finished')
@@ -262,8 +272,9 @@ def download_file(task, full_path, url):
         for e in downloader.get_errors():
             logger.error(str(e))
 
-#TODO continue log statements
-        
+
+# TODO continue log statements
+
 def process_dir(task, path, new_name, dir_content):
     logger.debug('def processing_dir started')
     ext = prem_config.get('downloads', 'download_ext').split(',')
@@ -276,11 +287,12 @@ def process_dir(task, path, new_name, dir_content):
         if type == 'dir':
             process_dir(task, new_path, clean_name(x), dir_content[x]['children'])
         elif type == 'file':
-            if ext == None and dir_content[x]['size'] >= size:
+            if ext is None and dir_content[x]['size'] >= size:
                 if prem_config.getboolean('downloads', 'download_enabled'):
                     if not os.path.exists(new_path):
                         os.makedirs(new_path)
-                    download_file(task, new_path + '/' + clean_name(x), dir_content[x]['url'].replace('https', 'http', 1))
+                    download_file(task, new_path + '/' + clean_name(x),
+                                  dir_content[x]['url'].replace('https', 'http', 1))
                 elif prem_config.getboolean('downloads', 'copylink_toclipboard'):
                     logger.info('Link copied to clipboard for: %s', dir_content[x]['name'])
                     pyperclip.copy(dir_content[x]['url'])
@@ -288,12 +300,14 @@ def process_dir(task, path, new_name, dir_content):
                 if prem_config.getboolean('downloads', 'download_enabled'):
                     if not os.path.exists(new_path):
                         os.makedirs(new_path)
-                    download_file(task, new_path + '/' + clean_name(x), dir_content[x]['url'].replace('https', 'http', 1))
+                    download_file(task, new_path + '/' + clean_name(x),
+                                  dir_content[x]['url'].replace('https', 'http', 1))
                 elif prem_config.getboolean('downloads', 'copylink_toclipboard'):
                     logger.info('Link copied to clipboard for: %s', dir_content[x]['name'])
                     pyperclip.copy(dir_content[x]['url'])
 
-# 
+
+#
 def download_task(task):
     logger.debug('def download_task started')
     global downloading
@@ -301,7 +315,8 @@ def download_task(task):
     if task.category:
         base_path = os.path.join(base_path, task.category)
     task.download_location = os.path.join(base_path, clean_name(task.name))
-    payload = {'customer_id': prem_config.get('premiumize', 'customer_id'), 'pin': prem_config.get('premiumize', 'pin'), 'hash': task.hash}
+    payload = {'customer_id': prem_config.get('premiumize', 'customer_id'), 'pin': prem_config.get('premiumize', 'pin'),
+               'hash': task.hash}
     r = requests.post("https://www.premiumize.me/torrent/browse", payload)
     global total_size_downloaded
     total_size_downloaded = 0
@@ -349,18 +364,25 @@ def parse_tasks(torrents):
             tasks.append(task)
         elif task.local_status != 'finished':
             if task.cloud_status == 'uploading':
-                task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], name=torrent['name'], size=torrent['size'])
+                task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], name=torrent['name'],
+                            size=torrent['size'])
             elif task.cloud_status == 'finished' and task.local_status != 'finished':
-                if (prem_config.getboolean('downloads', 'download_enabled') and task.category in prem_config.get('downloads', 'download_categories').split(',')) or prem_config.getboolean('downloads', 'copylink_toclipboard'):
+                if (prem_config.getboolean('downloads', 'download_enabled') and task.category in prem_config.get(
+                        'downloads', 'download_categories').split(',')) or prem_config.getboolean('downloads',
+                                                                                                  'copylink_toclipboard'):
                     if not downloading:
-                        task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], local_status='downloading')
+                        task.update(progress=torrent['percent_done'], cloud_status=torrent['status'],
+                                    local_status='downloading')
                         scheduler.scheduler.add_job(download_task, args=(task,), replace_existing=True, max_instances=1)
                     elif task.local_status != 'downloading':
-                        task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], local_status='queued')
+                        task.update(progress=torrent['percent_done'], cloud_status=torrent['status'],
+                                    local_status='queued')
                 else:
-                    task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], local_status='finished')
+                    task.update(progress=torrent['percent_done'], cloud_status=torrent['status'],
+                                local_status='finished')
             else:
-                task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], name=torrent['name'], speed=torrent['speed_down'])
+                task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], name=torrent['name'],
+                            speed=torrent['speed_down'])
         else:
             task.update()
         hashes_online.append(task.hash)
@@ -368,7 +390,7 @@ def parse_tasks(torrents):
         db[task.hash] = task
         task.callback = socketio.emit
 
-#   Delete local tasks that are removed from cloud
+    # Delete local tasks that are removed from cloud
     hash_diff = [aa for aa in hashes_local if aa not in set(hashes_online)]
     for task_hash in hash_diff:
         for task in tasks:
@@ -411,7 +433,8 @@ def upload_torrent(filename):
 
 def upload_magnet(magnet):
     logger.debug('def upload_magnet started')
-    payload = {'customer_id': prem_config.get('premiumize', 'customer_id'), 'pin': prem_config.get('premiumize', 'pin'), 'url': magnet}
+    payload = {'customer_id': prem_config.get('premiumize', 'customer_id'), 'pin': prem_config.get('premiumize', 'pin'),
+               'url': magnet}
     r = requests.post("https://www.premiumize.me/torrent/add", payload)
     response_content = json.loads(r.content)
     if response_content['status'] == "success":
@@ -431,7 +454,7 @@ class MyHandler(PatternMatchingEventHandler):
     patterns = ["*.torrent"]
 
     def process(self, event):
-        if event.event_type == 'created' and event.is_directory == False:
+        if event.event_type == 'created' and event.is_directory is False:
             torrent_file = event.src_path
             logger.debug('New torrent file detected at: %s', torrent_file)
             # Open torrent file to get hash
@@ -453,11 +476,13 @@ class MyHandler(PatternMatchingEventHandler):
     def on_created(self, event):
         self.process(event)
 
+
 def load_tasks():
     for hash in db.keys():
         task = db[hash.encode("utf-8")]
         task.callback = socketio.emit
         tasks.append(task)
+
 
 def watchdir():
     try:
@@ -468,7 +493,7 @@ def watchdir():
         logger.info('Watchdog initialized')
         for dirpath, dirs, files in os.walk(prem_config.get('upload', 'watchdir_location')):
             for filename in files:
-                fname = os.path.join(dirpath,filename)
+                fname = os.path.join(dirpath, filename)
                 if fname.endswith('.torrent'):
                     fname2 = fname.replace('.torrent', '2.torrent')
                     import shutil
@@ -495,11 +520,10 @@ def upload():
         if not os.path.isdir('tmp'):
             os.makedirs('tmp')
         torrent_file.save(os.path.join('tmp', filename))
-        upload_torrent('tmp/'+filename)
+        upload_torrent('tmp/' + filename)
     elif request.data:
         upload_magnet(request.data)
     return 'OK'
-
 
 
 @app.route('/settings', methods=["POST", "GET"])
@@ -509,7 +533,8 @@ def settings():
         if 'Restart' in request.form.values():
             logger.info('Restarting')
             from subprocess import Popen
-            Popen(['python', 'utils.py', '--restart'], shell=False,stdin=None,stdout=None,stderr=None,close_fds=True)
+            Popen(['python', 'utils.py', '--restart'], shell=False, stdin=None, stdout=None, stderr=None,
+                  close_fds=True)
             sys.exit()
         elif 'Shutdown' in request.form.values():
             logger.info('Shutdown recieved')
@@ -517,7 +542,7 @@ def settings():
         elif 'Update' in request.form.values():
             logger.info('Update - will restart')
             from subprocess import Popen
-            Popen(['python', 'utils.py', '--update'], shell=False,stdin=None,stdout=None,stderr=None,close_fds=True)
+            Popen(['python', 'utils.py', '--update'], shell=False, stdin=None, stdout=None, stderr=None, close_fds=True)
             sys.exit()
         else:
             global prem_config
@@ -535,12 +560,12 @@ def settings():
                 prem_config.set('security', 'login_enabled', 0)
             if request.form.get('download_enabled'):
                 prem_config.set('downloads', 'download_enabled', 1)
-                checkPaths()
+                check_paths()
             else:
                 prem_config.set('downloads', 'download_enabled', 0)
             if request.form.get('copylink_toclipboard'):
                 prem_config.set('downloads', 'copylink_toclipboard ', 1)
-                checkPaths()
+                check_paths()
             else:
                 prem_config.set('downloads', 'copylink_toclipboard ', 0)
             if request.form.get('watchdir_enabled'):
@@ -549,24 +574,25 @@ def settings():
             else:
                 prem_config.set('upload', 'watchdir_enabled', 0)
             if request.form.get('nzbtomedia_enabled'):
-                checkPaths()
+                check_paths()
                 prem_config.set('nzbtomedia', 'nzbtomedia_enabled', 1)
             else:
                 prem_config.set('nzbtomedia', 'nzbtomedia_enabled', 0)
             prem_config.set('global', 'server_port', request.form.get('server_port'))
-            prem_config.set('security', 'username',  request.form.get('username'))
-            prem_config.set('security', 'password',  request.form.get('password'))
-            prem_config.set('premiumize', 'customer_id',  request.form.get('customer_id'))
-            prem_config.set('premiumize', 'pin',  request.form.get('pin'))
-            prem_config.set('downloads', 'download_categories',  request.form.get('download_categories'))
-            prem_config.set('downloads', 'download_location',  request.form.get('download_location'))
-            prem_config.set('downloads', 'download_ext',  request.form.get('download_ext'))
-            prem_config.set('downloads', 'download_size',  request.form.get('download_size'))
-            prem_config.set('upload', 'watchdir_location',  request.form.get('watchdir_location'))
-            prem_config.set('nzbtomedia', 'nzbtomedia_location',  request.form.get('nzbtomedia_location'))
-            with open('settings.cfg', 'w') as configfile:    # save
+            prem_config.set('security', 'username', request.form.get('username'))
+            prem_config.set('security', 'password', request.form.get('password'))
+            prem_config.set('premiumize', 'customer_id', request.form.get('customer_id'))
+            prem_config.set('premiumize', 'pin', request.form.get('pin'))
+            prem_config.set('downloads', 'download_categories', request.form.get('download_categories'))
+            prem_config.set('downloads', 'download_location', request.form.get('download_location'))
+            prem_config.set('downloads', 'download_ext', request.form.get('download_ext'))
+            prem_config.set('downloads', 'download_size', request.form.get('download_size'))
+            prem_config.set('upload', 'watchdir_location', request.form.get('watchdir_location'))
+            prem_config.set('nzbtomedia', 'nzbtomedia_location', request.form.get('nzbtomedia_location'))
+            with open(runningdir+'settings.cfg', 'w') as configfile:  # save
                 prem_config.write(configfile)
     return render_template('settings.html', settings=prem_config)
+
 
 @app.route('/login', methods=["GET", "POST"])
 def login():
@@ -613,10 +639,11 @@ def load_user(userid):
 
 @socketio.on('delete_task')
 def delete_task(message):
-    payload = {'customer_id': prem_config.get('premiumize', 'customer_id'), 'pin': prem_config.get('premiumize', 'pin'), 'hash': message['data']}
+    payload = {'customer_id': prem_config.get('premiumize', 'customer_id'), 'pin': prem_config.get('premiumize', 'pin'),
+               'hash': message['data']}
     r = requests.post("https://www.premiumize.me/torrent/delete", payload)
-    responseDict = json.loads(r.content)
-    if responseDict['status'] == "success":
+    responsedict = json.loads(r.content)
+    if responsedict['status'] == "success":
         emit('delete_success', {'data': message['data']})
     else:
         emit('delete_failed', {'data': message['data']})
@@ -625,6 +652,7 @@ def delete_task(message):
 @socketio.on('connect')
 def test_message():
     emit('hello_client', {'data': 'Server says hello!'})
+
 
 @socketio.on('disconnect')
 def test_disconnect():
@@ -637,13 +665,16 @@ def hello_server(message):
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=0)
     print(message['data'])
 
+
 @socketio.on('message')
 def handle_message(message):
     print('received message: ' + message)
 
+
 @socketio.on('json')
 def handle_json(json):
     print('received json: ' + str(json))
+
 
 @socketio.on('change_category')
 def change_category(message):
@@ -651,17 +682,19 @@ def change_category(message):
     task = get_task(data['hash'])
     task.update(category=data['category'])
 
+
 # Start the watchdog if watchdir is enabled
 if prem_config.getboolean('upload', 'watchdir_enabled'):
     watchdir()
-    
+
 # start the server with the 'run()' method
 if __name__ == '__main__':
     try:
         load_tasks()
         scheduler = APScheduler(GeventScheduler())
         scheduler.init_app(app)
-        scheduler.scheduler.add_job(update, 'interval', id='update', seconds=prem_config.getint('global', 'active_interval'), max_instances=1)
+        scheduler.scheduler.add_job(update, 'interval', id='update',
+                                    seconds=prem_config.getint('global', 'active_interval'), max_instances=1)
         scheduler.start()
         socketio.run(app, port=prem_config.getint('global', 'server_port'), use_reloader=False)
     except:

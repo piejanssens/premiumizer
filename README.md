@@ -37,17 +37,8 @@ Windows:
 
 Installation:
 
-
-Install Git & make sure u select Use git from the windows command prompt:
-```
-https://git-scm.com/download/win
-```
-
-Download python 2.7.11 install to default location: C:\python27
-```
-https://www.python.org/ftp/python/2.7.11/python-2.7.11.msi
-```
-
+Install [Git] (https://git-scm.com/download/win) & make sure u select Use git from the windows command prompt
+Download [Python] (https://www.python.org/ftp/python/2.7.11/python-2.7.11.msi) install to default location: C:\python27
 
 Open command prompt (winkey + R, type cmd) & input:
 ```
