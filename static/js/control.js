@@ -165,10 +165,12 @@ function update_task(task) {
         var files = $(this).prop('files');
         if (files.length > 0) {
             var file = files[0];
-            if (file.type == 'application/x-bittorrent') {
+	    var file2 = String(file);
+	    var fileExtension = file2.replace(/^.*\./, '');
+            if (fileExtension == '.torrent') {
                 uploadTorrent(file);
             } else {
-                alert('Nope, not a torrent file...');
+                alert(fileExtension);
             }
         }
         $('#torrent-file-upload[type="file"]').val(null);
