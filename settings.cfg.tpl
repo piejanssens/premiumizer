@@ -19,7 +19,7 @@ download_enabled = 0
 download_location =
 download_categories = movie,tv,music
 copylink_toclipboard = 0
-download_ext = *
+download_ext =
 download_size = 0
 
 [upload]
