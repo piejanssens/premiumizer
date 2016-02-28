@@ -367,9 +367,9 @@ def parse_tasks(torrents):
                 task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], name=torrent['name'],
                             size=torrent['size'])
             elif task.cloud_status == 'finished' and task.local_status != 'finished':
-                if (prem_config.getboolean('downloads', 'download_enabled') and task.category in prem_config.get(
-                        'downloads', 'download_categories').split(',')) or prem_config.getboolean('downloads',
-                                                                                                  'copylink_toclipboard'):
+                if prem_config.getboolean('downloads', 'download_enabled') or prem_config.getboolean('downloads',
+                                            'copylink_toclipboard') and task.category in prem_config.get(
+                        'downloads', 'download_categories').split(',') :
                     if not downloading:
                         task.update(progress=torrent['percent_done'], cloud_status=torrent['status'],
                                     local_status='downloading')
@@ -517,10 +517,10 @@ def upload():
     if request.files:
         torrent_file = request.files['file']
         filename = secure_filename(torrent_file.filename)
-        if not os.path.isdir('tmp'):
-            os.makedirs('tmp')
-        torrent_file.save(os.path.join('tmp', filename))
-        upload_torrent('tmp/' + filename)
+        if not os.path.isdir(runningdir + 'tmp'):
+            os.makedirs(runningdir + 'tmp')
+        torrent_file.save(os.path.join(runningdir + 'tmp', filename))
+        upload_torrent(runningdir + 'tmp/' + filename)
     elif request.data:
         upload_magnet(request.data)
     return 'OK'
@@ -560,12 +560,10 @@ def settings():
                 prem_config.set('security', 'login_enabled', 0)
             if request.form.get('download_enabled'):
                 prem_config.set('downloads', 'download_enabled', 1)
-                check_paths()
             else:
                 prem_config.set('downloads', 'download_enabled', 0)
             if request.form.get('copylink_toclipboard'):
                 prem_config.set('downloads', 'copylink_toclipboard ', 1)
-                check_paths()
             else:
                 prem_config.set('downloads', 'copylink_toclipboard ', 0)
             if request.form.get('watchdir_enabled'):
@@ -574,7 +572,6 @@ def settings():
             else:
                 prem_config.set('upload', 'watchdir_enabled', 0)
             if request.form.get('nzbtomedia_enabled'):
-                check_paths()
                 prem_config.set('nzbtomedia', 'nzbtomedia_enabled', 1)
             else:
                 prem_config.set('nzbtomedia', 'nzbtomedia_enabled', 0)
@@ -589,7 +586,7 @@ def settings():
             prem_config.set('downloads', 'download_size', request.form.get('download_size'))
             prem_config.set('upload', 'watchdir_location', request.form.get('watchdir_location'))
             prem_config.set('nzbtomedia', 'nzbtomedia_location', request.form.get('nzbtomedia_location'))
-            with open(runningdir+'settings.cfg', 'w') as configfile:  # save
+            with open(runningdir + 'settings.cfg', 'w') as configfile:  # save
                 prem_config.write(configfile)
     return render_template('settings.html', settings=prem_config)
 
