@@ -44,9 +44,9 @@ if not os.path.isfile(runningdir + 'settings.cfg'):
     shutil.copy(runningdir + 'settings.cfg.tpl', runningdir + 'settings.cfg')
 prem_config.read(runningdir + 'settings.cfg')
 
-server_port = prem_config.get('global', 'server_port')
-active_interval = prem_config.get('global', 'active_interval')
-idle_interval = prem_config.get('global', 'idle_interval')
+server_port = prem_config.getint('global', 'server_port')
+active_interval = prem_config.getint('global', 'active_interval')
+idle_interval = prem_config.getint('global', 'idle_interval')
 debug_enabled = prem_config.getboolean('global', 'debug_enabled')
 logfile_enabled = prem_config.getboolean('global', 'logfile_enabled')
 premiumizer_updated = prem_config.getboolean('update', 'updated')
@@ -158,15 +158,16 @@ logger.info('Running at %s', runningdir)
 logger.debug('Premiumizer starting on port: %s', server_port)
 logger.debug('Intervals set at: %s', active_interval, idle_interval)
 
+
 def check_paths():
-logger.info('Checking paths')
+    logger.info('Checking paths')
 
     if download_enabled:
         logger.debug('Downloads are enabled & saved to: %s', download_location)
         if not os.path.exists(download_location):
             logger.info('Creating Download Path at: %s', download_location)
             os.makedirs(download_location)
-            for x in download_categories[x]:
+            for x in download_categories:
                 logger.info('Creating download subdirectory at: %s', download_location + x)
                 os.makedirs(download_location + x)
 
@@ -175,7 +176,7 @@ logger.info('Checking paths')
         if not os.path.exists(watchdir_location):
             logger.info('Creating Watchdir Path at %s', watchdir_location)
             os.makedirs(watchdir_location)
-            for x in download_categories[x]:
+            for x in download_categories:
                 logger.info('Creating watchdir subdirectory at: %s', watchdir_location + x)
                 os.makedirs(watchdir_location + x)
 
@@ -183,7 +184,6 @@ logger.info('Checking paths')
         logger.debug('nzbtomedia is enabled at: %s', nzbtomedia_location)
         if not os.path.isfile(nzbtomedia_location):
             logger.error('Error unable to locate nzbToMedia.py')
-
 
     logger.debug('Checking paths done')
 
@@ -261,9 +261,7 @@ def clean_name(original):
     cleaned_filename = unicodedata.normalize('NFKD', to_unicode(original)).encode('ASCII', 'ignore')
     valid_string = ''.join(c for c in cleaned_filename if c in valid_chars)
     return ' '.join(valid_string.split())
-class settings(object):
-    def __init__(self):
-        self.nzbtomedia_location = 'blabla'
+
 
 def notify_nzbtomedia(task):
     if os.path.isfile(nzbtomedia_location):
@@ -430,7 +428,7 @@ def get_task(hash):
 
 def add_task(hash, name, category):
     logger.debug('def add_task started')
-    tasks.append(DownloadTask(0, hash, 0, name, category))
+    tasks.append(DownloadTask('', hash, 0, name, category))
 
 
 def upload_torrent(filename):
@@ -576,18 +574,21 @@ def settings():
                 prem_config.set('security', 'login_enabled', 0)
             if request.form.get('download_enabled'):
                 prem_config.set('downloads', 'download_enabled', 1)
+                global download_enabled
                 download_enabled = 1
             else:
                 prem_config.set('downloads', 'download_enabled', 0)
                 download_enabled = 0
             if request.form.get('copylink_toclipboard'):
                 prem_config.set('downloads', 'copylink_toclipboard ', 1)
+                global copylink_toclipboard
                 copylink_toclipboard = 1
             else:
                 prem_config.set('downloads', 'copylink_toclipboard ', 0)
                 copylink_toclipboard = 0
             if request.form.get('watchdir_enabled'):
                 prem_config.set('upload', 'watchdir_enabled', 1)
+                global watchdir_enabled
                 watchdir_enabled = 1
                 watchdir()
             else:
@@ -595,30 +596,41 @@ def settings():
                 watchdir_enabled = 0
             if request.form.get('nzbtomedia_enabled'):
                 prem_config.set('nzbtomedia', 'nzbtomedia_enabled', 1)
+                global nzbtomedia_enabled
                 nzbtomedia_enabled = 1
             else:
                 prem_config.set('nzbtomedia', 'nzbtomedia_enabled', 0)
                 nzbtomedia_enabled = 0
             prem_config.set('global', 'server_port', request.form.get('server_port'))
             prem_config.set('security', 'username', request.form.get('username'))
+            global web_username
             web_username = request.form.get('username')
             prem_config.set('security', 'password', request.form.get('password'))
+            global web_password
             web_password = request.form.get('password')
             prem_config.set('premiumize', 'customer_id', request.form.get('customer_id'))
+            global prem_customer_id
             prem_customer_id = request.form.get('customer_id')
             prem_config.set('premiumize', 'pin', request.form.get('pin'))
+            global prem_pin
             prem_pin = request.form.get('pin')
             prem_config.set('downloads', 'download_categories', request.form.get('download_categories'))
+            global download_categories
             download_categories = request.form.get('download_categories').split(',')
             prem_config.set('downloads', 'download_location', request.form.get('download_location'))
+            global download_location
             download_location = request.form.get('download_location')
             prem_config.set('downloads', 'download_ext', request.form.get('download_ext'))
+            global download_ext
             download_ext = request.form.get('download_ext').split(',')
             prem_config.set('downloads', 'download_size', request.form.get('download_size'))
-            download_size = request.form.get('download_size')
+            global download_size
+            download_size = int((request.form.get('download_size') * 1000000))
             prem_config.set('upload', 'watchdir_location', request.form.get('watchdir_location'))
+            global watchdir_location
             watchdir_location = request.form.get('watchdir_location')
             prem_config.set('nzbtomedia', 'nzbtomedia_location', request.form.get('nzbtomedia_location'))
+            global nzbtomedia_location
             nzbtomedia_location = request.form.get('nzbtomedia_location')
             with open(runningdir + 'settings.cfg', 'w') as configfile:  # save
                 prem_config.write(configfile)
