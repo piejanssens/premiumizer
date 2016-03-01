@@ -24,7 +24,7 @@ def update():
     if prem_config.getfloat('update', 'req_version') < default_config.getfloat('update', 'req_version'):
         import pip
         pip.main(['install', '-r', runningdir + 'requirements.txt'])
-        prem_config.set('update', 'updated', 1)
+        prem_config.set('update', 'updated', '1')
         with open('settings.cfg', 'w') as configfile:
             prem_config.write(configfile)
     if prem_config.getfloat('update', 'config_version') < default_config.getfloat('update', 'config_version'):

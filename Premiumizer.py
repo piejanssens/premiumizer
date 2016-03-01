@@ -130,7 +130,7 @@ if prem_config.getboolean('update', 'updated'):
         logger.info('*************************************************************************************')
         logger.info('-------Settings file has been updated/wiped, old settings file renamed to .old-------')
         logger.info('*************************************************************************************')
-    prem_config.set('update', 'updated', 0)
+    prem_config.set('update', 'updated', '0')
     with open(runningdir + 'settings.cfg', 'w') as configfile:
         prem_config.write(configfile)
 
