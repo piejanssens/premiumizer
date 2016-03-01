@@ -568,34 +568,34 @@ def settings():
         else:
             global prem_config
             if request.form.get('debug_enabled'):
-                prem_config.set('global', 'debug_enabled', 1)
+                prem_config.set('global', 'debug_enabled', '1')
             else:
-                prem_config.set('global', 'debug_enabled', 0)
+                prem_config.set('global', 'debug_enabled', '0')
             if request.form.get('logfile_enabled'):
-                prem_config.set('global', 'logfile_enabled', 1)
+                prem_config.set('global', 'logfile_enabled', '1')
             else:
-                prem_config.set('global', 'logfile_enabled', 0)
+                prem_config.set('global', 'logfile_enabled', '0')
             if request.form.get('login_enabled'):
-                prem_config.set('security', 'login_enabled', 1)
+                prem_config.set('security', 'login_enabled', '1')
             else:
-                prem_config.set('security', 'login_enabled', 0)
+                prem_config.set('security', 'login_enabled', '0')
             if request.form.get('download_enabled'):
-                prem_config.set('downloads', 'download_enabled', 1)
+                prem_config.set('downloads', 'download_enabled', '1')
             else:
-                prem_config.set('downloads', 'download_enabled', 0)
+                prem_config.set('downloads', 'download_enabled', '0')
             if request.form.get('copylink_toclipboard'):
-                prem_config.set('downloads', 'copylink_toclipboard ', 1)
+                prem_config.set('downloads', 'copylink_toclipboard ', '1')
             else:
-                prem_config.set('downloads', 'copylink_toclipboard ', 0)
+                prem_config.set('downloads', 'copylink_toclipboard ', '0')
             if request.form.get('watchdir_enabled'):
-                prem_config.set('upload', 'watchdir_enabled', 1)
+                prem_config.set('upload', 'watchdir_enabled', '1')
                 watchdir()
             else:
-                prem_config.set('upload', 'watchdir_enabled', 0)
+                prem_config.set('upload', 'watchdir_enabled', '0')
             if request.form.get('nzbtomedia_enabled'):
-                prem_config.set('nzbtomedia', 'nzbtomedia_enabled', 1)
+                prem_config.set('nzbtomedia', 'nzbtomedia_enabled', '1')
             else:
-                prem_config.set('nzbtomedia', 'nzbtomedia_enabled', 0)
+                prem_config.set('nzbtomedia', 'nzbtomedia_enabled', '0')
             prem_config.set('global', 'server_port', request.form.get('server_port'))
             prem_config.set('security', 'username', request.form.get('username'))
             prem_config.set('security', 'password', request.form.get('password'))
