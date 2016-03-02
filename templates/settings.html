@@ -59,6 +59,13 @@
             {% else %}
                 <input type="checkbox" class="bootstrap_switch" name="download_enabled" data-size="small">
             {% endif %}
+            {% if settings.get('downloads', 'remove_cloud') == '1' %}
+                <input type="checkbox" class="bootstrap_switch" name="remove_cloud" data-size="small"
+                       data-label-text="Remove from cloud after downloading" checked>
+            {% else %}
+                <input type="checkbox" class="bootstrap_switch" name="remove_cloud" data-size="small"
+                       data-label-text="Remove from cloud after downloading">
+            {% endif %}
             <p>&nbsp;</p>
             <input type="text" class="form-control" placeholder="Download categories seperated by commas"
                    name="download_categories" aria-describedby="basic-addon1"

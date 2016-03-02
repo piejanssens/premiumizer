@@ -6,8 +6,8 @@ import json
 import logging
 import os
 import shelve
+import shutil
 import sys
-import time
 import unicodedata
 from logging.handlers import RotatingFileHandler
 from string import ascii_letters, digits
@@ -40,8 +40,6 @@ print '-------------------------------------------------------------------------
 prem_config = ConfigParser.RawConfigParser()
 runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0] + '/'
 if not os.path.isfile(runningdir + 'settings.cfg'):
-    import shutil
-
     shutil.copy(runningdir + 'settings.cfg.tpl', runningdir + 'settings.cfg')
 prem_config.read(runningdir + 'settings.cfg')
 active_interval = prem_config.getint('global', 'active_interval')
@@ -153,6 +151,7 @@ class PremConfig:
 
         self.prem_customer_id = prem_config.get('premiumize', 'customer_id')
         self.prem_pin = prem_config.get('premiumize', 'pin')
+        self.remove_cloud = prem_config.getboolean('downloads', 'remove_cloud')
         self.copylink_toclipboard = prem_config.getboolean('downloads', 'copylink_toclipboard')
         self.download_enabled = prem_config.getboolean('downloads', 'download_enabled')
         self.download_categories = prem_config.get('downloads', 'download_categories').split(',')
@@ -289,22 +288,25 @@ def get_download_stats(task):
 def download_file(task, full_path, url):
     logger.debug('def download_file started')
     logger.info('Downloading file: %s', full_path)
-    global downloader
-    downloader = SmartDL(url, full_path, progress_bar=False, logger=logger)
-    stat_job = scheduler.scheduler.add_job(get_download_stats, args=(task,), trigger='interval', seconds=1,
-                                           max_instances=1, next_run_time=datetime.datetime.now())
-    downloader.start(blocking=True)
-    while not downloader.isFinished():
-        print('wrong! waiting for downloader before finished')
-    stat_job.remove()
-    if downloader.isSuccessful():
-        global total_size_downloaded
-        total_size_downloaded += downloader.get_dl_size()
-        logger.info('Finished downloading file: %s', full_path)
+    if not os.path.isfile(full_path):
+        global downloader
+        downloader = SmartDL(url, full_path, progress_bar=False, logger=logger)
+        stat_job = scheduler.scheduler.add_job(get_download_stats, args=(task,), trigger='interval', seconds=1,
+                                               max_instances=1, next_run_time=datetime.datetime.now())
+        downloader.start(blocking=True)
+        while not downloader.isFinished():
+            print('wrong! waiting for downloader before finished')
+        stat_job.remove()
+        if downloader.isSuccessful():
+            global total_size_downloaded
+            total_size_downloaded += downloader.get_dl_size()
+            logger.info('Finished downloading file: %s', full_path)
+        else:
+            logger.error('Error while downloading file from: %s', full_path)
+            for e in downloader.get_errors():
+                logger.error(str(e))
     else:
-        logger.error('Error while downloading file from: %s', full_path)
-        for e in downloader.get_errors():
-            logger.error(str(e))
+        logger.info('File not downloaded it already exists at: %s', full_path)
 
 
 # TODO continue log statements
@@ -325,7 +327,7 @@ def process_dir(task, path, dir_content):
                         if not os.path.exists(path):
                             os.makedirs(path)
                         download_file(task, path + '/' + clean_name(x),
-                                      dir_content[x]['url'].replace('https', 'http', 1))
+                                      dir_content[x]['url'])
                     elif cfg.copylink_toclipboard:
                         logger.info('Link copied to clipboard for: %s', dir_content[x]['name'])
                         pyperclip.copy(dir_content[x]['url'])
@@ -349,6 +351,21 @@ def download_task(task):
     downloading = False
     if cfg.nzbtomedia_enabled:
         notify_nzbtomedia(task)
+    if cfg.remove_cloud:
+        payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'hash': task.hash}
+        r = requests.post("https://www.premiumize.me/torrent/delete", payload)
+        responsedict = json.loads(r.content)
+        if responsedict['status'] == "success":
+            logger.info('Torrent removed from cloud: %s', task.name)
+        else:
+            logger.info('Torrent could not be removed from cloud: %s', task.name)
+            logger.info(responsedict['message'])
+        payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
+        r = requests.post("https://www.premiumize.me/torrent/list", payload)
+        response_content = json.loads(r.content)
+        if response_content['status'] == "success":
+            torrents = response_content['torrents']
+            parse_tasks(torrents)
 
 
 def update():
@@ -364,6 +381,7 @@ def update():
             idle = parse_tasks(torrents)
         else:
             socketio.emit('tasks_updated', {})
+            update_interval *= 2
     else:
         socketio.emit('premiumize_connect_error', {})
     if not idle:
@@ -405,6 +423,8 @@ def parse_tasks(torrents):
             else:
                 task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], name=torrent['name'],
                             speed=torrent['speed_down'])
+                if task.cloud_status == 'finished':
+                    parse_tasks(torrents)
         else:
             task.update()
         hashes_online.append(task.hash)
@@ -412,7 +432,7 @@ def parse_tasks(torrents):
         db[task.hash] = task
         task.callback = socketio.emit
 
-    # Delete local tasks that are removed from cloud
+    # Delete local task.hash that are removed from cloud
     hash_diff = [aa for aa in hashes_local if aa not in set(hashes_online)]
     for task_hash in hash_diff:
         for task in tasks:
@@ -517,8 +537,6 @@ def watchdir():
                 fname = os.path.join(dirpath, filename)
                 if fname.endswith('.torrent'):
                     fname2 = fname.replace('.torrent', '2.torrent')
-                    import shutil
-                    time.sleep(5)
                     shutil.copy(fname, fname2)
                     os.remove(fname)
     except:
@@ -583,6 +601,10 @@ def settings():
                 prem_config.set('downloads', 'download_enabled', '1')
             else:
                 prem_config.set('downloads', 'download_enabled', '0')
+            if request.form.get('remove_cloud'):
+                prem_config.set('downloads', 'remove_cloud', '1')
+            else:
+                prem_config.set('downloads', 'remove_cloud', '0')
             if request.form.get('copylink_toclipboard'):
                 prem_config.set('downloads', 'copylink_toclipboard', '1')
             else:
