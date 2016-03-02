@@ -309,15 +309,15 @@ def download_file(task, full_path, url):
 
 # TODO continue log statements
 
-def process_dir(task, path, new_name, dir_content):
+def process_dir(task, path, dir_content):
     logger.debug('def processing_dir started')
     if not dir_content:
         return None
-    new_path = os.path.join(path, new_name)
     for x in dir_content:
         type = dir_content[x]['type']
         if type == 'dir':
-            process_dir(task, new_path, clean_name(x), dir_content[x]['children'])
+            new_path = os.path.join(path, clean_name(x))
+            process_dir(task, new_path, dir_content[x]['children'])
         elif type == 'file':
             if dir_content[x]['size'] >= cfg.download_size:
                 if cfg.download_ext is None or dir_content[x]['url'].lower().endswith(tuple(cfg.download_ext)):
@@ -338,14 +338,13 @@ def download_task(task):
     base_path = cfg.download_location
     if task.category:
         base_path = os.path.join(base_path, task.category)
-    task.download_location = os.path.join(base_path, clean_name(task.name))
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
                'hash': task.hash}
     r = requests.post("https://www.premiumize.me/torrent/browse", payload)
     global total_size_downloaded
     total_size_downloaded = 0
     downloading = True
-    process_dir(task, base_path, clean_name(task.name), json.loads(r.content)['data']['content'])
+    process_dir(task, base_path, json.loads(r.content)['data']['content'])
     task.update(local_status='finished', progress=100)
     downloading = False
     if cfg.nzbtomedia_enabled:
@@ -354,19 +353,20 @@ def download_task(task):
 
 def update():
     logger.debug('Updating')
-    global update_interval
     idle = True
+    update_interval = idle_interval
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
     r = requests.post("https://www.premiumize.me/torrent/list", payload)
     response_content = json.loads(r.content)
     if response_content['status'] == "success":
-        torrents = response_content['torrents']
-        idle = parse_tasks(torrents)
+        if response_content['torrents']:
+            torrents = response_content['torrents']
+            idle = parse_tasks(torrents)
+        else:
+            socketio.emit('tasks_updated', {})
     else:
         socketio.emit('premiumize_connect_error', {})
-    if idle:
-        update_interval = idle_interval
-    else:
+    if not idle:
         update_interval = active_interval
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=update_interval)
 
@@ -435,7 +435,7 @@ def get_task(hash):
 
 def add_task(hash, name, category):
     logger.debug('def add_task started')
-    tasks.append(DownloadTask(None, hash, 0, name, category))
+    tasks.append(DownloadTask(socketio.emit, hash, 0, name, category))
 
 
 def upload_torrent(filename):

@@ -113,7 +113,7 @@ function update_task(task) {
     }
 }
 
-+ function ($) {
++function ($) {
     'use strict';
     var originalTorrentPlaceHolder;
     var originalTorrentLabelClass;
@@ -165,8 +165,8 @@ function update_task(task) {
         var files = $(this).prop('files');
         if (files.length > 0) {
             var file = files[0];
-	    var fileName = file.name;
-	    var fileExt = '.' + fileName.split('.').pop();
+            var fileName = file.name;
+            var fileExt = '.' + fileName.split('.').pop();
             if (fileExt == '.torrent') {
                 uploadTorrent(file);
             } else {
@@ -191,8 +191,8 @@ function update_task(task) {
     $('#torrent-input').on('drop', function (e) {
         e.preventDefault();
         var file = e.originalEvent.dataTransfer.files[0];
-	var fileName = file.name;
-	var fileExt = '.' + fileName.split('.').pop();
+        var fileName = file.name;
+        var fileExt = '.' + fileName.split('.').pop();
         if (fileExt == '.torrent') {
             uploadTorrent(file);
         } else {
