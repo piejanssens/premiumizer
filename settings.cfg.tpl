@@ -16,6 +16,7 @@ pin =
 
 [downloads]
 download_enabled = 0
+remove_cloud = 0
 download_location =
 download_categories = movie,tv,music
 copylink_toclipboard = 0
