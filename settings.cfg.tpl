@@ -16,10 +16,11 @@ pin =
 
 [downloads]
 download_enabled = 0
+remove_cloud = 0
 download_location =
 download_categories = movie,tv,music
 copylink_toclipboard = 0
-download_ext = *
+download_ext =
 download_size = 0
 
 [upload]
@@ -29,3 +30,9 @@ watchdir_location =
 [nzbtomedia]
 nzbtomedia_enabled = 0
 nzbtomedia_location =
+
+[update]
+#Do not change these values#
+updated = 1
+config_version = 1.0
+req_version = 1.0

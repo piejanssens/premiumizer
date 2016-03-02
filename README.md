@@ -33,9 +33,36 @@ Package coming soon(ish).
 
 Requirement: git, Python 2.7 (with pip+virtualenv)
 
+Windows:
+
+Installation:
+
+Install [Git] (https://git-scm.com/download/win) & make sure u select Use git from the windows command prompt.
+
+Download [Python] (https://www.python.org/ftp/python/2.7.11/python-2.7.11.msi) install to default location: C:\python27.
+
+Open command prompt (winkey + R, type cmd) & input:
+```
+git clone https://github.com/piejanssens/premiumizer.git c:\premiumizer
+C:\Python27\Scripts\pip.exe install virtualenv
+C:\Python27\Scripts\virtualenv.exe c:\premiumizer\env
+C:\premiumizer\env\Scripts\activate.bat
+pip install -r C:\premiumizer\requirements.txt
+```
+
+Running:
+
+Open command prompt or create .bat file:
+```
+c:\premiumizer\env\Scripts\activate.bat
+cd C:\premiumizer
+python premiumizer.py
+```
+
 OS X: Install [brew](http://brew.sh/), use brew to install python
 
-1. ```git clone https://github.com/piejanssens/premiumizer.git```
+1. ```git clone
+https://github.com/piejanssens/premiumizer.git```
 2. ```cd premiumizer```
 3. ```virtualenv virtualenv```
 4. ```source virtualenv/bin/activate```
@@ -46,7 +73,7 @@ Now use your browser to access [http://localhost:5000/](http://localhost:5000/).
 Extra: Google how you can turn it into a service and run it in background
 
 ## Updating
-There is no automatic updater in place yet. You need to "git pull" the latest changes.
+Use update from settings page, Premiumizer will restart & check for updates.
 
 ## Settings
 Once you can access the premiumizer web interface make sure you head over to the settings page.

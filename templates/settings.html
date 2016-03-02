@@ -2,89 +2,128 @@
 {% set active_page = "settings" %}
 {% block title %} - Home{% endblock %}
 {% block content %}
-<form data-toggle="validator" role="form" method="post" action="/settings" enctype="multipart/form-data">
-<h3>Global (requires restart)</h3>
-<div class="form-group">
-{% if settings.get('global', 'debug_enabled') == 1 %}
-    <input type="checkbox" class="form-control bootstrap_switch" name="debug_enabled" data-size="small" data-label-text="Debug Mode" checked>
-{% else %}
-    <input type="checkbox" class="form-control bootstrap_switch" name="debug_enabled" data-size="small" data-label-text="Debug Mode">
-{% endif %}
-</div>
-<div class="form-group">
-{% if settings.get('global', 'logfile_enabled') == 1 %}
-    <input type="checkbox" class="form-control bootstrap_switch" name="logfile_enabled" data-size="small" data-label-text="Enable Logfile to premiumizer.log" checked>
-{% else %}
-    <input type="checkbox" class="form-control bootstrap_switch" name="logfile_enabled" data-size="small" data-label-text="Enable Logfile to premiumizer.log">
-{% endif %}
-</div>
-<div class="form-group">
-<p>&nbsp;</p>
-<input type="number" class="form-control" placeholder="Server Port" aria-describedby="basic-addon1" name="server_port" value="{{ settings.get('global', 'server_port') }}">
-</div>
+    <form data-toggle="validator" role="form" method="post" action="/settings" enctype="multipart/form-data">
+        <h3>Global (requires restart)</h3>
+        <div class="form-group">
+            {% if settings.get('global', 'debug_enabled') == '1' %}
+                <input type="checkbox" class="form-control bootstrap_switch" name="debug_enabled" data-size="small"
+                       data-label-text="Debug Mode" checked>
+            {% else %}
+                <input type="checkbox" class="form-control bootstrap_switch" name="debug_enabled" data-size="small"
+                       data-label-text="Debug Mode">
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {% if settings.get('global', 'logfile_enabled') == '1' %}
+                <input type="checkbox" class="form-control bootstrap_switch" name="logfile_enabled" data-size="small"
+                       data-label-text="Enable Logfile to premiumizer.log" checked>
+            {% else %}
+                <input type="checkbox" class="form-control bootstrap_switch" name="logfile_enabled" data-size="small"
+                       data-label-text="Enable Logfile to premiumizer.log">
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <p>&nbsp;</p>
+            <input type="number" class="form-control" placeholder="Server Port" aria-describedby="basic-addon1"
+                   name="server_port" value="{{ settings.get('global', 'server_port') }}">
+        </div>
 
-<h3>Premiumizer Authorisation</h3>
-<div class="form-group">
-{% if settings.get('security', 'login_enabled') == 1 %}
-    <input type="checkbox" class="bootstrap_switch bootstrap-switch-small" name="login_enabled" data-size="small" checked>
-{% else %}
-    <input type="checkbox" class="bootstrap_switch bootstrap-switch-small" name="login_enabled" data-size="small">
-{% endif %}
-<p>&nbsp;</p>
-<input type="text" class="form-control" placeholder="Username" aria-describedby="basic-addon1" name="username" value="{{ settings.get('security', 'username') }}">
-<input type="password" class="form-control" placeholder="Password" aria-describedby="basic-addon1" name="password" value="{{ settings.get('security', 'password') }}">
-</div>
+        <h3>Premiumizer Authorisation</h3>
+        <div class="form-group">
+            {% if settings.get('security', 'login_enabled') == '1' %}
+                <input type="checkbox" class="bootstrap_switch bootstrap-switch-small" name="login_enabled"
+                       data-size="small" checked>
+            {% else %}
+                <input type="checkbox" class="bootstrap_switch bootstrap-switch-small" name="login_enabled"
+                       data-size="small">
+            {% endif %}
+            <p>&nbsp;</p>
+            <input type="text" class="form-control" placeholder="Username" aria-describedby="basic-addon1"
+                   name="username" value="{{ settings.get('security', 'username') }}">
+            <input type="password" class="form-control" placeholder="Password" aria-describedby="basic-addon1"
+                   name="password" value="{{ settings.get('security', 'password') }}">
+        </div>
 
-<h3>Premiumize.me</h3>
-<div class="form-group">
-<input type="number" class="form-control" placeholder="Customer ID" aria-describedby="basic-addon1" name="customer_id" value="{{ settings.get('premiumize', 'customer_id') }}">
-<input type="password" class="form-control" placeholder="PIN" aria-describedby="basic-addon1" name="pin" value="{{ settings.get('premiumize', 'pin') }}">
-</div>
+        <h3>Premiumize.me</h3>
+        <div class="form-group">
+            <input type="number" class="form-control" placeholder="Customer ID" aria-describedby="basic-addon1"
+                   name="customer_id" value="{{ settings.get('premiumize', 'customer_id') }}">
+            <input type="password" class="form-control" placeholder="PIN" aria-describedby="basic-addon1" name="pin"
+                   value="{{ settings.get('premiumize', 'pin') }}">
+        </div>
 
-<h3>Automatic Local Downloads</h3>
-<div class="form-group">
-{% if settings.get('downloads', 'download_enabled') == 1 %}
-    <input type="checkbox" class="bootstrap_switch" name="download_enabled" data-size="small" checked>
-{% else %}
-    <input type="checkbox" class="bootstrap_switch" name="download_enabled" data-size="small">
-{% endif %}
-<p>&nbsp;</p>
-<input type="text" class="form-control" placeholder="Download categories seperated by commas" name="download_categories" aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_categories') }}">
-<input type="text" class="form-control" placeholder="Download Location" name="download_location" aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_location') }}">
-</div>
+        <h3>Automatic Local Downloads</h3>
+        <div class="form-group">
+            {% if settings.get('downloads', 'download_enabled') == '1' %}
+                <input type="checkbox" class="bootstrap_switch" name="download_enabled" data-size="small" checked>
+            {% else %}
+                <input type="checkbox" class="bootstrap_switch" name="download_enabled" data-size="small">
+            {% endif %}
+            {% if settings.get('downloads', 'remove_cloud') == '1' %}
+                <input type="checkbox" class="bootstrap_switch" name="remove_cloud" data-size="small"
+                       data-label-text="Remove from cloud after downloading" checked>
+            {% else %}
+                <input type="checkbox" class="bootstrap_switch" name="remove_cloud" data-size="small"
+                       data-label-text="Remove from cloud after downloading">
+            {% endif %}
+            <p>&nbsp;</p>
+            <input type="text" class="form-control" placeholder="Download categories seperated by commas"
+                   name="download_categories" aria-describedby="basic-addon1"
+                   value="{{ settings.get('downloads', 'download_categories') }}">
+            <input type="text" class="form-control" placeholder="Download Location" name="download_location"
+                   aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_location') }}">
+        </div>
 
-<h3>Copy Links to clipboard to catch (Jdownloader)  -  Disable above download option</h3>
-<h5>Input extensions as followed: .mkv,.mp4,.avi</h5>
-<div class="form-group">
-{% if settings.get('downloads', 'copylink_toclipboard') == 1 %}
-    <input type="checkbox" class="bootstrap_switch" name="copylink_toclipboard" data-size="small" checked>
-{% else %}
-    <input type="checkbox" class="bootstrap_switch" name="copylink_toclipboard" data-size="small">
-{% endif %}
-<p>&nbsp;</p>
-<input type="text" class="form-control" placeholder="Extensions to download, * for everything" name="download_ext" aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_ext') }}">
-<input type="text" class="form-control" placeholder="Minimum size in MB to copy links for, 0 for all" name="download_size" aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_size') }}">
-</div>
+        <h3>Copy Links to clipboard to catch (Jdownloader) - Disable above download option</h3>
+        <h5>Input extensions as followed: .mkv,.mp4,.avi</h5>
+        <div class="form-group">
+            {% if settings.get('downloads', 'copylink_toclipboard') == '1' %}
+                <input type="checkbox" class="bootstrap_switch" name="copylink_toclipboard" data-size="small" checked>
+            {% else %}
+                <input type="checkbox" class="bootstrap_switch" name="copylink_toclipboard" data-size="small">
+            {% endif %}
+            <p>&nbsp;</p>
+            <input type="text" class="form-control" placeholder="Extensions to download, leave blank for everything"
+                   name="download_ext" aria-describedby="basic-addon1"
+                   value="{{ settings.get('downloads', 'download_ext') }}">
+            <input type="text" class="form-control" placeholder="Minimum size in MB to copy links for, 0 for all"
+                   name="download_size" aria-describedby="basic-addon1"
+                   value="{{ settings.get('downloads', 'download_size') }}">
+        </div>
 
-<h3>Upload Torrents / Watchdir </h3><div class="form-group">{% if settings.get('upload', 'watchdir_enabled') == 1 %}<input type="checkbox" class="bootstrap_switch" name="watchdir_enabled" data-size="small" checked>{% else %}<input type="checkbox" class="bootstrap_switch" name="watchdir_enabled" data-size="small">{% endif %}<p>&nbsp;</p><input type="text" class="form-control" placeholder="Folder to Watch" name="watchdir_location" aria-describedby="basic-addon1" value="{{ settings.get('upload', 'watchdir_location') }}">
-</div>
+        <h3>Upload Torrents / Watchdir </h3>
 
-<h3>nzbToMedia</h3>
-<div class="form-group">
-{% if settings.get('nzbtomedia', 'nzbtomedia_enabled') == 1 %}
-    <input type="checkbox" class="bootstrap_switch" name="nzbtomedia_enabled" data-size="small" checked>
-{% else %}
-    <input type="checkbox" class="bootstrap_switch" name="nzbtomedia_enabled" data-size="small">
-{% endif %}
-<p>&nbsp;</p>
-<input type="text" class="form-control" placeholder="path to nzbToMedia.py" name="nzbtomedia_location" aria-describedby="basic-addon1" value="{{ settings.get('nzbtomedia', 'nzbtomedia_location') }}">
-</div>
-<hr>
-<div class="form-group pull-right">
-<button type="submit" class="btn btn-default">Save</button>
-<input type="submit" name="submit" value="Restart">
-<input type="submit" name="submit" value="Shutdown">
 
-</div>
-</form>
+        <div class="form-group">{% if settings.get('upload', 'watchdir_enabled') == '1' %}
+            <input type="checkbox" class="bootstrap_switch" name="watchdir_enabled" data-size="small" checked>{% else %}
+            <input type="checkbox" class="bootstrap_switch" name="watchdir_enabled" data-size="small">{% endif %}<p>
+            &nbsp;</p><input type="text" class="form-control" placeholder="Folder to Watch" name="watchdir_location"
+                             aria-describedby="basic-addon1" value="{{ settings.get('upload', 'watchdir_location') }}">
+        </div>
+
+        <h3>nzbToMedia</h3>
+        <div class="form-group">
+            {% if settings.get('nzbtomedia', 'nzbtomedia_enabled') == '1' %}
+                <input type="checkbox" class="bootstrap_switch" name="nzbtomedia_enabled" data-size="small" checked>
+            {% else %}
+                <input type="checkbox" class="bootstrap_switch" name="nzbtomedia_enabled" data-size="small">
+            {% endif %}
+            <p>&nbsp;</p>
+            <input type="text" class="form-control" placeholder="path to nzbToMedia.py" name="nzbtomedia_location"
+                   aria-describedby="basic-addon1" value="{{ settings.get('nzbtomedia', 'nzbtomedia_location') }}">
+        </div>
+        <h3>Update</h3>
+        <h5>Premiumizer will restart & update</h5>
+        <div>
+            <input type="submit" name="submit" value="Update">
+        </div>
+
+        <hr>
+        <div class="form-group pull-right">
+            <button type="submit" class="btn btn-default">Save</button>
+            <input type="submit" name="submit" value="Restart">
+            <input type="submit" name="submit" value="Shutdown">
+        </div>
+        <hr/>
+    </form>
 {% endblock %}
