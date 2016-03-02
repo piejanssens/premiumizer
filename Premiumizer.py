@@ -547,7 +547,7 @@ def watchdir():
 @app.route('/')
 @login_required
 def home():
-    return render_template('index.html')
+    return render_template('index.html', debug_enabled=debug_enabled)
 
 
 @app.route('/upload', methods=["POST"])

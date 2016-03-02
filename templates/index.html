@@ -8,7 +8,13 @@
         <span class="sr-only">Error:</span>
         Cannot connect to premiumize.me. Check your premiumize account details in settings and if premiumize.me is up.
     </div>
-
+    {% if debug_enabled == 1 %}
+        <div id="debug_enabled" class="alert alert-warning" role="alert" style="display:inline;">
+            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+            <span class="sr-only">Error:</span>
+            Debug mode is enabled, this is not recommended, disable it as the settings page & restart.
+        </div>
+    {% endif %}
     <div id="main_container" class="container">
 
         <div class="row">
