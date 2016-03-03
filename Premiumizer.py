@@ -152,8 +152,10 @@ class PremConfig:
         self.prem_customer_id = prem_config.get('premiumize', 'customer_id')
         self.prem_pin = prem_config.get('premiumize', 'pin')
         self.remove_cloud = prem_config.getboolean('downloads', 'remove_cloud')
-        self.copylink_toclipboard = prem_config.getboolean('downloads', 'copylink_toclipboard')
         self.download_enabled = prem_config.getboolean('downloads', 'download_enabled')
+        self.copylink_toclipboard = prem_config.getboolean('downloads', 'copylink_toclipboard')
+        if self.copylink_toclipboard:
+            self.download_enabled = 0
         self.download_categories = prem_config.get('downloads', 'download_categories').split(',')
         if self.download_enabled:
             self.download_location = prem_config.get('downloads', 'download_location')
@@ -607,6 +609,7 @@ def settings():
                 prem_config.set('downloads', 'remove_cloud', '0')
             if request.form.get('copylink_toclipboard'):
                 prem_config.set('downloads', 'copylink_toclipboard', '1')
+                prem_config.set('downloads', 'download_enabled', '0')
             else:
                 prem_config.set('downloads', 'copylink_toclipboard', '0')
             if request.form.get('watchdir_enabled'):
