@@ -1,6 +1,5 @@
 #! /usr/bin/env python
 import ConfigParser
-import datetime
 import hashlib
 import json
 import logging
@@ -13,6 +12,7 @@ from logging.handlers import RotatingFileHandler
 from string import ascii_letters, digits
 
 import bencode
+import gevent
 import pyperclip
 import requests
 import six
@@ -293,12 +293,10 @@ def download_file(task, full_path, url):
     if not os.path.isfile(full_path):
         global downloader
         downloader = SmartDL(url, full_path, progress_bar=False, logger=logger)
-        stat_job = scheduler.scheduler.add_job(get_download_stats, args=(task,), trigger='interval', seconds=1,
-                                               max_instances=1, next_run_time=datetime.datetime.now())
-        downloader.start(blocking=True)
+        downloader.start(blocking=False)
         while not downloader.isFinished():
-            print('wrong! waiting for downloader before finished')
-        stat_job.remove()
+            get_download_stats(task)
+            gevent.sleep(5)
         if downloader.isSuccessful():
             global total_size_downloaded
             total_size_downloaded += downloader.get_dl_size()
@@ -414,7 +412,7 @@ def parse_tasks(torrents):
                 if (cfg.download_enabled or cfg.copylink_toclipboard) and (task.category in cfg.download_categories):
                     if not downloading:
                         task.update(progress=torrent['percent_done'], cloud_status=torrent['status'],
-                                    local_status='downloading')
+                                    local_status='downloading', size=torrent['size'])
                         scheduler.scheduler.add_job(download_task, args=(task,), replace_existing=True, max_instances=1)
                     elif task.local_status != 'downloading':
                         task.update(progress=torrent['percent_done'], cloud_status=torrent['status'],
@@ -467,9 +465,8 @@ def upload_torrent(filename):
     r = requests.post("https://www.premiumize.me/torrent/add", payload, files=files)
     response_content = json.loads(r.content)
     if response_content['status'] == "success":
-        torrents = response_content['torrents']
-        parse_tasks(torrents)
         logger.debug('Upload successful: %s', filename)
+        scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=0)
         return True
     else:
         return False
@@ -481,8 +478,8 @@ def upload_magnet(magnet):
     r = requests.post("https://www.premiumize.me/torrent/add", payload)
     response_content = json.loads(r.content)
     if response_content['status'] == "success":
-        torrents = response_content['torrents']
-        parse_tasks(torrents)
+        logger.debug('Upload magnet successful')
+        scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=0)
         return True
     else:
         return False
@@ -498,6 +495,7 @@ class MyHandler(PatternMatchingEventHandler):
 
     def process(self, event):
         if event.event_type == 'created' and event.is_directory is False:
+            gevent.sleep(2)
             torrent_file = event.src_path
             logger.debug('New torrent file detected at: %s', torrent_file)
             # Open torrent file to get hash
