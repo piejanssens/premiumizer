@@ -19,7 +19,7 @@ pySmartDL==1.2.4
 pyperclip==1.5.26
 requests==2.9.1
 python-socketio==1.0
-tzlocal==1.2.1
+tzlocal==1.2.2
 werkzeug==0.11.4
 itsdangerous==0.24
 six==1.10.0
