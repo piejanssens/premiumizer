@@ -429,6 +429,8 @@ def parse_tasks(torrents):
                     elif task.local_status != 'downloading':
                         task.update(progress=torrent['percent_done'], cloud_status=torrent['status'],
                                     local_status='queued')
+                elif task.category == '':
+                    task.update(progress=torrent['percent_done'], cloud_status=torrent['status'])
                 else:
                     task.update(progress=torrent['percent_done'], cloud_status=torrent['status'],
                                 local_status='finished')
@@ -736,6 +738,7 @@ def change_category(message):
     data = message['data']
     task = get_task(data['hash'])
     task.update(category=data['category'])
+    scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=5)
 
 
 # Start watchdog if watchdir is enabled
