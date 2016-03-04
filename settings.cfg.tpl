@@ -1,6 +1,6 @@
 [global]
 server_port = 5000
-active_interval = 5
+active_interval = 20
 idle_interval = 120
 debug_enabled = 0
 logfile_enabled = 1
