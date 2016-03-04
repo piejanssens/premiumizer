@@ -375,13 +375,11 @@ def update():
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
     r = requests.post("https://www.premiumize.me/torrent/list", payload)
     response_content = json.loads(r.content)
+    torrents = response_content['torrents']
     if response_content['status'] == "success":
-        if response_content['torrents']:
-            torrents = response_content['torrents']
-            idle = parse_tasks(torrents)
-        else:
-            socketio.emit('tasks_updated', {})
+        if not response_content['torrents']:
             update_interval *= 2
+        idle = parse_tasks(torrents)
     else:
         socketio.emit('premiumize_connect_error', {})
     if not idle:
