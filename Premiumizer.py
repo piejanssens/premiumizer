@@ -55,11 +55,11 @@ if debug_enabled:
                                        datefmt='%m-%d %H:%M:%S')
     syslog.setFormatter(formatterdebug)
     logger.addHandler(syslog)
-    print '------------------------------------------------------------------------------------------------------------'
-    print '|                                                                                                           |'
-    print '------------------------PREMIUMIZER IS RUNNING IN DEBUG MODE, THIS IS NOT RECOMMENDED-----------------------'
-    print '|                                                                                                           |'
-    print '------------------------------------------------------------------------------------------------------------'
+    print '-----------------------------------------------------------------------------------------------------------'
+    print '|                                                                                                          |'
+    print '------------------------PREMIUMIZER IS RUNNING IN DEBUG MODE, THIS IS NOT RECOMMENDED----------------------'
+    print '|                                                                                                          |'
+    print '-----------------------------------------------------------------------------------------------------------'
     logger.info('----------------------------------')
     logger.info('----------------------------------')
     logger.info('----------------------------------')
@@ -142,7 +142,7 @@ class PremConfig:
         self.check_config()
 
     def check_config(self):
-        logger.debug('Checking config')
+        logger.debug('Initializing config')
         self.web_login_enabled = prem_config.getboolean('security', 'login_enabled')
         if self.web_login_enabled:
             logger.debug('Premiumizer login is enabled')
@@ -188,7 +188,7 @@ class PremConfig:
         if self.nzbtomedia_enabled:
             self.nzbtomedia_location = prem_config.get('nzbtomedia', 'nzbtomedia_location')
 
-        logger.debug('Checking config done')
+        logger.debug('Initializing config complete')
 
 
 cfg = PremConfig()
@@ -205,16 +205,20 @@ app.config['LOGIN_DISABLED'] = not cfg.web_login_enabled
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
-logger.debug('Flask initialized')
+logger.debug('Initializing Flask complete')
 
-# Initializer Database
-logger.debug('Initialize Database')
+# Initialise Database
+logger.debug('Initializing Database')
 db = shelve.open(runningdir + 'premiumizer.db')
+logger.debug('Initializing Database complete')
+
+# Initialise Globals
 tasks = []
 downloading = False
-downloader = None
 total_size_downloaded = None
-logger.debug('Database initialized')
+size_remove = 0
+download_list = []
+download_list_send = 0
 
 
 #
@@ -276,7 +280,7 @@ def notify_nzbtomedia(task):
         logger.error('Error unable to locate nzbToMedia.py')
 
 
-def get_download_stats(task):
+def get_download_stats(task, downloader):
     logger.debug('Updating Download Stats')
     if downloader and downloader.get_status() == 'downloading':
         size_downloaded = total_size_downloaded + downloader.get_dl_size()
@@ -287,32 +291,31 @@ def get_download_stats(task):
         logger.debug('Want to update stats, but downloader does not exist yet.')
 
 
-def download_file(task, full_path, url):
+def download_file(download_list):
     logger.debug('def download_file started')
-    logger.info('Downloading file: %s', full_path)
-    if not os.path.isfile(full_path):
-        global downloader
-        downloader = SmartDL(url, full_path, progress_bar=False, logger=logger)
-        downloader.start(blocking=False)
-        while not downloader.isFinished():
-            get_download_stats(task)
-            gevent.sleep(5)
-        if downloader.isSuccessful():
-            global total_size_downloaded
-            total_size_downloaded += downloader.get_dl_size()
-            logger.info('Finished downloading file: %s', full_path)
+    for download in download_list:
+        logger.info('Downloading file: %s', download['path'])
+        if not os.path.isfile(download['path']):
+            downloader = SmartDL(download['url'], download['path'], progress_bar=False, logger=logger)
+            downloader.start(blocking=False)
+            while not downloader.isFinished():
+                get_download_stats(download['task'], downloader)
+                gevent.sleep(2)
+            if downloader.isSuccessful():
+                logger.info('Finished downloading file: %s', download['path'])
+            else:
+                logger.error('Error while downloading file from: %s', download['path'])
+                for e in downloader.get_errors():
+                    logger.error(str(e))
         else:
-            logger.error('Error while downloading file from: %s', full_path)
-            for e in downloader.get_errors():
-                logger.error(str(e))
-    else:
-        logger.info('File not downloaded it already exists at: %s', full_path)
+            logger.info('File not downloaded it already exists at: %s', download['path'])
 
 
 # TODO continue log statements
 
 def process_dir(task, path, dir_content):
     logger.debug('def processing_dir started')
+    global download_list, download_list_send, size_remove
     if not dir_content:
         return None
     for x in dir_content:
@@ -321,30 +324,40 @@ def process_dir(task, path, dir_content):
             new_path = os.path.join(path, clean_name(x))
             process_dir(task, new_path, dir_content[x]['children'])
         elif type == 'file':
-            if dir_content[x]['size'] >= cfg.download_size:
-                if cfg.download_ext is None or dir_content[x]['url'].lower().endswith(tuple(cfg.download_ext)):
-                    if cfg.download_enabled:
-                        if not os.path.exists(path):
-                            os.makedirs(path)
-                        download_file(task, path + '/' + clean_name(x),
-                                      dir_content[x]['url'])
-                    elif cfg.copylink_toclipboard:
-                        logger.info('Link copied to clipboard for: %s', dir_content[x]['name'])
-                        pyperclip.copy(dir_content[x]['url'])
+            if dir_content[x]['size'] >= cfg.download_size and (
+                            cfg.download_ext is None or dir_content[x]['url'].lower().endswith(
+                        tuple(cfg.download_ext))):
+                if cfg.download_enabled:
+                    if not os.path.exists(path):
+                        os.makedirs(path)
+                    download = {'task': task, 'path': path + '/' + clean_name(x), 'url': dir_content[x]['url']}
+                    download_list.append(download)
+                    if not download_list_send:
+                        download_list_send = 1
+                elif cfg.copylink_toclipboard:
+                    logger.info('Link copied to clipboard for: %s', dir_content[x]['name'])
+                    pyperclip.copy(dir_content[x]['url'])
+            else:
+                size_remove += dir_content[x]['size']
+    if download_list_send:
+        download_list_send = 0
+        task.update(size=(task.size - size_remove))
+        download_file(download_list)
 
 
 #
 def download_task(task):
     logger.debug('def download_task started')
-    global downloading
+    global downloading, total_size_downloaded, download_list, size_remove
     base_path = cfg.download_location
     if task.category:
         base_path = os.path.join(base_path, task.category)
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
                'hash': task.hash}
     r = requests.post("https://www.premiumize.me/torrent/browse", payload)
-    global total_size_downloaded
     total_size_downloaded = 0
+    size_remove = 0
+    download_list = []
     downloading = True
     process_dir(task, base_path, json.loads(r.content)['data']['content'])
     task.update(local_status='finished', progress=100)
@@ -412,7 +425,7 @@ def parse_tasks(torrents):
                         task.update(progress=torrent['percent_done'], cloud_status=torrent['status'],
                                     local_status='downloading', size=torrent['size'])
                         scheduler.scheduler.add_job(download_task, args=(task,), id='download', coalesce=False,
-                                                    replace_existing=False, max_instances=1, misfire_grace_time=7200)
+                                                    replace_existing=True, max_instances=1, misfire_grace_time=7200)
                     elif task.local_status != 'downloading':
                         task.update(progress=torrent['percent_done'], cloud_status=torrent['status'],
                                     local_status='queued')
@@ -465,7 +478,7 @@ def upload_torrent(filename):
     response_content = json.loads(r.content)
     if response_content['status'] == "success":
         logger.debug('Upload successful: %s', filename)
-        scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=0)
+        scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=5)
         return True
     else:
         return False
@@ -478,7 +491,7 @@ def upload_magnet(magnet):
     response_content = json.loads(r.content)
     if response_content['status'] == "success":
         logger.debug('Upload magnet successful')
-        scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=0)
+        scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=5)
         return True
     else:
         return False
@@ -494,7 +507,7 @@ class MyHandler(PatternMatchingEventHandler):
 
     def process(self, event):
         if event.event_type == 'created' and event.is_directory is False:
-            gevent.sleep(2)
+            gevent.sleep(1)
             torrent_file = event.src_path
             logger.debug('New torrent file detected at: %s', torrent_file)
             # Open torrent file to get hash
@@ -530,7 +543,7 @@ def watchdir():
         observer = Observer()
         observer.schedule(MyHandler(), path=cfg.watchdir_location, recursive=True)
         observer.start()
-        logger.info('Watchdir initialized')
+        logger.info('Initializing watchdog complete')
         for dirpath, dirs, files in os.walk(cfg.watchdir_location):
             for filename in files:
                 fname = os.path.join(dirpath, filename)
