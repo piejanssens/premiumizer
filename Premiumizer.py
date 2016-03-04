@@ -64,8 +64,8 @@ if debug_enabled:
     logger.info('----------------------------------')
     logger.info('----------------------------------')
     logger.info('DEBUG Logger Initialized')
-    handler = logging.handlers.RotatingFileHandler(runningdir + 'premiumizerDEBUG.log', maxBytes=(20 * 1024),
-                                                   backupCount=5)
+    handler = logging.handlers.RotatingFileHandler(runningdir + 'premiumizerDEBUG.log', maxBytes=(100 * 1024),
+                                                   backupCount=2)
     handler.setFormatter(formatterdebug)
     logger.addHandler(handler)
     logger.info('DEBUG Logfile Initialized')
@@ -80,8 +80,8 @@ else:
     logger.info('-------------------------------------------------------------------------------------')
     logger.info('Logger Initialized')
     if prem_config.getboolean('global', 'logfile_enabled'):
-        handler = logging.handlers.RotatingFileHandler(runningdir + 'premiumizer.log', maxBytes=(20 * 1024),
-                                                       backupCount=5)
+        handler = logging.handlers.RotatingFileHandler(runningdir + 'premiumizer.log', maxBytes=(100 * 1024),
+                                                       backupCount=2)
         handler.setFormatter(formatter)
         logger.addHandler(handler)
         logger.info('Logfile Initialized')
