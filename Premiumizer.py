@@ -411,7 +411,8 @@ def parse_tasks(torrents):
                     if not downloading:
                         task.update(progress=torrent['percent_done'], cloud_status=torrent['status'],
                                     local_status='downloading', size=torrent['size'])
-                        scheduler.scheduler.add_job(download_task, args=(task,), replace_existing=True, max_instances=1)
+                        scheduler.scheduler.add_job(download_task, args=(task,), id='download', coalesce=False,
+                                                    replace_existing=False, max_instances=1, misfire_grace_time=7200)
                     elif task.local_status != 'downloading':
                         task.update(progress=torrent['percent_done'], cloud_status=torrent['status'],
                                     local_status='queued')
@@ -735,7 +736,7 @@ if __name__ == '__main__':
         scheduler = APScheduler(GeventScheduler())
         scheduler.init_app(app)
         scheduler.scheduler.add_job(update, 'interval', id='update',
-                                    seconds=active_interval, max_instances=1)
+                                    seconds=active_interval, max_instances=1, coalesce=True)
         scheduler.start()
         socketio.run(app, port=prem_config.getint('global', 'server_port'), use_reloader=False)
     except:
