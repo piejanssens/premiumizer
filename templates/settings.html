@@ -67,11 +67,6 @@
                        data-label-text="Remove from cloud after downloading">
             {% endif %}
             <p>&nbsp;</p>
-            <input type="text" class="form-control" placeholder="Download categories seperated by commas"
-                   name="download_categories" aria-describedby="basic-addon1"
-                   value="{{ settings.get('downloads', 'download_categories') }}">
-            <input type="text" class="form-control" placeholder="Download Location" name="download_location"
-                   aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_location') }}">
         </div>
 
         <h3>Copy Links to clipboard to catch (Jdownloader) - Automatic downloads will be disabled</h3>
@@ -83,12 +78,6 @@
                 <input type="checkbox" class="bootstrap_switch" name="copylink_toclipboard" data-size="small">
             {% endif %}
             <p>&nbsp;</p>
-            <input type="text" class="form-control" placeholder="Extensions to download, leave blank for everything"
-                   name="download_ext" aria-describedby="basic-addon1"
-                   value="{{ settings.get('downloads', 'download_ext') }}">
-            <input type="text" class="form-control" placeholder="Minimum size in MB to copy links for, 0 for all"
-                   name="download_size" aria-describedby="basic-addon1"
-                   value="{{ settings.get('downloads', 'download_size') }}">
         </div>
 
         <h3>Upload Torrents / Watchdir </h3>
@@ -103,11 +92,6 @@
 
         <h3>nzbToMedia</h3>
         <div class="form-group">
-            {% if settings.get('nzbtomedia', 'nzbtomedia_enabled') == '1' %}
-                <input type="checkbox" class="bootstrap_switch" name="nzbtomedia_enabled" data-size="small" checked>
-            {% else %}
-                <input type="checkbox" class="bootstrap_switch" name="nzbtomedia_enabled" data-size="small">
-            {% endif %}
             <p>&nbsp;</p>
             <input type="text" class="form-control" placeholder="path to nzbToMedia.py" name="nzbtomedia_location"
                    aria-describedby="basic-addon1" value="{{ settings.get('nzbtomedia', 'nzbtomedia_location') }}">
