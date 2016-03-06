@@ -783,6 +783,7 @@ if cfg.watchdir_enabled:
     watchdir()
 
 # start the server with the 'run()' method
+logger.info('Starting server on port: %s ', prem_config.getint('global', 'server_port'))
 if __name__ == '__main__':
     try:
         load_tasks()
