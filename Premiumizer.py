@@ -153,40 +153,48 @@ class PremConfig:
         self.prem_pin = prem_config.get('premiumize', 'pin')
         self.remove_cloud = prem_config.getboolean('downloads', 'remove_cloud')
         self.download_enabled = prem_config.getboolean('downloads', 'download_enabled')
+        self.download_location = prem_config.get('downloads', 'download_location')
+        self.nzbtomedia_location = prem_config.get('nzbtomedia', 'nzbtomedia_location')
         self.copylink_toclipboard = prem_config.getboolean('downloads', 'copylink_toclipboard')
         if self.copylink_toclipboard:
             self.download_enabled = 0
-        self.download_categories = prem_config.get('downloads', 'download_categories').split(',')
-        if self.download_enabled:
-            self.download_location = prem_config.get('downloads', 'download_location')
-            logger.info('Downloads are enabled & saved to: %s', self.download_location)
-            if not os.path.exists(self.download_location):
-                logger.info('Creating Download Path at: %s', self.download_location)
-                os.makedirs(self.download_location)
-            for x in self.download_categories:
-                self.sub = self.download_location + '/' + x
-                if not os.path.exists(self.sub):
-                    logger.info('Creating download subdirectory at: %s', self.sub)
-                    os.makedirs(self.sub)
 
-        if self.download_enabled or self.copylink_toclipboard:
-            self.download_ext = prem_config.get('downloads', 'download_ext').split(',')
-            self.download_size = (prem_config.getint('downloads', 'download_size') * 1000000)
         self.watchdir_enabled = prem_config.getboolean('upload', 'watchdir_enabled')
         if self.watchdir_enabled:
             self.watchdir_location = prem_config.get('upload', 'watchdir_location')
             logger.info('Watchdir is enabled at: %s', self.watchdir_location)
             if not os.path.exists(self.watchdir_location):
-                logger.info('Creating watchdir Path at %s', self.watchdir_location)
                 os.makedirs(self.watchdir_location)
-            for x in self.download_categories:
-                self.sub = self.watchdir_location + '/' + x
-                if not os.path.exists(self.sub):
-                    logger.info('Creating watchdir subdirectory at: %s ', self.sub)
-                    os.makedirs(self.sub)
-        self.nzbtomedia_enabled = prem_config.getboolean('nzbtomedia', 'nzbtomedia_enabled')
-        if self.nzbtomedia_enabled:
-            self.nzbtomedia_location = prem_config.get('nzbtomedia', 'nzbtomedia_location')
+
+        if self.download_enabled or self.copylink_toclipboard:
+            self.categories = []
+            self.download_categories = ''
+            for x in range(1, 6):
+                y = prem_config.get('categories', ('cat_name' + str([x])))
+                z = prem_config.get('categories', ('cat_dir' + str([x])))
+                if y != '':
+                    cat_name = y
+                    if z == '':
+                        cat_dir = self.download_location + '/' + y
+                    else:
+                        cat_dir = z
+                    cat_ext = prem_config.get('categories', ('cat_ext' + str([x]))).split(',')
+                    cat_size = prem_config.getint('categories', ('cat_size' + str([x]))) * 1000000
+                    cat_nzbtomedia = prem_config.getboolean('categories', ('cat_nzbtomedia' + str([x])))
+                    cat = {'name': cat_name, 'dir': cat_dir, 'ext': cat_ext, 'size': cat_size, 'nzb': cat_nzbtomedia}
+                    self.categories.append(cat)
+                    self.download_categories += str(cat_name + ',')
+                    if self.download_enabled:
+                        if not os.path.exists(cat_dir):
+                            logger.info('Creating Download Path at: %s', cat_dir)
+                            os.makedirs(cat_dir)
+                    if self.watchdir_enabled:
+                        sub = self.watchdir_location + '/' + cat_name
+                        if not os.path.exists(sub):
+                            logger.info('Creating watchdir Path at %s', sub)
+                            os.makedirs(sub)
+            self.download_categories = self.download_categories[:-1]
+            self.download_categories = self.download_categories.split(',')
 
         logger.debug('Initializing config complete')
 
@@ -274,7 +282,7 @@ def notify_nzbtomedia(task):
     if os.path.isfile(cfg.nzbtomedia_location):
         # noinspection PyArgumentList
         os.system(cfg.nzbtomedia_location,
-                  task.download_location + ' ' + task.name + ' ' + task.category + ' ' + task.hash)
+                  task.dldir + ' ' + task.name + ' ' + task.category + ' ' + task.hash)
         logger.info('Send to nzbtomedia: %s', task.name)
     else:
         logger.error('Error unable to locate nzbToMedia.py')
@@ -324,9 +332,7 @@ def process_dir(task, path, dir_content):
             new_path = os.path.join(path, clean_name(x))
             process_dir(task, new_path, dir_content[x]['children'])
         elif type == 'file':
-            if dir_content[x]['size'] >= cfg.download_size and (
-                            cfg.download_ext is None or dir_content[x]['url'].lower().endswith(
-                        tuple(cfg.download_ext))):
+            if dir_content[x]['size'] >= task.dlsize and dir_content[x]['url'].lower().endswith(tuple(task.dlext)):
                 if cfg.download_enabled:
                     if not os.path.exists(path):
                         os.makedirs(path)
@@ -349,9 +355,6 @@ def process_dir(task, path, dir_content):
 def download_task(task):
     logger.debug('def download_task started')
     global downloading, total_size_downloaded, download_list, size_remove
-    base_path = cfg.download_location
-    if task.category:
-        base_path = os.path.join(base_path, task.category)
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
                'hash': task.hash}
     r = requests.post("https://www.premiumize.me/torrent/browse", payload)
@@ -359,10 +362,10 @@ def download_task(task):
     size_remove = 0
     download_list = []
     downloading = True
-    process_dir(task, base_path, json.loads(r.content)['data']['content'])
+    process_dir(task, task.dldir, json.loads(r.content)['data']['content'])
     task.update(local_status='finished', progress=100)
     downloading = False
-    if cfg.nzbtomedia_enabled:
+    if task.dlnzbtomedia:
         notify_nzbtomedia(task)
     if cfg.remove_cloud:
         payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'hash': task.hash}
@@ -412,9 +415,7 @@ def parse_tasks(torrents):
             idle = False
         task = get_task(torrent['hash'].encode("utf-8"))
         if not task:
-            task = DownloadTask(socketio.emit, torrent['hash'].encode("utf-8"), torrent['size'], torrent['name'], '')
-            task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], speed=torrent['speed_down'])
-            tasks.append(task)
+            add_task(torrent['hash'].encode("utf-8"), torrent['size'], torrent['name'], '')
         elif task.local_status != 'finished':
             if task.cloud_status == 'uploading':
                 task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], name=torrent['name'],
@@ -467,9 +468,28 @@ def get_task(hash):
     return None
 
 
-def add_task(hash, name, category):
+# noinspection PyUnboundLocalVariable
+def get_cat_var(category):
+    if category != '':
+        for cat in cfg.categories:
+            if cat['name'] == category:
+                dldir = cat['dir']
+                dlext = cat['ext']
+                dlsize = cat['size']
+                dlnzbtomedia = cat['nzb']
+    else:
+        dldir = None
+        dlext = None
+        dlsize = 0
+        dlnzbtomedia = 0
+    return dldir, dlext, dlsize, dlnzbtomedia
+
+
+def add_task(hash, size, name, category):
     logger.debug('def add_task started')
-    tasks.append(DownloadTask(socketio.emit, hash, 0, name, category))
+    dldir, dlext, dlsize, dlnzbtomedia = get_cat_var(category)
+    tasks.append(DownloadTask(socketio.emit, hash, size, name, category, dldir, dlext, dlsize, dlnzbtomedia))
+    scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
 
 
 def upload_torrent(filename):
@@ -480,7 +500,6 @@ def upload_torrent(filename):
     response_content = json.loads(r.content)
     if response_content['status'] == "success":
         logger.debug('Upload successful: %s', filename)
-        scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=5)
         return True
     else:
         return False
@@ -493,7 +512,6 @@ def upload_magnet(magnet):
     response_content = json.loads(r.content)
     if response_content['status'] == "success":
         logger.debug('Upload magnet successful')
-        scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=5)
         return True
     else:
         return False
@@ -507,22 +525,19 @@ def send_categories():
 class MyHandler(PatternMatchingEventHandler):
     patterns = ["*.torrent"]
 
+    # noinspection PyMethodMayBeStatic
     def process(self, event):
         if event.event_type == 'created' and event.is_directory is False:
             gevent.sleep(1)
             torrent_file = event.src_path
             logger.debug('New torrent file detected at: %s', torrent_file)
-            # Open torrent file to get hash
-            metainfo = bencode.bdecode(open(torrent_file, 'rb').read())
-            info = metainfo['info']
-            name = info['name']
-            hash = hashlib.sha1(bencode.bencode(info)).hexdigest()
+            hash, name = torrent_metainfo(torrent_file)
             dirname = os.path.basename(os.path.normpath(os.path.dirname(torrent_file)))
             if dirname in cfg.download_categories:
                 category = dirname
             else:
                 category = ''
-            add_task(hash, name, category)
+            add_task(hash, 0, name, category)
             logger.info('Uploading torrent to the cloud: %s', torrent_file)
             upload_torrent(event.src_path)
             logger.debug('Deleting torrent from watchdir: %s', torrent_file)
@@ -530,6 +545,14 @@ class MyHandler(PatternMatchingEventHandler):
 
     def on_created(self, event):
         self.process(event)
+
+
+def torrent_metainfo(torrent):
+    metainfo = bencode.bdecode(open(torrent, 'rb').read())
+    info = metainfo['info']
+    name = info['name']
+    hash = hashlib.sha1(bencode.bencode(info)).hexdigest()
+    return hash, name
 
 
 def load_tasks():
@@ -573,9 +596,14 @@ def upload():
         if not os.path.isdir(runningdir + 'tmp'):
             os.makedirs(runningdir + 'tmp')
         torrent_file.save(os.path.join(runningdir + 'tmp', filename))
-        upload_torrent(runningdir + 'tmp/' + filename)
+        torrent = runningdir + 'tmp' + '/' + filename
+        upload_torrent(torrent)
+        hash, name = torrent_metainfo(torrent)
+        add_task(hash, 0, name, '')
+        os.remove(torrent)
     elif request.data:
         upload_magnet(request.data)
+        scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
     return 'OK'
 
 
@@ -629,21 +657,28 @@ def settings():
                 watchdir()
             else:
                 prem_config.set('upload', 'watchdir_enabled', '0')
-            if request.form.get('nzbtomedia_enabled'):
-                prem_config.set('nzbtomedia', 'nzbtomedia_enabled', '1')
-            else:
-                prem_config.set('nzbtomedia', 'nzbtomedia_enabled', '0')
+
             prem_config.set('global', 'server_port', request.form.get('server_port'))
             prem_config.set('security', 'username', request.form.get('username'))
             prem_config.set('security', 'password', request.form.get('password'))
             prem_config.set('premiumize', 'customer_id', request.form.get('customer_id'))
             prem_config.set('premiumize', 'pin', request.form.get('pin'))
-            prem_config.set('downloads', 'download_categories', request.form.get('download_categories'))
             prem_config.set('downloads', 'download_location', request.form.get('download_location'))
             prem_config.set('downloads', 'download_ext', request.form.get('download_ext'))
             prem_config.set('downloads', 'download_size', request.form.get('download_size'))
             prem_config.set('upload', 'watchdir_location', request.form.get('watchdir_location'))
             prem_config.set('nzbtomedia', 'nzbtomedia_location', request.form.get('nzbtomedia_location'))
+
+            for x in range(1, 6):
+                prem_config.set('categories', ('cat_name' + str([x])), request.form.get('cat_name' + str([x])))
+                prem_config.set('categories', ('cat_dir' + str([x])), request.form.get('cat_dir' + str([x])))
+                prem_config.set('categories', ('cat_ext' + str([x])), request.form.get('cat_ext' + str([x])))
+                prem_config.set('categories', ('cat_size' + str([x])), request.form.get('cat_size' + str([x])))
+                if request.form.get('cat_nzbtomedia' + str([x])):
+                    prem_config.set('categories', ('cat_nzbtomedia' + str([x])), 1)
+                else:
+                    prem_config.set('categories', ('cat_nzbtomedia' + str([x])), 0)
+
             with open(runningdir + 'settings.cfg', 'w') as configfile:  # save
                 prem_config.write(configfile)
             cfg.check_config()
@@ -702,6 +737,7 @@ def delete_task(message):
     responsedict = json.loads(r.content)
     if responsedict['status'] == "success":
         emit('delete_success', {'data': message['data']})
+        scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
     else:
         emit('delete_failed', {'data': message['data']})
 
@@ -719,7 +755,7 @@ def test_disconnect():
 @socketio.on('hello_server')
 def hello_server(message):
     send_categories()
-    scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=0)
+    scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=2)
     print(message['data'])
 
 
@@ -737,8 +773,9 @@ def handle_json(json):
 def change_category(message):
     data = message['data']
     task = get_task(data['hash'])
-    task.update(category=data['category'])
-    scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=5)
+    dldir, dlext, dlsize, dlnzbtomedia = get_cat_var(data['category'])
+    task.update(category=data['category'], dldir=dldir, dlext=dlext, dlsize=dlsize, dlnzbtomedia=dlnzbtomedia)
+    scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
 
 
 # Start watchdog if watchdir is enabled

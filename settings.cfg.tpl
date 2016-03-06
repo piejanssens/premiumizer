@@ -18,10 +18,35 @@ pin =
 download_enabled = 0
 remove_cloud = 0
 download_location =
-download_categories = default,movie,tv,music
 copylink_toclipboard = 0
-download_ext =
-download_size = 0
+
+[categories]
+cat_name[1] = tv
+cat_dir[1] =
+cat_ext[1] =
+cat_size[1] = 0
+cat_nzbtomedia[1] = 0
+cat_name[2] = movie
+cat_dir[2] =
+cat_ext[2] =
+cat_size[2] = 0
+cat_nzbtomedia[2] = 0
+cat_name[3] =
+cat_dir[3] =
+cat_ext[3] =
+cat_size[3] = 0
+cat_nzbtomedia[3] = 0
+cat_name[4] =
+cat_dir[4] =
+cat_ext[4] =
+cat_size[4] = 0
+cat_nzbtomedia[4] = 0
+cat_name[5] =
+cat_dir[5] =
+cat_ext[5] =
+cat_size[5] = 0
+cat_nzbtomedia[5] = 0
+
 
 [upload]
 watchdir_enabled = 0
