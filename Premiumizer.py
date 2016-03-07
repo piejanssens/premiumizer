@@ -237,6 +237,7 @@ class User(UserMixin):
 
 
 def to_unicode(original, *args):
+    logger.debug('def to_unicode started')
     try:
         if isinstance(original, unicode):
             return original
@@ -261,6 +262,7 @@ def to_unicode(original, *args):
 
 
 def ek(original, *args):
+    logger.debug('def ek started')
     if isinstance(original, (str, unicode)):
         try:
             return original.decode('UTF-8', 'ignore')
@@ -271,6 +273,7 @@ def ek(original, *args):
 
 #
 def clean_name(original):
+    logger.debug('def clean_name started')
     valid_chars = "-_.() %s%s" % (ascii_letters, digits)
     cleaned_filename = unicodedata.normalize('NFKD', to_unicode(original)).encode('ASCII', 'ignore')
     valid_string = ''.join(c for c in cleaned_filename if c in valid_chars)
@@ -278,6 +281,7 @@ def clean_name(original):
 
 
 def notify_nzbtomedia(task):
+    logger.debug('def notify_nzbtomedia started')
     if os.path.isfile(cfg.nzbtomedia_location):
         # noinspection PyArgumentList
         os.system(cfg.nzbtomedia_location,
@@ -288,7 +292,7 @@ def notify_nzbtomedia(task):
 
 
 def get_download_stats(task, downloader):
-    logger.debug('Updating Download Stats')
+    logger.debug('def get_download_stats started')
     if downloader and downloader.get_status() == 'downloading':
         size_downloaded = total_size_downloaded + downloader.get_dl_size()
         progress = round(float(size_downloaded) * 100 / task.size, 1)
@@ -361,8 +365,10 @@ def download_task(task):
     size_remove = 0
     download_list = []
     task.update(local_status='downloading')
+    logger.info('Downloading torrent: %s', task.name)
     process_dir(task, task.dldir, json.loads(r.content)['data']['content'])
     task.update(local_status='finished', progress=100)
+    logger.info('Downloading torrent finished: %s', task.name)
     if task.dlnzbtomedia:
         notify_nzbtomedia(task)
     if cfg.remove_cloud:
@@ -378,7 +384,8 @@ def download_task(task):
 
 
 def update():
-    logger.debug('Updating')
+    logger.debug('def updating started')
+    logger.info('Updating')
     idle = True
     update_interval = idle_interval
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
@@ -457,6 +464,7 @@ def get_task(hash):
 
 # noinspection PyUnboundLocalVariable
 def get_cat_var(category):
+    logger.debug('def get_cat_var started')
     if category != '':
         for cat in cfg.categories:
             if cat['name'] == category:
@@ -483,6 +491,7 @@ def upload_torrent(filename):
     logger.debug('def upload_torrent started')
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
     files = {'file': open(filename, 'rb')}
+    logger.info('Uploading torrent to the cloud: %s', filename)
     r = requests.post("https://www.premiumize.me/torrent/add", payload, files=files)
     response_content = json.loads(r.content)
     if response_content['status'] == "success":
@@ -525,7 +534,6 @@ class MyHandler(PatternMatchingEventHandler):
             else:
                 category = ''
             add_task(hash, 0, name, category)
-            logger.info('Uploading torrent to the cloud: %s', torrent_file)
             upload_torrent(event.src_path)
             logger.debug('Deleting torrent from watchdir: %s', torrent_file)
             os.remove(torrent_file)
@@ -535,6 +543,7 @@ class MyHandler(PatternMatchingEventHandler):
 
 
 def torrent_metainfo(torrent):
+    logger.debug('def torrent_metainfo started')
     metainfo = bencode.bdecode(open(torrent, 'rb').read())
     info = metainfo['info']
     name = info['name']
@@ -543,6 +552,7 @@ def torrent_metainfo(torrent):
 
 
 def load_tasks():
+    logger.debug('def load_tasks started')
     for hash in db.keys():
         task = db[hash.encode("utf-8")]
         task.callback = socketio.emit
