@@ -305,7 +305,7 @@ def get_download_stats(task, downloader):
 def download_file(download_list):
     logger.debug('def download_file started')
     for download in download_list:
-        logger.info('Downloading file: %s', download['path'])
+        logger.debug('Downloading file: %s', download['path'])
         if not os.path.isfile(download['path']):
             downloader = SmartDL(download['url'], download['path'], progress_bar=False, logger=logger)
             downloader.start(blocking=False)
@@ -313,7 +313,7 @@ def download_file(download_list):
                 get_download_stats(download['task'], downloader)
                 gevent.sleep(2)
             if downloader.isSuccessful():
-                logger.info('Finished downloading file: %s', download['path'])
+                logger.debug('Finished downloading file: %s', download['path'])
             else:
                 logger.error('Error while downloading file from: %s', download['path'])
                 for e in downloader.get_errors():
@@ -414,7 +414,7 @@ def parse_tasks(torrents):
         task = get_task(torrent['hash'].encode("utf-8"))
         if not task:
             add_task(torrent['hash'].encode("utf-8"), torrent['size'], torrent['name'], '')
-        elif task.local_status == 'finished':
+        elif task.local_status == 'finished' or task.local_status == 'waiting':
             task.update()
         elif task.local_status == 'queued' or task.local_status == 'downloading':
             pass
@@ -772,7 +772,8 @@ def change_category(message):
     data = message['data']
     task = get_task(data['hash'])
     dldir, dlext, dlsize, dlnzbtomedia = get_cat_var(data['category'])
-    task.update(category=data['category'], dldir=dldir, dlext=dlext, dlsize=dlsize, dlnzbtomedia=dlnzbtomedia)
+    task.update(local_status=None, category=data['category'], dldir=dldir, dlext=dlext, dlsize=dlsize,
+                dlnzbtomedia=dlnzbtomedia)
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
 
 
