@@ -23,12 +23,16 @@
             {% endif %}
         </div>
         <div class="form-group">
+            <p>Time in seconds for idle interval:</p>
+            <input type="number" class="form-control" placeholder="Idle interval" aria-describedby="basic-addon1"
+                   name="idle_interval" value="{{ settings.get('global', 'idle_interval') }}">
+            <p>&nbsp;</p>
             <p>Server port:</p>
             <input type="number" class="form-control" placeholder="Server Port" aria-describedby="basic-addon1"
                    name="server_port" value="{{ settings.get('global', 'server_port') }}">
         </div>
         <p>&nbsp;</p>
-        <h3>Premiumizer Authorisation</h3>
+        <h3>Premiumizer Login Required</h3>
         <div class="form-group">
             {% if settings.get('security', 'login_enabled') == '1' %}
                 <input type="checkbox" class="bootstrap_switch bootstrap-switch-small" name="login_enabled"
@@ -44,7 +48,7 @@
                    name="password" value="{{ settings.get('security', 'password') }}">
         </div>
         <p>&nbsp;</p>
-        <h3>Premiumize.me</h3>
+        <h3>Premiumize.me account:</h3>
         <div class="form-group">
             <input type="number" class="form-control" placeholder="Customer ID" aria-describedby="basic-addon1"
                    name="customer_id" value="{{ settings.get('premiumize', 'customer_id') }}">
@@ -70,6 +74,7 @@
                 <p>&nbsp;</p>
                 <input type="text" class="form-control" placeholder="Download Location" name="download_location"
                        aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_location') }}">
+                <p>&nbsp;</p>
                 <input type="text" class="form-control" placeholder="path to nzbToMedia.py" name="nzbtomedia_location"
                        aria-describedby="basic-addon1" value="{{ settings.get('nzbtomedia', 'nzbtomedia_location') }}">
             </div>
@@ -88,27 +93,31 @@
 
 
         <h3> Categories </h3>
+        <h5>Download Location defaults to above location + subdirectory based on category name</h5>
+        <h5>Size: default 0 = download everything</h5>
         <p>&nbsp;</p>
         {% for x in range(1,6) %}
             <div class="form-inline">
                 <input type="text" class="form-control" placeholder="Name" name="{{ "cat_name["+x|string+"]" }}"
                        aria-describedby="basic-addon1"
                        value="{{ settings.get('categories', 'cat_name['+x|string+']') }}">
-                <input type="text" class="form-control" placeholder="Directory" name="{{ "cat_dir["+x|string+"]" }}"
+                <input type="text" class="form-control" placeholder="Download Location"
+                       name="{{ "cat_dir["+x|string+"]" }}"
                        aria-describedby="basic-addon1"
                        value="{{ settings.get('categories', 'cat_dir['+x|string+']') }}">
                 <input type="text" class="form-control" placeholder="Extensions" name="{{ "cat_ext["+x|string+"]" }}"
                        aria-describedby="basic-addon1"
                        value="{{ settings.get('categories', 'cat_ext['+x|string+']') }}">
-                <input type="text" class="form-control" placeholder="Size" name="{{ "cat_size["+x|string+"]" }}"
+                <input type="text" class="form-control" placeholder="Minimum Size to download"
+                       name="{{ "cat_size["+x|string+"]" }}"
                        aria-describedby="basic-addon1"
                        value="{{ settings.get('categories', 'cat_size['+x|string+']') }}">
                 {% if settings.get('categories', 'cat_nzbtomedia['+x|string+']') == '1' %}
-                    <input type="checkbox" class="checkbox" name="{{ "cat_nzbtomedia["+x|string+"]" }}"
-                           data-size="small" checked>
+                    <input type="checkbox" class="bootstrap_switch" name="{{ "cat_nzbtomedia["+x|string+"]" }}"
+                           data-size="small" data-label-text="NZBtomedia" checked>
                 {% else %}
-                    <input type="checkbox" class="checkbox" name="{{ "cat_nzbtomedia["+x|string+"]" }}"
-                           data-size="small">
+                    <input type="checkbox" class="bootstrap_switch" name="{{ "cat_nzbtomedia["+x|string+"]" }}"
+                           data-size="small" data-label-text="NZBtomedia">
                 {% endif %}
             </div>
         {% endfor %}
@@ -123,6 +132,7 @@
                 <input type="checkbox" class="bootstrap_switch" name="watchdir_enabled" data-size="small">
             {% endif %}
             <p>&nbsp;</p>
+            <p>Subfolders will be created based on categories names</p>
             <input type="text" class="form-control" placeholder="Folder to Watch" name="watchdir_location"
                    aria-describedby="basic-addon1" value="{{ settings.get('upload', 'watchdir_location') }}">
         </div>
@@ -132,15 +142,14 @@
         <h5>Premiumizer will restart & update</h5>
         <div>
             <input type="submit" name="submit" value="Update">
-            <p>&nbsp;</p>
         </div>
+        <p>&nbsp;</p>
 
-        <hr>
         <div class="form-group pull-right">
             <button type="submit" class="btn btn-default">Save</button>
             <input type="submit" name="submit" value="Restart">
             <input type="submit" name="submit" value="Shutdown">
         </div>
-        <hr/>
+
     </form>
 {% endblock %}

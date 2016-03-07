@@ -656,6 +656,7 @@ def settings():
                 prem_config.set('upload', 'watchdir_enabled', '0')
 
             prem_config.set('global', 'server_port', request.form.get('server_port'))
+            prem_config.set('global', 'idle_interval', request.form.get('idle_interval'))
             prem_config.set('security', 'username', request.form.get('username'))
             prem_config.set('security', 'password', request.form.get('password'))
             prem_config.set('premiumize', 'customer_id', request.form.get('customer_id'))
