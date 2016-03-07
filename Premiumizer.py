@@ -410,7 +410,7 @@ def parse_tasks(torrents):
         elif task.local_status == 'finished':
             task.update()
         elif task.local_status == 'queued' or task.local_status == 'downloading':
-            continue
+            pass
         elif task.local_status == None:
             if task.cloud_status != 'finished':
                 task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], name=torrent['name'],
