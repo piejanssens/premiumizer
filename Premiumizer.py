@@ -222,7 +222,6 @@ logger.debug('Initializing Database complete')
 
 # Initialise Globals
 tasks = []
-downloading = False
 total_size_downloaded = None
 size_remove = 0
 download_list = []
@@ -354,17 +353,16 @@ def process_dir(task, path, dir_content):
 #
 def download_task(task):
     logger.debug('def download_task started')
-    global downloading, total_size_downloaded, download_list, size_remove
+    global total_size_downloaded, download_list, size_remove
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
                'hash': task.hash}
     r = requests.post("https://www.premiumize.me/torrent/browse", payload)
     total_size_downloaded = 0
     size_remove = 0
     download_list = []
-    downloading = True
+    task.update(local_status='downloading')
     process_dir(task, task.dldir, json.loads(r.content)['data']['content'])
     task.update(local_status='finished', progress=100)
-    downloading = False
     if task.dlnzbtomedia:
         notify_nzbtomedia(task)
     if cfg.remove_cloud:
@@ -406,37 +404,31 @@ def parse_tasks(torrents):
     for task in tasks:
         hashes_local.append(task.hash)
     for torrent in torrents:
-        if torrent['status'] == "downloading":
-            idle = False
         task = get_task(torrent['hash'].encode("utf-8"))
         if not task:
             add_task(torrent['hash'].encode("utf-8"), torrent['size'], torrent['name'], '')
-        elif task.local_status != 'finished':
-            if task.cloud_status == 'uploading':
-                task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], name=torrent['name'],
-                            size=torrent['size'])
-            elif task.cloud_status == 'finished' and task.local_status != 'finished':
-                if (cfg.download_enabled or cfg.copylink_toclipboard) and (task.category in cfg.download_categories):
-                    if not downloading:
-                        task.update(progress=torrent['percent_done'], cloud_status=torrent['status'],
-                                    local_status='downloading', size=torrent['size'])
-                        scheduler.scheduler.add_job(download_task, args=(task,), id='download', coalesce=False,
-                                                    replace_existing=True, max_instances=1, misfire_grace_time=7200)
-                    elif task.local_status != 'downloading':
-                        task.update(progress=torrent['percent_done'], cloud_status=torrent['status'],
-                                    local_status='queued')
-                elif task.category == '':
-                    task.update(progress=torrent['percent_done'], cloud_status=torrent['status'])
-                else:
-                    task.update(progress=torrent['percent_done'], cloud_status=torrent['status'],
-                                local_status='finished')
-            else:
-                task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], name=torrent['name'],
-                            speed=torrent['speed_down'])
-                if task.cloud_status == 'finished':
-                    parse_tasks(torrents)
-        else:
+        elif task.local_status == 'finished':
             task.update()
+        elif task.local_status == 'queued' or task.local_status == 'downloading':
+            continue
+        elif task.local_status == None:
+            if task.cloud_status != 'finished':
+                task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], name=torrent['name'],
+                            size=torrent['size'], speed=torrent['speed_down'])
+            if task.cloud_status == 'finished':
+                if cfg.download_enabled or cfg.copylink_toclipboard:
+                    if task.category in cfg.download_categories:
+                        if not (task.local_status == 'queued' or task.local_status == 'downloading'):
+                            task.update(local_status='queued')
+                            scheduler.scheduler.add_job(download_task, args=(task,), id='download', coalesce=False,
+                                                        replace_existing=True, max_instances=1, misfire_grace_time=7200)
+                    elif task.category == '':
+                        task.update(local_status='waiting')
+                else:
+                    task.update(local_status='finished')
+            else:
+                idle = False
+
         hashes_online.append(task.hash)
         task.callback = None
         db[task.hash] = task

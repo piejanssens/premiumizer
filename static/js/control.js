@@ -54,8 +54,18 @@ function update_task(task) {
         categoryState = '';
     } else if (task.cloud_status == 'finished' && task.local_status == null) {
         stateColor = 'success';
-        stateStr = 'Finished'
-        stateIcon = 'cloud'
+        stateStr = 'Finished';
+        stateIcon = 'cloud';
+        categoryState = '';
+    } else if (task.cloud_status == 'finished' && task.local_status == 'queued') {
+        stateColor = 'primary';
+        stateStr = 'Download Queue';
+        stateIcon = 'desktop';
+        categoryState = '';
+    } else if (task.cloud_status == 'finished' && task.local_status == 'waiting') {
+        stateColor = 'primary';
+        stateStr = 'Waiting on category';
+        stateIcon = 'desktop';
         categoryState = '';
     } else if (task.cloud_status == 'finished' && task.local_status == 'downloading') {
         stateColor = 'primary';
@@ -139,7 +149,7 @@ function update_task(task) {
                 stop_loading_upload();
             }
         });
-    }
+    };
 
     var uploadMagnet = function (magnet) {
         console.log(magnet);
@@ -158,7 +168,7 @@ function update_task(task) {
                 $('#magnet-input').val('');
             }
         });
-    }
+    };
 
     $('#torrent-file-upload').on('change', function (e) {
         e.preventDefault();
