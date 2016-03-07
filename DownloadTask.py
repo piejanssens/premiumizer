@@ -72,5 +72,6 @@ class DownloadTask:
             return False
 
     def get_json(self):
-        return {'progress': self.progress, 'speed': self.speed, 'size': self.size, 'hash': self.hash, 'name': self.name,
+        return {'progress': self.progress, 'speed': self.speed, 'size': self.size, 'eta': self.eta, 'hash': self.hash,
+                'name': self.name,
                 'cloud_status': self.cloud_status, 'local_status': self.local_status, 'category': self.category}

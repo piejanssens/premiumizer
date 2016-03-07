@@ -22,7 +22,7 @@ from flask import Flask, flash, request, redirect, url_for, render_template, sen
 from flask.ext.login import LoginManager, login_required, login_user, logout_user, UserMixin
 from flask.ext.socketio import SocketIO, emit
 from flask_apscheduler import APScheduler
-from pySmartDL import SmartDL
+from pySmartDL import SmartDL, utils
 from watchdog.events import PatternMatchingEventHandler
 from watchdog.observers import Observer
 from werkzeug.utils import secure_filename
@@ -296,8 +296,10 @@ def get_download_stats(task, downloader):
     if downloader and downloader.get_status() == 'downloading':
         size_downloaded = total_size_downloaded + downloader.get_dl_size()
         progress = round(float(size_downloaded) * 100 / task.size, 1)
-        speed = downloader.get_speed(human=True)
-        task.update(speed=speed, progress=progress)
+        speed = downloader.get_speed(human=True) + ' '
+        tmp = task.size / downloader.get_speed()
+        eta = utils.time_human(tmp, fmt_short=True)
+        task.update(speed=speed, progress=progress, eta=eta)
     else:
         logger.debug('Want to update stats, but downloader does not exist yet.')
 
@@ -326,7 +328,7 @@ def download_file(download_list):
 
 def process_dir(task, path, dir_content):
     logger.debug('def processing_dir started')
-    global download_list, download_list_send, size_remove
+    global download_list, size_remove
     if not dir_content:
         return None
     for x in dir_content:
@@ -341,17 +343,11 @@ def process_dir(task, path, dir_content):
                         os.makedirs(path)
                     download = {'task': task, 'path': path + '/' + clean_name(x), 'url': dir_content[x]['url']}
                     download_list.append(download)
-                    if not download_list_send:
-                        download_list_send = 1
                 elif cfg.copylink_toclipboard:
                     logger.info('Link copied to clipboard for: %s', dir_content[x]['name'])
                     pyperclip.copy(dir_content[x]['url'])
             else:
                 size_remove += dir_content[x]['size']
-    if download_list_send:
-        download_list_send = 0
-        task.update(size=(task.size - size_remove))
-        download_file(download_list)
 
 
 #
@@ -367,6 +363,9 @@ def download_task(task):
     task.update(local_status='downloading')
     logger.info('Downloading torrent: %s', task.name)
     process_dir(task, task.dldir, json.loads(r.content)['data']['content'])
+    if size_remove is not 0:
+        task.update(size=(task.size - size_remove))
+    download_file(download_list)
     task.update(local_status='finished', progress=100)
     logger.info('Downloading torrent finished: %s', task.name)
     if task.dlnzbtomedia:
@@ -403,6 +402,7 @@ def update():
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=update_interval)
 
 
+
 def parse_tasks(torrents):
     logger.debug('def parse_task started')
     hashes_online = []
@@ -420,8 +420,16 @@ def parse_tasks(torrents):
             pass
         elif task.local_status == None:
             if task.cloud_status != 'finished':
+                if torrent['eta'] is None or torrent['eta'] == 0:
+                    eta = ''
+                else:
+                    eta = utils.time_human(torrent['eta'], fmt_short=True)
+                if torrent['speed_down'] is None or torrent['speed_down'] == 0:
+                    speed = ''
+                else:
+                    speed = utils.sizeof_human(torrent['speed_down']) + '/s '
                 task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], name=torrent['name'],
-                            size=torrent['size'], speed=torrent['speed_down'])
+                            size=torrent['size'], speed=speed, eta=eta)
             if task.cloud_status == 'finished':
                 if cfg.download_enabled or cfg.copylink_toclipboard:
                     if task.category in cfg.download_categories:
