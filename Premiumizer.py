@@ -376,12 +376,7 @@ def download_task(task):
         else:
             logger.info('Torrent could not be removed from cloud: %s', task.name)
             logger.info(responsedict['message'])
-        payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
-        r = requests.post("https://www.premiumize.me/torrent/list", payload)
-        response_content = json.loads(r.content)
-        if response_content['status'] == "success":
-            torrents = response_content['torrents']
-            parse_tasks(torrents)
+        scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
 
 
 def update():
