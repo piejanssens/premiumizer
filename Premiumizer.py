@@ -670,9 +670,9 @@ def settings():
                 prem_config.set('categories', ('cat_ext' + str([x])), request.form.get('cat_ext' + str([x])))
                 prem_config.set('categories', ('cat_size' + str([x])), request.form.get('cat_size' + str([x])))
                 if request.form.get('cat_nzbtomedia' + str([x])):
-                    prem_config.set('categories', ('cat_nzbtomedia' + str([x])), 1)
+                    prem_config.set('categories', ('cat_nzbtomedia' + str([x])), '1')
                 else:
-                    prem_config.set('categories', ('cat_nzbtomedia' + str([x])), 0)
+                    prem_config.set('categories', ('cat_nzbtomedia' + str([x])), '0')
 
             with open(runningdir + 'settings.cfg', 'w') as configfile:  # save
                 prem_config.write(configfile)

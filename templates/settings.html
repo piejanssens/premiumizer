@@ -23,11 +23,11 @@
             {% endif %}
         </div>
         <div class="form-group">
-            <p>&nbsp;</p>
+            <p>Server port:</p>
             <input type="number" class="form-control" placeholder="Server Port" aria-describedby="basic-addon1"
                    name="server_port" value="{{ settings.get('global', 'server_port') }}">
         </div>
-
+        <p>&nbsp;</p>
         <h3>Premiumizer Authorisation</h3>
         <div class="form-group">
             {% if settings.get('security', 'login_enabled') == '1' %}
@@ -43,7 +43,7 @@
             <input type="password" class="form-control" placeholder="Password" aria-describedby="basic-addon1"
                    name="password" value="{{ settings.get('security', 'password') }}">
         </div>
-
+        <p>&nbsp;</p>
         <h3>Premiumize.me</h3>
         <div class="form-group">
             <input type="number" class="form-control" placeholder="Customer ID" aria-describedby="basic-addon1"
@@ -51,7 +51,7 @@
             <input type="password" class="form-control" placeholder="PIN" aria-describedby="basic-addon1" name="pin"
                    value="{{ settings.get('premiumize', 'pin') }}">
         </div>
-
+        <p>&nbsp;</p>
         <h3>Automatic Local Downloads</h3>
         <div class="form-group">
             {% if settings.get('downloads', 'download_enabled') == '1' %}
@@ -66,11 +66,17 @@
                 <input type="checkbox" class="bootstrap_switch" name="remove_cloud" data-size="small"
                        data-label-text="Remove from cloud after downloading">
             {% endif %}
+            <div class="form-group">
+                <p>&nbsp;</p>
+                <input type="text" class="form-control" placeholder="Download Location" name="download_location"
+                       aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_location') }}">
+                <input type="text" class="form-control" placeholder="path to nzbToMedia.py" name="nzbtomedia_location"
+                       aria-describedby="basic-addon1" value="{{ settings.get('nzbtomedia', 'nzbtomedia_location') }}">
+            </div>
             <p>&nbsp;</p>
         </div>
 
         <h3>Copy Links to clipboard to catch (Jdownloader) - Automatic downloads will be disabled</h3>
-        <h5>Input extensions as followed: mkv,mp4,avi,srt </h5>
         <div class="form-group">
             {% if settings.get('downloads', 'copylink_toclipboard') == '1' %}
                 <input type="checkbox" class="bootstrap_switch" name="copylink_toclipboard" data-size="small" checked>
@@ -80,26 +86,53 @@
             <p>&nbsp;</p>
         </div>
 
+
+        <h3> Categories </h3>
+        <p>&nbsp;</p>
+        {% for x in range(1,6) %}
+            <div class="form-inline">
+                <input type="text" class="form-control" placeholder="Name" name="{{ "cat_name["+x|string+"]" }}"
+                       aria-describedby="basic-addon1"
+                       value="{{ settings.get('categories', 'cat_name['+x|string+']') }}">
+                <input type="text" class="form-control" placeholder="Directory" name="{{ "cat_dir["+x|string+"]" }}"
+                       aria-describedby="basic-addon1"
+                       value="{{ settings.get('categories', 'cat_dir['+x|string+']') }}">
+                <input type="text" class="form-control" placeholder="Extensions" name="{{ "cat_ext["+x|string+"]" }}"
+                       aria-describedby="basic-addon1"
+                       value="{{ settings.get('categories', 'cat_ext['+x|string+']') }}">
+                <input type="text" class="form-control" placeholder="Size" name="{{ "cat_size["+x|string+"]" }}"
+                       aria-describedby="basic-addon1"
+                       value="{{ settings.get('categories', 'cat_size['+x|string+']') }}">
+                {% if settings.get('categories', 'cat_nzbtomedia['+x|string+']') == '1' %}
+                    <input type="checkbox" class="checkbox" name="{{ "cat_nzbtomedia["+x|string+"]" }}"
+                           data-size="small" checked>
+                {% else %}
+                    <input type="checkbox" class="checkbox" name="{{ "cat_nzbtomedia["+x|string+"]" }}"
+                           data-size="small">
+                {% endif %}
+            </div>
+        {% endfor %}
+        <p>&nbsp;</p>
+
+
         <h3>Upload Torrents / Watchdir </h3>
-
-
-        <div class="form-group">{% if settings.get('upload', 'watchdir_enabled') == '1' %}
-            <input type="checkbox" class="bootstrap_switch" name="watchdir_enabled" data-size="small" checked>{% else %}
-            <input type="checkbox" class="bootstrap_switch" name="watchdir_enabled" data-size="small">{% endif %}<p>
-            &nbsp;</p><input type="text" class="form-control" placeholder="Folder to Watch" name="watchdir_location"
-                             aria-describedby="basic-addon1" value="{{ settings.get('upload', 'watchdir_location') }}">
-        </div>
-
-        <h3>nzbToMedia</h3>
         <div class="form-group">
+            {% if settings.get('upload', 'watchdir_enabled') == '1' %}
+                <input type="checkbox" class="bootstrap_switch" name="watchdir_enabled" data-size="small" checked>
+            {% else %}
+                <input type="checkbox" class="bootstrap_switch" name="watchdir_enabled" data-size="small">
+            {% endif %}
             <p>&nbsp;</p>
-            <input type="text" class="form-control" placeholder="path to nzbToMedia.py" name="nzbtomedia_location"
-                   aria-describedby="basic-addon1" value="{{ settings.get('nzbtomedia', 'nzbtomedia_location') }}">
+            <input type="text" class="form-control" placeholder="Folder to Watch" name="watchdir_location"
+                   aria-describedby="basic-addon1" value="{{ settings.get('upload', 'watchdir_location') }}">
         </div>
+        <p>&nbsp;</p>
+
         <h3>Update</h3>
         <h5>Premiumizer will restart & update</h5>
         <div>
             <input type="submit" name="submit" value="Update">
+            <p>&nbsp;</p>
         </div>
 
         <hr>
