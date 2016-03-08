@@ -222,10 +222,8 @@ logger.debug('Initializing Database complete')
 
 # Initialise Globals
 tasks = []
-total_size_downloaded = None
 size_remove = 0
 download_list = []
-download_list_send = 0
 
 
 #
@@ -291,30 +289,37 @@ def notify_nzbtomedia(task):
         logger.error('Error unable to locate nzbToMedia.py')
 
 
-def get_download_stats(task, downloader):
+def get_download_stats(task, downloader, total_size_downloaded):
     logger.debug('def get_download_stats started')
     if downloader and downloader.get_status() == 'downloading':
         size_downloaded = total_size_downloaded + downloader.get_dl_size()
         progress = round(float(size_downloaded) * 100 / task.size, 1)
-        speed = downloader.get_speed(human=True) + ' '
-        tmp = task.size / downloader.get_speed()
-        eta = utils.time_human(tmp, fmt_short=True)
-        task.update(speed=speed, progress=progress, eta=eta)
+        speed = downloader.get_speed(human=False)
+        scheduler.scheduler.print_jobs()
+        if speed == 0:
+            eta = ''
+        else:
+            tmp = (task.size - size_downloaded) / speed
+            eta = ' ' + utils.time_human(tmp, fmt_short=True)
+
+        task.update(speed=utils.sizeof_human(speed), progress=progress, eta=eta)
     else:
         logger.debug('Want to update stats, but downloader does not exist yet.')
 
 
 def download_file(download_list):
     logger.debug('def download_file started')
+    total_size_downloaded = 0
     for download in download_list:
         logger.debug('Downloading file: %s', download['path'])
         if not os.path.isfile(download['path']):
             downloader = SmartDL(download['url'], download['path'], progress_bar=False, logger=logger)
             downloader.start(blocking=False)
             while not downloader.isFinished():
-                get_download_stats(download['task'], downloader)
+                get_download_stats(download['task'], downloader, total_size_downloaded)
                 gevent.sleep(2)
             if downloader.isSuccessful():
+                total_size_downloaded += downloader.get_dl_size()
                 logger.debug('Finished downloading file: %s', download['path'])
             else:
                 logger.error('Error while downloading file from: %s', download['path'])
@@ -353,11 +358,10 @@ def process_dir(task, path, dir_content):
 #
 def download_task(task):
     logger.debug('def download_task started')
-    global total_size_downloaded, download_list, size_remove
+    global download_list, size_remove
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
                'hash': task.hash}
     r = requests.post("https://www.premiumize.me/torrent/browse", payload)
-    total_size_downloaded = 0
     size_remove = 0
     download_list = []
     task.update(local_status='downloading')
@@ -414,11 +418,7 @@ def parse_tasks(torrents):
         task = get_task(torrent['hash'].encode("utf-8"))
         if not task:
             add_task(torrent['hash'].encode("utf-8"), torrent['size'], torrent['name'], '')
-        elif task.local_status == 'finished' or task.local_status == 'waiting':
-            task.update()
-        elif task.local_status == 'queued' or task.local_status == 'downloading':
-            pass
-        elif task.local_status == None:
+        elif task.local_status is None:
             if task.cloud_status != 'finished':
                 if torrent['eta'] is None or torrent['eta'] == 0:
                     eta = ''
@@ -436,18 +436,21 @@ def parse_tasks(torrents):
                         if not (task.local_status == 'queued' or task.local_status == 'downloading'):
                             task.update(local_status='queued')
                             scheduler.scheduler.add_job(download_task, args=(task,), id='download', coalesce=False,
-                                                        replace_existing=True, max_instances=1, misfire_grace_time=7200)
+                                                        max_instances=1,
+                                                        misfire_grace_time=7200)
                     elif task.category == '':
                         task.update(local_status='waiting')
                 else:
-                    task.update(local_status='finished')
+                    task.update(local_status='finished', speed=None)
             else:
                 idle = False
-
-        hashes_online.append(task.hash)
-        task.callback = None
-        db[task.hash] = task
-        task.callback = socketio.emit
+        else:
+            task.update()
+        if task:
+            hashes_online.append(task.hash)
+            task.callback = None
+            db[task.hash] = task
+            task.callback = socketio.emit
 
     # Delete local task.hash that are removed from cloud
     hash_diff = [aa for aa in hashes_local if aa not in set(hashes_online)]
@@ -780,7 +783,8 @@ def change_category(message):
     data = message['data']
     task = get_task(data['hash'])
     dldir, dlext, dlsize, dlnzbtomedia = get_cat_var(data['category'])
-    task.update(local_status=None, category=data['category'], dldir=dldir, dlext=dlext, dlsize=dlsize,
+    task.update(local_status=None, process=None, speed=None, category=data['category'], dldir=dldir, dlext=dlext,
+                dlsize=dlsize,
                 dlnzbtomedia=dlnzbtomedia)
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
 
