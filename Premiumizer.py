@@ -64,8 +64,7 @@ if debug_enabled:
     logger.info('----------------------------------')
     logger.info('----------------------------------')
     logger.info('DEBUG Logger Initialized')
-    handler = logging.handlers.RotatingFileHandler(runningdir + 'premiumizerDEBUG.log', maxBytes=(100 * 1024),
-                                                   backupCount=2)
+    handler = logging.handlers.RotatingFileHandler(runningdir + 'premiumizerDEBUG.log', maxBytes=(500 * 1024))
     handler.setFormatter(formatterdebug)
     logger.addHandler(handler)
     logger.info('DEBUG Logfile Initialized')
@@ -80,11 +79,11 @@ else:
     logger.info('-------------------------------------------------------------------------------------')
     logger.info('Logger Initialized')
     if prem_config.getboolean('global', 'logfile_enabled'):
-        handler = logging.handlers.RotatingFileHandler(runningdir + 'premiumizer.log', maxBytes=(100 * 1024),
-                                                       backupCount=2)
+        handler = logging.handlers.RotatingFileHandler(runningdir + 'premiumizer.log', maxBytes=(500 * 1024))
         handler.setFormatter(formatter)
         logger.addHandler(handler)
         logger.info('Logfile Initialized')
+
 
 
 # Catch uncaught exceptions in log
@@ -714,6 +713,38 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for('login'))
+
+
+@app.route('/log', methods=["GET", "POST"])
+@login_required
+def log():
+    if request.method == 'POST':
+        if 'Clear' in request.form.values():
+            try:
+                with open(runningdir+'premiumizer.log', 'w'):
+                    pass
+            except:
+                pass
+            try:
+                with open(runningdir+'premiumizerDEBUG.log', 'w'):
+                    pass
+            except:
+                pass
+            logger.info('Logfile Cleared')
+    try:
+        with open(runningdir + 'premiumizer.log', "r") as f:
+            log = f.read()
+    except:
+        log = 'no log file'
+
+    try:
+        with open(runningdir + 'premiumizerDEBUG.log', "r") as f:
+            debuglog = f.read()
+    except:
+        debuglog = 'no debug log file'
+    return render_template("log.html", log=log, debuglog=debuglog)
+
+
 
 
 @app.route('/list')
