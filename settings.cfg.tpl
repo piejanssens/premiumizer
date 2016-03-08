@@ -16,6 +16,7 @@ pin =
 
 [downloads]
 download_enabled = 0
+download_max = 1
 remove_cloud = 0
 download_location =
 copylink_toclipboard = 0

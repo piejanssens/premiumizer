@@ -153,6 +153,7 @@ class PremConfig:
         self.prem_pin = prem_config.get('premiumize', 'pin')
         self.remove_cloud = prem_config.getboolean('downloads', 'remove_cloud')
         self.download_enabled = prem_config.getboolean('downloads', 'download_enabled')
+        self.download_max = prem_config.getint('downloads', 'download_max')
         self.download_location = prem_config.get('downloads', 'download_location')
         self.nzbtomedia_location = prem_config.get('nzbtomedia', 'nzbtomedia_location')
         self.copylink_toclipboard = prem_config.getboolean('downloads', 'copylink_toclipboard')
@@ -406,7 +407,6 @@ def update():
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=update_interval)
 
 
-
 def parse_tasks(torrents):
     logger.debug('def parse_task started')
     hashes_online = []
@@ -418,6 +418,7 @@ def parse_tasks(torrents):
         task = get_task(torrent['hash'].encode("utf-8"))
         if not task:
             add_task(torrent['hash'].encode("utf-8"), torrent['size'], torrent['name'], '')
+            idle = False
         elif task.local_status is None:
             if task.cloud_status != 'finished':
                 if torrent['eta'] is None or torrent['eta'] == 0:
@@ -430,20 +431,19 @@ def parse_tasks(torrents):
                     speed = utils.sizeof_human(torrent['speed_down']) + '/s '
                 task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], name=torrent['name'],
                             size=torrent['size'], speed=speed, eta=eta)
+                idle = False
             if task.cloud_status == 'finished':
                 if cfg.download_enabled or cfg.copylink_toclipboard:
                     if task.category in cfg.download_categories:
                         if not (task.local_status == 'queued' or task.local_status == 'downloading'):
                             task.update(local_status='queued')
-                            scheduler.scheduler.add_job(download_task, args=(task,), id='download', coalesce=False,
-                                                        max_instances=1,
-                                                        misfire_grace_time=7200)
+                            scheduler.scheduler.add_job(download_task, args=(task,), name=task.name,
+                                                        misfire_grace_time=7200, coalesce=False, max_instances=1,
+                                                        executor='download', replace_existing=True)
                     elif task.category == '':
                         task.update(local_status='waiting')
                 else:
                     task.update(local_status='finished', speed=None)
-            else:
-                idle = False
         else:
             task.update()
         if task:
@@ -673,8 +673,7 @@ def settings():
             prem_config.set('premiumize', 'customer_id', request.form.get('customer_id'))
             prem_config.set('premiumize', 'pin', request.form.get('pin'))
             prem_config.set('downloads', 'download_location', request.form.get('download_location'))
-            prem_config.set('downloads', 'download_ext', request.form.get('download_ext'))
-            prem_config.set('downloads', 'download_size', request.form.get('download_size'))
+            prem_config.set('downloads', 'download_max', request.form.get('download_max'))
             prem_config.set('upload', 'watchdir_location', request.form.get('watchdir_location'))
             prem_config.set('nzbtomedia', 'nzbtomedia_location', request.form.get('nzbtomedia_location'))
 
@@ -801,7 +800,8 @@ if __name__ == '__main__':
         scheduler = APScheduler(GeventScheduler())
         scheduler.init_app(app)
         scheduler.scheduler.add_job(update, 'interval', id='update',
-                                    seconds=active_interval, max_instances=1, coalesce=True)
+                                    seconds=active_interval, replace_existing=True, max_instances=1, coalesce=True)
+        scheduler.scheduler.add_executor('threadpool', alias='download', max_workers=cfg.download_max)
         scheduler.start()
         socketio.run(app, port=prem_config.getint('global', 'server_port'), use_reloader=False)
     except:

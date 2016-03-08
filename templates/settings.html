@@ -72,6 +72,10 @@
             {% endif %}
             <div class="form-group">
                 <p>&nbsp;</p>
+                <p>Max Simultaneous downloads, requires restart</p>
+                <input type="number" class="form-control" placeholder="Max Simultaneous downloads" name="download_max"
+                       aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_max') }}">
+                <p>&nbsp;</p>
                 <input type="text" class="form-control" placeholder="Download Location" name="download_location"
                        aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_location') }}">
                 <p>&nbsp;</p>
