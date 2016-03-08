@@ -418,8 +418,10 @@ def parse_tasks(torrents):
         task = get_task(torrent['hash'].encode("utf-8"))
         if not task:
             add_task(torrent['hash'].encode("utf-8"), torrent['size'], torrent['name'], '')
-            idle = False
-        elif task.local_status is None:
+            task = get_task(torrent['hash'].encode("utf-8"))
+            hashes_local.append(task.hash)
+            task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], speed=torrent['speed_down'])
+        if task.local_status is None:
             if task.cloud_status != 'finished':
                 if torrent['eta'] is None or torrent['eta'] == 0:
                     eta = ''
@@ -445,12 +447,12 @@ def parse_tasks(torrents):
                 else:
                     task.update(local_status='finished', speed=None)
         else:
-            task.update()
-        if task:
-            hashes_online.append(task.hash)
-            task.callback = None
-            db[task.hash] = task
-            task.callback = socketio.emit
+            task.update(cloud_status=torrent['status'])
+
+        hashes_online.append(task.hash)
+        task.callback = None
+        db[task.hash] = task
+        task.callback = socketio.emit
 
     # Delete local task.hash that are removed from cloud
     hash_diff = [aa for aa in hashes_local if aa not in set(hashes_online)]
