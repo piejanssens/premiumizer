@@ -296,7 +296,6 @@ def get_download_stats(task, downloader, total_size_downloaded):
         size_downloaded = total_size_downloaded + downloader.get_dl_size()
         progress = round(float(size_downloaded) * 100 / task.size, 1)
         speed = downloader.get_speed(human=False)
-        scheduler.scheduler.print_jobs()
         if speed == 0:
             eta = ''
         else:
