@@ -766,6 +766,12 @@ def log():
     return render_template("log.html", log=log, debuglog=debuglog)
 
 
+@app.route('/about')
+@login_required
+def about():
+    return render_template("about.html")
+
+
 @app.route('/list')
 @login_required
 def list():
