@@ -74,6 +74,7 @@ else:
     formatter = logging.Formatter('%(asctime)-s: %(levelname)-s : %(message)s', datefmt='%m-%d %H:%M:%S')
     syslog.setFormatter(formatter)
     logger.addHandler(syslog)
+    logging.getLogger('apscheduler.executors.default').addHandler(logging.NullHandler())
     logger.info('-------------------------------------------------------------------------------------')
     logger.info('-------------------------------------------------------------------------------------')
     logger.info('-------------------------------------------------------------------------------------')
