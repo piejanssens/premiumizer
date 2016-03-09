@@ -16,15 +16,6 @@
             {% endif %}
         </div>
         <div class="form-group">
-            <label for="logfile_enabled">Enable Logfile 'premiumizer.log':</label>
-            {% if settings.get('global', 'logfile_enabled') == '1' %}
-                <input type="checkbox" class="form-control bootstrap_switch" name="logfile_enabled" data-size="small"
-                       checked>
-            {% else %}
-                <input type="checkbox" class="form-control bootstrap_switch" name="logfile_enabled" data-size="small">
-            {% endif %}
-        </div>
-        <div class="form-group">
             <label for="idle_interval">Idle interval:</label>
             <input type="number" class="form-control" aria-describedby="basic-addon1"
                    name="idle_interval" value="{{ settings.get('global', 'idle_interval') }}">

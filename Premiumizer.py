@@ -79,11 +79,10 @@ else:
     logger.info('-------------------------------------------------------------------------------------')
     logger.info('-------------------------------------------------------------------------------------')
     logger.info('Logger Initialized')
-    if prem_config.getboolean('global', 'logfile_enabled'):
-        handler = logging.handlers.RotatingFileHandler(runningdir + 'premiumizer.log', maxBytes=(500 * 1024))
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        logger.info('Logfile Initialized')
+    handler = logging.handlers.RotatingFileHandler(runningdir + 'premiumizer.log', maxBytes=(500 * 1024))
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.info('Logfile Initialized')
 
 
 # Catch uncaught exceptions in log
@@ -660,10 +659,6 @@ def settings():
                 prem_config.set('global', 'debug_enabled', '1')
             else:
                 prem_config.set('global', 'debug_enabled', '0')
-            if request.form.get('logfile_enabled'):
-                prem_config.set('global', 'logfile_enabled', '1')
-            else:
-                prem_config.set('global', 'logfile_enabled', '0')
             if request.form.get('login_enabled'):
                 prem_config.set('security', 'login_enabled', '1')
             else:
@@ -750,12 +745,12 @@ def log():
                     pass
             except:
                 pass
-            logger.info('Logfile Cleared')
+            logger.info('Logfiles Cleared')
     try:
         with open(runningdir + 'premiumizer.log', "r") as f:
             log = f.read()
     except:
-        log = 'no log file'
+        log = 'Error opening logfile'
 
     try:
         with open(runningdir + 'premiumizerDEBUG.log', "r") as f:
