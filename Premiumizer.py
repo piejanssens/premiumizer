@@ -369,7 +369,7 @@ def download_task(task):
         task.update(size=(task.size - size_remove))
     download_file(download_list)
     task.update(local_status='finished', progress=100)
-    logger.info('Download finished: %s', task.name)
+    logger.info('Download finished: %s location: %s', task.name, task.dldir)
     if task.dlnzbtomedia:
         notify_nzbtomedia(task)
     if cfg.remove_cloud:
@@ -746,7 +746,7 @@ def log():
                     pass
             except:
                 pass
-            logger.info('Logfiles Cleared')
+            logger.info('Logfile Cleared')
     try:
         with open(runningdir + 'premiumizer.log', "r") as f:
             log = f.read()
