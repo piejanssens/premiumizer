@@ -86,7 +86,6 @@ else:
         logger.info('Logfile Initialized')
 
 
-
 # Catch uncaught exceptions in log
 def uncaught_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, SystemExit or KeyboardInterrupt):
@@ -618,6 +617,25 @@ def upload():
     return 'OK'
 
 
+@app.route('/history')
+def history():
+    taskad = ""
+    taskdel = ""
+    taskdl = ""
+    try:
+        with open(runningdir + 'premiumizer.log', 'r') as f:
+            for line in f:
+                if 'Added:' in line:
+                    taskad += line
+                if 'Deleted:' in line:
+                    taskdel += line
+                if 'Download finished' in line:
+                    taskdl += line
+    except:
+        taskad = 'History is based on premiumizer.log file, error opening or it does not exist.'
+    return render_template("history.html", taskad=taskad, taskdel=taskdel, taskdl=taskdl)
+
+
 @app.route('/settings', methods=["POST", "GET"])
 @login_required
 def settings():
@@ -723,12 +741,12 @@ def log():
     if request.method == 'POST':
         if 'Clear' in request.form.values():
             try:
-                with open(runningdir+'premiumizer.log', 'w'):
+                with open(runningdir + 'premiumizer.log', 'w'):
                     pass
             except:
                 pass
             try:
-                with open(runningdir+'premiumizerDEBUG.log', 'w'):
+                with open(runningdir + 'premiumizerDEBUG.log', 'w'):
                     pass
             except:
                 pass
@@ -745,8 +763,6 @@ def log():
     except:
         debuglog = 'no debug log file'
     return render_template("log.html", log=log, debuglog=debuglog)
-
-
 
 
 @app.route('/list')
