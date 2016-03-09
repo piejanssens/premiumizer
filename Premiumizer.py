@@ -74,7 +74,7 @@ else:
     formatter = logging.Formatter('%(asctime)-s: %(levelname)-s : %(message)s', datefmt='%m-%d %H:%M:%S')
     syslog.setFormatter(formatter)
     logger.addHandler(syslog)
-    logging.getLogger('apscheduler.executors.default').addHandler(logging.NullHandler())
+    logging.getLogger('apscheduler.executors').addHandler(logging.NullHandler())
     logger.info('-------------------------------------------------------------------------------------')
     logger.info('-------------------------------------------------------------------------------------')
     logger.info('-------------------------------------------------------------------------------------')
@@ -366,13 +366,13 @@ def download_task(task):
     size_remove = 0
     download_list = []
     task.update(local_status='downloading')
-    logger.info('Downloading torrent: %s', task.name)
+    logger.info('Downloading: %s', task.name)
     process_dir(task, task.dldir, json.loads(r.content)['data']['content'])
     if size_remove is not 0:
         task.update(size=(task.size - size_remove))
     download_file(download_list)
     task.update(local_status='finished', progress=100)
-    logger.info('Downloading torrent finished: %s', task.name)
+    logger.info('Download finished: %s', task.name)
     if task.dlnzbtomedia:
         notify_nzbtomedia(task)
     if cfg.remove_cloud:
@@ -496,7 +496,9 @@ def get_cat_var(category):
 def add_task(hash, size, name, category):
     logger.debug('def add_task started')
     dldir, dlext, dlsize, dlnzbtomedia = get_cat_var(category)
-    tasks.append(DownloadTask(socketio.emit, hash, size, name, category, dldir, dlext, dlsize, dlnzbtomedia))
+    task = DownloadTask(socketio.emit, hash, size, name, category, dldir, dlext, dlsize, dlnzbtomedia)
+    tasks.append(task)
+    logger.info('Added: %s', task.name)
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
 
 
@@ -504,7 +506,7 @@ def upload_torrent(filename):
     logger.debug('def upload_torrent started')
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
     files = {'file': open(filename, 'rb')}
-    logger.info('Uploading torrent to the cloud: %s', filename)
+    logger.debug('Uploading torrent to the cloud: %s', filename)
     r = requests.post("https://www.premiumize.me/torrent/add", payload, files=files)
     response_content = json.loads(r.content)
     if response_content['status'] == "success":
@@ -779,7 +781,7 @@ def delete_task(message):
     responsedict = json.loads(r.content)
     task = get_task(message['data'])
     if responsedict['status'] == "success":
-        logger.info('Torrent deleted: %s', task.name)
+        logger.info('Deleted: %s', task.name)
         emit('delete_success', {'data': message['data']})
         scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
     else:
