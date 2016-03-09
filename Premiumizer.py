@@ -618,6 +618,7 @@ def upload():
 
 
 @app.route('/history')
+@login_required
 def history():
     taskad = ""
     taskdel = ""
