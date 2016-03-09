@@ -705,6 +705,7 @@ def settings():
 
             with open(runningdir + 'settings.cfg', 'w') as configfile:  # save
                 prem_config.write(configfile)
+            logger.info('Settings saved, reloading configuration')
             cfg.check_config()
 
     return render_template('settings.html', settings=prem_config)
