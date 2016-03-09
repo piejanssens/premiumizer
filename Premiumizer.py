@@ -387,7 +387,6 @@ def download_task(task):
 
 def update():
     logger.debug('def updating started')
-    logger.info('Updating')
     idle = True
     update_interval = idle_interval
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
