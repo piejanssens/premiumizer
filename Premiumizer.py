@@ -777,7 +777,9 @@ def delete_task(message):
                'hash': message['data']}
     r = requests.post("https://www.premiumize.me/torrent/delete", payload)
     responsedict = json.loads(r.content)
+    task = get_task(message['data'])
     if responsedict['status'] == "success":
+        logger.info('Torrent deleted: %s', task.name)
         emit('delete_success', {'data': message['data']})
         scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
     else:
