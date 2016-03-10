@@ -10,6 +10,7 @@ import sys
 import unicodedata
 from logging.handlers import RotatingFileHandler
 from string import ascii_letters, digits
+from subprocess import Popen
 
 import bencode
 import gevent
@@ -30,7 +31,6 @@ from werkzeug.utils import secure_filename
 from DownloadTask import DownloadTask
 
 # "https://www.premiumize.me/static/api/torrent.html"
-
 print '------------------------------------------------------------------------------------------------------------'
 print '|                                                                                                           |'
 print '-------------------------------------------WELCOME TO PREMIUMIZER-------------------------------------------'
@@ -153,7 +153,7 @@ class PremConfig:
         self.download_enabled = prem_config.getboolean('downloads', 'download_enabled')
         self.download_max = prem_config.getint('downloads', 'download_max')
         self.download_location = prem_config.get('downloads', 'download_location')
-        self.nzbtomedia_location = prem_config.get('nzbtomedia', 'nzbtomedia_location')
+        self.nzbtomedia_location = prem_config.get('downloads', 'nzbtomedia_location')
         self.copylink_toclipboard = prem_config.getboolean('downloads', 'copylink_toclipboard')
         if self.copylink_toclipboard:
             self.download_enabled = 0
@@ -174,7 +174,7 @@ class PremConfig:
                 if y != '':
                     cat_name = y
                     if z == '':
-                        cat_dir = self.download_location + '/' + y
+                        cat_dir = self.download_location + '\\' + y
                     else:
                         cat_dir = z
                     cat_ext = prem_config.get('categories', ('cat_ext' + str([x]))).split(',')
@@ -188,7 +188,7 @@ class PremConfig:
                             logger.info('Creating Download Path at: %s', cat_dir)
                             os.makedirs(cat_dir)
                     if self.watchdir_enabled:
-                        sub = self.watchdir_location + '/' + cat_name
+                        sub = self.watchdir_location + '\\' + cat_name
                         if not os.path.exists(sub):
                             logger.info('Creating watchdir Path at %s', sub)
                             os.makedirs(sub)
@@ -280,9 +280,7 @@ def clean_name(original):
 def notify_nzbtomedia(task):
     logger.debug('def notify_nzbtomedia started')
     if os.path.isfile(cfg.nzbtomedia_location):
-        # noinspection PyArgumentList
-        os.system(cfg.nzbtomedia_location,
-                  task.dldir + ' ' + task.name + ' ' + task.category + ' ' + task.hash)
+        Popen(['python', cfg.nzbtomedia_location, task.dldir, task.name, task.category, task.hash, 'manual'], shell=False)
         logger.info('Send to nzbtomedia: %s', task.name)
     else:
         logger.error('Error unable to locate nzbToMedia.py')
@@ -290,7 +288,7 @@ def notify_nzbtomedia(task):
 
 def get_download_stats(task, downloader, total_size_downloaded):
     logger.debug('def get_download_stats started')
-    if downloader and downloader.get_status() == 'downloading':
+    if downloader.get_status() == 'downloading':
         size_downloaded = total_size_downloaded + downloader.get_dl_size()
         progress = round(float(size_downloaded) * 100 / task.size, 1)
         speed = downloader.get_speed(human=False)
@@ -299,15 +297,20 @@ def get_download_stats(task, downloader, total_size_downloaded):
         else:
             tmp = (task.size - size_downloaded) / speed
             eta = ' ' + utils.time_human(tmp, fmt_short=True)
+        task.update(speed=(utils.sizeof_human(speed)+ '/s'), progress=progress, eta=eta)
 
-        task.update(speed=utils.sizeof_human(speed), progress=progress, eta=eta)
+    elif downloader.get_status() == 'combining':
+        task.update(speed='',eta=' Combining files')
+    elif downloader.get_status() == 'paused':
+        task.update(speed='',eta=' Download paused')
     else:
-        logger.debug('Want to update stats, but downloader does not exist yet.')
+        logger.debug('Want to update stats, but downloader status is invalid.')
 
 
 def download_file(download_list):
     logger.debug('def download_file started')
     total_size_downloaded = 0
+    dltime = 0
     for download in download_list:
         logger.debug('Downloading file: %s', download['path'])
         if not os.path.isfile(download['path']):
@@ -317,8 +320,10 @@ def download_file(download_list):
                 get_download_stats(download['task'], downloader, total_size_downloaded)
                 gevent.sleep(2)
             if downloader.isSuccessful():
+                dltime += downloader.get_dl_time()
                 total_size_downloaded += downloader.get_dl_size()
                 logger.debug('Finished downloading file: %s', download['path'])
+                download['task'].update(dltime=dltime)
             else:
                 logger.error('Error while downloading file from: %s', download['path'])
                 for e in downloader.get_errors():
@@ -327,9 +332,10 @@ def download_file(download_list):
             logger.info('File not downloaded it already exists at: %s', download['path'])
 
 
+
 # TODO continue log statements
 
-def process_dir(task, path, dir_content):
+def process_dir(task, path, dir_content,change_dldir):
     logger.debug('def processing_dir started')
     global download_list, size_remove
     if not dir_content:
@@ -338,7 +344,9 @@ def process_dir(task, path, dir_content):
         type = dir_content[x]['type']
         if type == 'dir':
             new_path = os.path.join(path, clean_name(x))
-            process_dir(task, new_path, dir_content[x]['children'])
+            process_dir(task, new_path, dir_content[x]['children'], 0)
+            if change_dldir:
+                task.update(dldir=new_path)
         elif type == 'file':
             if dir_content[x]['size'] >= task.dlsize and dir_content[x]['url'].lower().endswith(tuple(task.dlext)):
                 if cfg.download_enabled:
@@ -364,12 +372,12 @@ def download_task(task):
     download_list = []
     task.update(local_status='downloading')
     logger.info('Downloading: %s', task.name)
-    process_dir(task, task.dldir, json.loads(r.content)['data']['content'])
+    process_dir(task, task.dldir, json.loads(r.content)['data']['content'], 1)
     if size_remove is not 0:
         task.update(size=(task.size - size_remove))
     download_file(download_list)
     task.update(local_status='finished', progress=100)
-    logger.info('Download finished: %s location: %s', task.name, task.dldir)
+    logger.info('Download %s  finished in: %s at location %s:', task.name, utils.time_human(task.dltime,fmt_short=True), task.dldir)
     if task.dlnzbtomedia:
         notify_nzbtomedia(task)
     if cfg.remove_cloud:
@@ -641,17 +649,14 @@ def settings():
     if request.method == 'POST':
         if 'Restart' in request.form.values():
             logger.info('Restarting')
-            from subprocess import Popen
-            Popen(['python', 'utils.py', '--restart'], shell=False, stdin=None, stdout=None, stderr=None,
-                  close_fds=True)
+            Popen(['python', 'utils.py', '--restart'], shell=False, close_fds=True)
             sys.exit()
         elif 'Shutdown' in request.form.values():
             logger.info('Shutdown recieved')
             sys.exit()
         elif 'Update' in request.form.values():
             logger.info('Update - will restart')
-            from subprocess import Popen
-            Popen(['python', 'utils.py', '--update'], shell=False, stdin=None, stdout=None, stderr=None, close_fds=True)
+            Popen(['python', 'utils.py', '--update'], shell=False, close_fds=True)
             sys.exit()
         else:
             global prem_config
@@ -691,7 +696,7 @@ def settings():
             prem_config.set('downloads', 'download_location', request.form.get('download_location'))
             prem_config.set('downloads', 'download_max', request.form.get('download_max'))
             prem_config.set('upload', 'watchdir_location', request.form.get('watchdir_location'))
-            prem_config.set('nzbtomedia', 'nzbtomedia_location', request.form.get('nzbtomedia_location'))
+            prem_config.set('downloads', 'nzbtomedia_location', request.form.get('nzbtomedia_location'))
 
             for x in range(1, 6):
                 prem_config.set('categories', ('cat_name' + str([x])), request.form.get('cat_name' + str([x])))

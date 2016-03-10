@@ -4,21 +4,26 @@ active_interval = 10
 idle_interval = 120
 debug_enabled = 0
 
+
 [security]
 login_enabled = 0
 username =
 password =
 
+
 [premiumize]
 customer_id =
 pin =
+
 
 [downloads]
 download_enabled = 0
 download_max = 1
 remove_cloud = 0
 download_location =
+nzbtomedia_location = [Change to path]\NzbToMedia.py
 copylink_toclipboard = 0
+
 
 [categories]
 cat_name[1] = tv
@@ -52,9 +57,6 @@ cat_nzbtomedia[5] = 0
 watchdir_enabled = 0
 watchdir_location =
 
-[nzbtomedia]
-nzbtomedia_enabled = 0
-nzbtomedia_location =
 
 [update]
 #Do not change these values#

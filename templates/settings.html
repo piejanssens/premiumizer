@@ -82,7 +82,7 @@
                 <input type="checkbox" class="bootstrap_switch" name="copylink_toclipboard" data-size="small">
             {% endif %}
             <p>&nbsp;</p>
-            <label for="download_max">Max Simultaneous downloads:: (requires restart)</label>
+            <label for="download_max">Max Simultaneous downloads: (requires restart)</label>
             <input type="number" class="form--inline" name="download_max"
                    aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_max') }}">
             <p>&nbsp;</p>
@@ -92,9 +92,9 @@
             <label for="download_location">Download Location:</label>
             <input type="text" class="form-control" name="download_location"
                    aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_location') }}">
-            <label for="nzbtomedia_location">path to nzbToMedia.py:</label>
+            <label for="nzbtomedia_location">path to TorrentToMedia.py in the nzbtomedia folder:</label>
             <input type="text" class="form-control" name="nzbtomedia_location"
-                   aria-describedby="basic-addon1" value="{{ settings.get('nzbtomedia', 'nzbtomedia_location') }}">
+                   aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'nzbtomedia_location') }}">
         </div>
         <p>&nbsp;</p>
         </div>

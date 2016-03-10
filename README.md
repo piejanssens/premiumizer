@@ -26,47 +26,63 @@ When premiumizer is running you can access it at http://localhost:5000/
 If premiumizer is running on a different PC replace localhost with that computer's IP.
 
 ## Installation
+
+### Requirments
+Git & Python 2.7 (with pip+virtualenv)
+
+optional: NzbToMedia
+replace your nzbtomedia.py with the one from the premiumizer folder, until pull request is done.
+
+
 ### Synology
 Package coming soon(ish).
 
-### Windows, Linux, OS X
+### Windows
 
-Requirement: git, Python 2.7 (with pip+virtualenv)
-
-Windows:
 
 Installation:
 
-Install [Git] (https://git-scm.com/download/win) & make sure u select Use git from the windows command prompt.
+Install [Git] (https://git-scm.com/download/win) & make sure durining installation you select: Use git from the windows command prompt.
 
 Download [Python] (https://www.python.org/ftp/python/2.7.11/python-2.7.11.msi) install to default location: C:\python27.
 
 Open command prompt (winkey + R, type cmd) & input:
 ```
-git clone https://github.com/piejanssens/premiumizer.git c:\premiumizer
+git clone https://github.com/piejanssens/premiumizer.git C:\premiumizer
 C:\Python27\Scripts\pip.exe install virtualenv
 C:\Python27\Scripts\virtualenv.exe c:\premiumizer\env
 C:\premiumizer\env\Scripts\activate.bat
 pip install -r C:\premiumizer\requirements.txt
 ```
+Optional:
+Install NzbToMedia, pywin32 required:
+```
+git clone https://github.com/clinton-hall/nzbToMedia.git C:\premiumizer\nzbtomedia
+easy_install http://downloads.sourceforge.net/project/pywin32/pywin32/Build%20220/pywin32-220.win32-py2.7.exe?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fpywin32%2Ffiles%2Fpywin32%2FBuild%2520220%2Fpywin32-220.win32-py2.7.exe%2Fdownload&ts=1457612705&use_mirror=heanet
+copy C:\premiumizer\nzbtomedia\autoProcessMedia.cfg.spec C:\premiumizer\nzbtomedia\autoProcessMedia.cfg
+```
+If easy_install timed out: download [pywin32] (https://sourceforge.net/projects/pywin32/files/pywin32/Build%20220/pywin32-220.win32-py2.7.exe/download) with brower and_& move the file in the command promp after easy_install_
+
+replace nzbtomedia.py with premiumizer version.
 
 Running:
 
-Open command prompt or create .bat file:
+Open command prompt & input:
 ```
-c:\premiumizer\env\Scripts\activate.bat
+C:\premiumizer\env\Scripts\activate.bat
 cd C:\premiumizer
 python premiumizer.py
 ```
 
-OS X: Install [brew](http://brew.sh/), use brew to install python
+### OS X
+Install [brew](http://brew.sh/), use brew to install python
 
 1. ```git clone
 https://github.com/piejanssens/premiumizer.git```
 2. ```cd premiumizer```
 3. ```virtualenv virtualenv```
 4. ```source virtualenv/bin/activate```
-5. ```pip install requirements.txt```
+5. ```pip install -r requirements.txt```
 6. ```./premiumizer.py```
 
 Now use your browser to access [http://localhost:5000/](http://localhost:5000/).

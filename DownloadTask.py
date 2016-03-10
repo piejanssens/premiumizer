@@ -23,6 +23,7 @@ class DownloadTask:
         self.dlext = dlext
         self.dlsize = dlsize
         self.dlnzbtomedia = dlnzbtomedia
+        self.dltime = 0
 
     def update(self, **kwargs):
         self.previous_timestamp = self.timestamp
@@ -53,6 +54,8 @@ class DownloadTask:
             self.dlsize = kwargs.get('dlsize')
         if 'dlnzbtomedia' in kwargs:
             self.dlnzbtomedia = kwargs.get('dlnzbtomedia')
+        if 'dltime' in kwargs:
+            self.dltime = kwargs.get('dltime')
         self.callback('update_task', {'task': self.get_json()})
 
     def delete(self):
