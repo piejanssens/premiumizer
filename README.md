@@ -27,7 +27,7 @@ If premiumizer is running on a different PC replace localhost with that computer
 
 ## Installation
 
-### Requirments
+### Requirements
 Git & Python 2.7 (with pip+virtualenv)
 
 optional: NzbToMedia
@@ -42,7 +42,7 @@ Package coming soon(ish).
 
 Installation:
 
-Install [Git] (https://git-scm.com/download/win) & make sure durining installation you select: Use git from the windows command prompt.
+Install [Git] (https://git-scm.com/download/win) & make sure during installation you select: Use git from the windows command prompt.
 
 Download [Python] (https://www.python.org/ftp/python/2.7.11/python-2.7.11.msi) install to default location: C:\python27.
 
