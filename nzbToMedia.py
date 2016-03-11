@@ -696,10 +696,6 @@ def main(args, section=None):
         result = process(os.environ['NZBPP_DIRECTORY'], inputName=os.environ['NZBPP_NZBNAME'], status=status,
                          clientAgent=clientAgent, download_id=download_id, inputCategory=os.environ['NZBPP_CATEGORY'],
                          failureLink=failureLink)
-    # Manual program
-    elif args[5] == 'manual':
-        logger.info("Script triggered manually")
-        result = process(args[1], inputName=args[2], inputCategory=args[3], download_id=args[4])
     # SABnzbd Pre 0.7.17
     elif len(args) == core.SABNZB_NO_OF_ARGUMENTS:
         # SABnzbd argv:
@@ -729,6 +725,10 @@ def main(args, section=None):
         logger.info("Script triggered from SABnzbd 0.7.17+")
         result = process(args[1], inputName=args[2], status=args[7], inputCategory=args[5], clientAgent=clientAgent,
                         download_id='', failureLink=''.join(args[8:]))
+    # Generic program
+    elif args[5] == 'generic':
+        logger.info("Script triggered from generic program")
+        result = process(args[1], inputName=args[2], inputCategory=args[3], download_id=args[4])
     else:
         # Perform Manual Post-Processing
         logger.warning("Invalid number of arguments received from client, Switching to manual run mode ...")

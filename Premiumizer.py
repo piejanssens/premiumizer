@@ -280,7 +280,7 @@ def clean_name(original):
 def notify_nzbtomedia(task):
     logger.debug('def notify_nzbtomedia started')
     if os.path.isfile(cfg.nzbtomedia_location):
-        Popen(['python', cfg.nzbtomedia_location, task.dldir, task.name, task.category, task.hash, 'manual'], shell=False)
+        Popen(['python', cfg.nzbtomedia_location, task.dldir, task.name, task.category, task.hash, 'generic'], shell=False)
         logger.info('Send to nzbtomedia: %s', task.name)
     else:
         logger.error('Error unable to locate nzbToMedia.py')
