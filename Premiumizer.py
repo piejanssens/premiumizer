@@ -118,7 +118,6 @@ if not log_flask:
 
 # Check if premiumizer has been updated
 if prem_config.getboolean('update', 'updated'):
-    logger.info('Premiumizer has been updated!!')
     logger.info('*************************************************************************************')
     logger.info('---------------------------Premiumizer has been updated!!----------------------------')
     logger.info('*************************************************************************************')
