@@ -31,7 +31,7 @@ If premiumizer is running on a different PC replace localhost with that computer
 Git & Python 2.7 (with pip+virtualenv)
 
 optional: NzbToMedia
-replace your nzbtomedia.py with the one from the premiumizer folder, until pull request is done.
+Until pull request is done, use this custom version: [NZBTOMEDIA] (https://github.com/neox387/nzbToMedia)
 
 
 ### Synology
@@ -57,7 +57,7 @@ pip install -r C:\premiumizer\requirements.txt
 Optional:
 Install NzbToMedia, pywin32 required:
 ```
-git clone https://github.com/clinton-hall/nzbToMedia.git C:\premiumizer\nzbtomedia
+git clone https://github.com/neox387/nzbToMedia.git C:\premiumizer\nzbtomedia
 easy_install http://downloads.sourceforge.net/project/pywin32/pywin32/Build%20220/pywin32-220.win32-py2.7.exe?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fpywin32%2Ffiles%2Fpywin32%2FBuild%2520220%2Fpywin32-220.win32-py2.7.exe%2Fdownload&ts=1457612705&use_mirror=heanet
 copy C:\premiumizer\nzbtomedia\autoProcessMedia.cfg.spec C:\premiumizer\nzbtomedia\autoProcessMedia.cfg
 ```
