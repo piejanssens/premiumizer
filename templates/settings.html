@@ -3,33 +3,32 @@
 {% block title %} - Home{% endblock %}
 {% block content %}
     <form data-toggle="validator" role="form" method="post" action="/settings" enctype="multipart/form-data">
-        <h3>Global (requires restart)</h3>
+        <div class="well well-sm">
+            <h2>Global (requires restart)</h2>
+        </div>
         <div class="form-group">
+            <label for="debug_enabled">Debug mode:</label>
             {% if settings.get('global', 'debug_enabled') == '1' %}
                 <input type="checkbox" class="form-control bootstrap_switch" name="debug_enabled" data-size="small"
-                       data-label-text="Debug Mode" checked>
+                       checked>
             {% else %}
-                <input type="checkbox" class="form-control bootstrap_switch" name="debug_enabled" data-size="small"
-                       data-label-text="Debug Mode">
+                <input type="checkbox" class="form-control bootstrap_switch" name="debug_enabled" data-size="small">
             {% endif %}
         </div>
         <div class="form-group">
-            {% if settings.get('global', 'logfile_enabled') == '1' %}
-                <input type="checkbox" class="form-control bootstrap_switch" name="logfile_enabled" data-size="small"
-                       data-label-text="Enable Logfile to premiumizer.log" checked>
-            {% else %}
-                <input type="checkbox" class="form-control bootstrap_switch" name="logfile_enabled" data-size="small"
-                       data-label-text="Enable Logfile to premiumizer.log">
-            {% endif %}
-        </div>
-        <div class="form-group">
-            <p>&nbsp;</p>
-            <input type="number" class="form-control" placeholder="Server Port" aria-describedby="basic-addon1"
+            <label for="idle_interval">Idle interval:</label>
+            <input type="number" class="form-control" aria-describedby="basic-addon1"
+                   name="idle_interval" value="{{ settings.get('global', 'idle_interval') }}">
+            <label for="server_port">Server Port:</label>
+            <input type="number" class="form-control" aria-describedby="basic-addon1"
                    name="server_port" value="{{ settings.get('global', 'server_port') }}">
         </div>
-
-        <h3>Premiumizer Authorisation</h3>
+        <p>&nbsp;</p>
+        <div class="well well-sm">
+            <h2>Premiumizer Login</h2>
+        </div>
         <div class="form-group">
+            <label for="login_enabled">Login enabled:</label>
             {% if settings.get('security', 'login_enabled') == '1' %}
                 <input type="checkbox" class="bootstrap_switch bootstrap-switch-small" name="login_enabled"
                        data-size="small" checked>
@@ -38,92 +37,140 @@
                        data-size="small">
             {% endif %}
             <p>&nbsp;</p>
-            <input type="text" class="form-control" placeholder="Username" aria-describedby="basic-addon1"
+            <label for="username">Username:</label>
+            <input type="text" class="form-control" aria-describedby="basic-addon1"
                    name="username" value="{{ settings.get('security', 'username') }}">
+            <label for="password">Password:</label>
             <input type="password" class="form-control" placeholder="Password" aria-describedby="basic-addon1"
                    name="password" value="{{ settings.get('security', 'password') }}">
         </div>
-
-        <h3>Premiumize.me</h3>
+        <p>&nbsp;</p>
+        <div class="well well-sm">
+            <h2>Premiumize.me account:</h2>
+        </div>
         <div class="form-group">
-            <input type="number" class="form-control" placeholder="Customer ID" aria-describedby="basic-addon1"
+            <label for="customer_id">Customer ID:</label>
+            <input type="number" class="form-control" aria-describedby="basic-addon1"
                    name="customer_id" value="{{ settings.get('premiumize', 'customer_id') }}">
-            <input type="password" class="form-control" placeholder="PIN" aria-describedby="basic-addon1" name="pin"
+            <label for="pin">PIN:</label>
+            <input type="password" class="form-control" aria-describedby="basic-addon1" name="pin"
                    value="{{ settings.get('premiumize', 'pin') }}">
         </div>
-
-        <h3>Automatic Local Downloads</h3>
+        <p>&nbsp;</p>
+        <div class="well well-sm">
+            <h2>Automatic Local Downloads</h2>
+        </div>
         <div class="form-group">
+            <label for="download_enabled">Downloads enabled:</label>
             {% if settings.get('downloads', 'download_enabled') == '1' %}
                 <input type="checkbox" class="bootstrap_switch" name="download_enabled" data-size="small" checked>
             {% else %}
                 <input type="checkbox" class="bootstrap_switch" name="download_enabled" data-size="small">
             {% endif %}
-            {% if settings.get('downloads', 'remove_cloud') == '1' %}
-                <input type="checkbox" class="bootstrap_switch" name="remove_cloud" data-size="small"
-                       data-label-text="Remove from cloud after downloading" checked>
+            <p>&nbsp;</p>
+            <label for="download_threading">Enable download threading:</label>
+            {% if settings.get('downloads', 'download_threading') == '1' %}
+                <input type="checkbox" class="bootstrap_switch" name="download_threading" data-size="small" checked>
             {% else %}
-                <input type="checkbox" class="bootstrap_switch" name="remove_cloud" data-size="small"
-                       data-label-text="Remove from cloud after downloading">
+                <input type="checkbox" class="bootstrap_switch" name="download_threading" data-size="small">
+            {% endif %}
+            <p>Disable if download location is not local or on slow systems</p>
+            <p>&nbsp;</p>
+            <label for="remove_cloud">Remove torrents from cloud after downloading:</label>
+            {% if settings.get('downloads', 'remove_cloud') == '1' %}
+                <input type="checkbox" class="bootstrap_switch" name="remove_cloud" data-size="small" checked>
+            {% else %}
+                <input type="checkbox" class="bootstrap_switch" name="remove_cloud" data-size="small">
             {% endif %}
             <p>&nbsp;</p>
-            <input type="text" class="form-control" placeholder="Download categories seperated by commas"
-                   name="download_categories" aria-describedby="basic-addon1"
-                   value="{{ settings.get('downloads', 'download_categories') }}">
-            <input type="text" class="form-control" placeholder="Download Location" name="download_location"
-                   aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_location') }}">
-        </div>
-
-        <h3>Copy Links to clipboard to catch (Jdownloader) - Disable above download option</h3>
-        <h5>Input extensions as followed: .mkv,.mp4,.avi</h5>
-        <div class="form-group">
+            <label for="copylink_toclipboard">Instead of downloading: copy links to clipboard (Jdownloader)</label>
             {% if settings.get('downloads', 'copylink_toclipboard') == '1' %}
                 <input type="checkbox" class="bootstrap_switch" name="copylink_toclipboard" data-size="small" checked>
             {% else %}
                 <input type="checkbox" class="bootstrap_switch" name="copylink_toclipboard" data-size="small">
             {% endif %}
             <p>&nbsp;</p>
-            <input type="text" class="form-control" placeholder="Extensions to download, leave blank for everything"
-                   name="download_ext" aria-describedby="basic-addon1"
-                   value="{{ settings.get('downloads', 'download_ext') }}">
-            <input type="text" class="form-control" placeholder="Minimum size in MB to copy links for, 0 for all"
-                   name="download_size" aria-describedby="basic-addon1"
-                   value="{{ settings.get('downloads', 'download_size') }}">
+            <label for="download_max">Max Simultaneous downloads: (requires restart)</label>
+            <input type="number" class="form--inline" name="download_max"
+                   aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_max') }}">
+            <p>&nbsp;</p>
         </div>
-
-        <h3>Upload Torrents / Watchdir </h3>
-
-
-        <div class="form-group">{% if settings.get('upload', 'watchdir_enabled') == '1' %}
-            <input type="checkbox" class="bootstrap_switch" name="watchdir_enabled" data-size="small" checked>{% else %}
-            <input type="checkbox" class="bootstrap_switch" name="watchdir_enabled" data-size="small">{% endif %}<p>
-            &nbsp;</p><input type="text" class="form-control" placeholder="Folder to Watch" name="watchdir_location"
-                             aria-describedby="basic-addon1" value="{{ settings.get('upload', 'watchdir_location') }}">
-        </div>
-
-        <h3>nzbToMedia</h3>
         <div class="form-group">
-            {% if settings.get('nzbtomedia', 'nzbtomedia_enabled') == '1' %}
-                <input type="checkbox" class="bootstrap_switch" name="nzbtomedia_enabled" data-size="small" checked>
+
+            <label for="download_location">Download Location:</label>
+            <input type="text" class="form-control" name="download_location"
+                   aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_location') }}">
+            <label for="nzbtomedia_location">path to TorrentToMedia.py in the nzbtomedia folder:</label>
+            <input type="text" class="form-control" name="nzbtomedia_location"
+                   aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'nzbtomedia_location') }}">
+        </div>
+        <p>&nbsp;</p>
+        </div>
+
+        <div class="well well-sm">
+            <h2> Categories </h2>
+        </div>
+        <h5>Download Location defaults to above location + subdirectory based on category name</h5>
+        <h5>Size: default 0 = download everything</h5>
+        <p>&nbsp;</p>
+        {% for x in range(1,6) %}
+            <div class="form-inline">
+                <input type="text" class="form-control" placeholder="Name" name="{{ "cat_name["+x|string+"]" }}"
+                       aria-describedby="basic-addon1"
+                       value="{{ settings.get('categories', 'cat_name['+x|string+']') }}">
+                <input type="text" class="form-control" placeholder="Download Location"
+                       name="{{ "cat_dir["+x|string+"]" }}"
+                       aria-describedby="basic-addon1"
+                       value="{{ settings.get('categories', 'cat_dir['+x|string+']') }}">
+                <input type="text" class="form-control" placeholder="Extensions" name="{{ "cat_ext["+x|string+"]" }}"
+                       aria-describedby="basic-addon1"
+                       value="{{ settings.get('categories', 'cat_ext['+x|string+']') }}">
+                <input type="text" class="form-control" placeholder="Minimum Size to download"
+                       name="{{ "cat_size["+x|string+"]" }}"
+                       aria-describedby="basic-addon1"
+                       value="{{ settings.get('categories', 'cat_size['+x|string+']') }}">
+                {% if settings.get('categories', 'cat_nzbtomedia['+x|string+']') == '1' %}
+                    <input type="checkbox" class="bootstrap_switch" name="{{ "cat_nzbtomedia["+x|string+"]" }}"
+                           data-size="small" data-label-text="NZBtomedia" checked>
+                {% else %}
+                    <input type="checkbox" class="bootstrap_switch" name="{{ "cat_nzbtomedia["+x|string+"]" }}"
+                           data-size="small" data-label-text="NZBtomedia">
+                {% endif %}
+            </div>
+        {% endfor %}
+        <p>&nbsp;</p>
+
+        <div class="well well-sm">
+            <h2>Upload Torrents / Watchdir </h2>
+        </div>
+        <div class="form-group">
+            <label for="watchdir_enabled">Enabled:</label>
+            {% if settings.get('upload', 'watchdir_enabled') == '1' %}
+                <input type="checkbox" class="bootstrap_switch" name="watchdir_enabled" data-size="small" checked>
             {% else %}
-                <input type="checkbox" class="bootstrap_switch" name="nzbtomedia_enabled" data-size="small">
+                <input type="checkbox" class="bootstrap_switch" name="watchdir_enabled" data-size="small">
             {% endif %}
             <p>&nbsp;</p>
-            <input type="text" class="form-control" placeholder="path to nzbToMedia.py" name="nzbtomedia_location"
-                   aria-describedby="basic-addon1" value="{{ settings.get('nzbtomedia', 'nzbtomedia_location') }}">
+            <p>Subfolders will be created based on categories names</p>
+            <label for="watchdir_location">Folder to Watch:</label>
+            <input type="text" class="form-control" name="watchdir_location"
+                   aria-describedby="basic-addon1" value="{{ settings.get('upload', 'watchdir_location') }}">
         </div>
-        <h3>Update</h3>
+        <p>&nbsp;</p>
+        <div class="well well-sm">
+            <h2>Update</h2>
+        </div>
         <h5>Premiumizer will restart & update</h5>
         <div>
-            <input type="submit" name="submit" value="Update">
+            <input type="submit" class="btn-danger" name="submit" value="Update">
+        </div>
+        <p>&nbsp;</p>
+
+        <div class="form-group pull-right">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <input type="submit" class="btn-danger" name="submit" value="Restart">
+            <input type="submit" class="btn-danger" name="submit" value="Shutdown">
         </div>
 
-        <hr>
-        <div class="form-group pull-right">
-            <button type="submit" class="btn btn-default">Save</button>
-            <input type="submit" name="submit" value="Restart">
-            <input type="submit" name="submit" value="Shutdown">
-        </div>
-        <hr/>
     </form>
 {% endblock %}

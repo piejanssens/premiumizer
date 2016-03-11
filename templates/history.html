@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% set active_page = "history" %}
+{% block title %} - Home{% endblock %}
+{% block content %}
+    <h5>History is based on logfile: to clear history, clear the log</h5>
+    <h1>Added:</h1>
+    <pre>{{ taskad }}</pre>
+    <h1>Deleted:</h1>
+    <pre>{{ taskdel }}</pre>
+    <h1>Downloaded:</h1>
+    <pre>{{ taskdl }}</pre>
+
+{% endblock %}
+
+
+{% block js_footer %}
+    {{ super() }}
+    <script type="text/javascript" src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/control.js') }}"></script>
+{% endblock %}

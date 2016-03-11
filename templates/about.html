@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% set active_page = "about" %}
+{% block title %} - Home{% endblock %}
+{% block content %}
+    <h3>Github:</h3>
+    <a href="https://github.com/piejanssens/premiumizer" target="_blank">https://github.com/piejanssens/premiumizer</a>
+    <p>&nbsp;</p>
+    <p>&nbsp;</p>
+    <h3>Premiumize.me:</h3>
+    <a href="https://www.premiumize.me/" target="_blank">https://www.premiumize.me/</a>
+
+{% endblock %}
+
+
+{% block js_footer %}
+    {{ super() }}
+    <script type="text/javascript" src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/control.js') }}"></script>
+{% endblock %}

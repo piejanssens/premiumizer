@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% set active_page = "log" %}
+{% block title %} - Home{% endblock %}
+{% block content %}
+    <form data-toggle="validator" role="form" method="post" action="/log" enctype="multipart/form-data">
+        <div class="form-group pull-right">
+            <button type="submit" class="btn btn-primary">Reload</button>
+            <input type="submit" class="btn-danger" name="submit" value="Clear">
+        </div>
+    </form>
+    <h1>Log:</h1>
+    <pre>{{ log }}</pre>
+    <h1>DEBUG Log:</h1>
+    <pre>{{ debuglog }}</pre>
+{% endblock %}
+
+
+{% block js_footer %}
+    {{ super() }}
+    <script type="text/javascript" src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/control.js') }}"></script>
+{% endblock %}
