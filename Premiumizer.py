@@ -165,35 +165,34 @@ class PremConfig:
             if not os.path.exists(self.watchdir_location):
                 os.makedirs(self.watchdir_location)
 
-        if self.download_enabled or self.copylink_toclipboard:
-            self.categories = []
-            self.download_categories = ''
-            for x in range(1, 6):
-                y = prem_config.get('categories', ('cat_name' + str([x])))
-                z = prem_config.get('categories', ('cat_dir' + str([x])))
-                if y != '':
-                    cat_name = y
-                    if z == '':
-                        cat_dir = self.download_location + '\\' + y
-                    else:
-                        cat_dir = z
-                    cat_ext = prem_config.get('categories', ('cat_ext' + str([x]))).split(',')
-                    cat_size = prem_config.getint('categories', ('cat_size' + str([x]))) * 1000000
-                    cat_nzbtomedia = prem_config.getboolean('categories', ('cat_nzbtomedia' + str([x])))
-                    cat = {'name': cat_name, 'dir': cat_dir, 'ext': cat_ext, 'size': cat_size, 'nzb': cat_nzbtomedia}
-                    self.categories.append(cat)
-                    self.download_categories += str(cat_name + ',')
-                    if self.download_enabled:
-                        if not os.path.exists(cat_dir):
-                            logger.info('Creating Download Path at: %s', cat_dir)
-                            os.makedirs(cat_dir)
-                    if self.watchdir_enabled:
-                        sub = self.watchdir_location + '\\' + cat_name
-                        if not os.path.exists(sub):
-                            logger.info('Creating watchdir Path at %s', sub)
-                            os.makedirs(sub)
-            self.download_categories = self.download_categories[:-1]
-            self.download_categories = self.download_categories.split(',')
+        self.categories = []
+        self.download_categories = ''
+        for x in range(1, 6):
+            y = prem_config.get('categories', ('cat_name' + str([x])))
+            z = prem_config.get('categories', ('cat_dir' + str([x])))
+            if y != '':
+                cat_name = y
+                if z == '':
+                    cat_dir = self.download_location + '\\' + y
+                else:
+                    cat_dir = z
+                cat_ext = prem_config.get('categories', ('cat_ext' + str([x]))).split(',')
+                cat_size = prem_config.getint('categories', ('cat_size' + str([x]))) * 1000000
+                cat_nzbtomedia = prem_config.getboolean('categories', ('cat_nzbtomedia' + str([x])))
+                cat = {'name': cat_name, 'dir': cat_dir, 'ext': cat_ext, 'size': cat_size, 'nzb': cat_nzbtomedia}
+                self.categories.append(cat)
+                self.download_categories += str(cat_name + ',')
+                if self.download_enabled:
+                    if not os.path.exists(cat_dir):
+                        logger.info('Creating Download Path at: %s', cat_dir)
+                        os.makedirs(cat_dir)
+                if self.watchdir_enabled:
+                    sub = self.watchdir_location + '\\' + cat_name
+                    if not os.path.exists(sub):
+                        logger.info('Creating watchdir Path at %s', sub)
+                        os.makedirs(sub)
+        self.download_categories = self.download_categories[:-1]
+        self.download_categories = self.download_categories.split(',')
 
         logger.debug('Initializing config complete')
 
