@@ -38,7 +38,7 @@ print '|                                                                        
 print '------------------------------------------------------------------------------------------------------------'
 # Initialize config values
 prem_config = ConfigParser.RawConfigParser()
-runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0] + '/'
+runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0] + '\\'
 if not os.path.isfile(runningdir + 'settings.cfg'):
     shutil.copy(runningdir + 'settings.cfg.tpl', runningdir + 'settings.cfg')
 prem_config.read(runningdir + 'settings.cfg')
@@ -153,8 +153,8 @@ class PremConfig:
         self.download_max = prem_config.getint('downloads', 'download_max')
         self.download_threading = prem_config.getboolean('downloads', 'download_threading')
         self.download_location = prem_config.get('downloads', 'download_location')
-        if os.path.isfile(runningdir + '\\nzbtomedia\\NzbToMedia.py'):
-            self.nzbtomedia_location = (runningdir + '\\nzbtomedia\\NzbToMedia.py')
+        if os.path.isfile(runningdir + 'nzbtomedia\\NzbToMedia.py'):
+            self.nzbtomedia_location = (runningdir + 'nzbtomedia\\NzbToMedia.py')
             self.nzbtomedia_builtin = 1
         else:
             self.nzbtomedia_location = prem_config.get('downloads', 'nzbtomedia_location')
