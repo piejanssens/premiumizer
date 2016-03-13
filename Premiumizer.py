@@ -153,7 +153,11 @@ class PremConfig:
         self.download_max = prem_config.getint('downloads', 'download_max')
         self.download_threading = prem_config.getboolean('downloads', 'download_threading')
         self.download_location = prem_config.get('downloads', 'download_location')
-        self.nzbtomedia_location = prem_config.get('downloads', 'nzbtomedia_location')
+        if os.path.isfile(runningdir + '\\nzbtomedia\\NzbToMedia.py'):
+            self.nzbtomedia_location = (runningdir + '\\nzbtomedia\\NzbToMedia.py')
+            self.nzbtomedia_builtin = 1
+        else:
+            self.nzbtomedia_location = prem_config.get('downloads', 'nzbtomedia_location')
         self.copylink_toclipboard = prem_config.getboolean('downloads', 'copylink_toclipboard')
         if self.copylink_toclipboard:
             self.download_enabled = 0
@@ -720,7 +724,7 @@ def settings():
             logger.info('Settings saved, reloading configuration')
             cfg.check_config()
 
-    return render_template('settings.html', settings=prem_config)
+    return render_template('settings.html', settings=prem_config, cfg=cfg)
 
 
 @app.route('/login', methods=["GET", "POST"])

@@ -100,9 +100,11 @@
             <label for="download_location">Download Location:</label>
             <input type="text" class="form-control" name="download_location"
                    aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_location') }}">
-            <label for="nzbtomedia_location">path to TorrentToMedia.py in the nzbtomedia folder:</label>
-            <input type="text" class="form-control" name="nzbtomedia_location"
-                   aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'nzbtomedia_location') }}">
+            {% if not cfg.nzbtomedia_builtin %}
+                <label for="nzbtomedia_location">path to TorrentToMedia.py in the nzbtomedia folder:</label>
+                <input type="text" class="form-control" name="nzbtomedia_location"
+                       aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'nzbtomedia_location') }}">
+            {% endif %}
         </div>
         <p>&nbsp;</p>
         </div>
