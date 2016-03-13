@@ -6,11 +6,11 @@ import logging
 import os
 import shelve
 import shutil
+import subprocess
 import sys
 import unicodedata
 from logging.handlers import RotatingFileHandler
 from string import ascii_letters, digits
-from subprocess import Popen
 
 import bencode
 import gevent
@@ -39,6 +39,11 @@ print '-------------------------------------------------------------------------
 # Initialize config values
 prem_config = ConfigParser.RawConfigParser()
 runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0] + '\\'
+rootdir = runningdir[:-12]
+try:
+    os_arg = sys.argv[1]
+except:
+    os_arg = ''
 if not os.path.isfile(runningdir + 'settings.cfg'):
     shutil.copy(runningdir + 'settings.cfg.tpl', runningdir + 'settings.cfg')
 prem_config.read(runningdir + 'settings.cfg')
@@ -283,7 +288,9 @@ def clean_name(original):
 def notify_nzbtomedia(task):
     logger.debug('def notify_nzbtomedia started')
     if os.path.isfile(cfg.nzbtomedia_location):
-        Popen(['python', cfg.nzbtomedia_location, task.dldir, task.name, task.category, task.hash, 'generic'], shell=False)
+        subprocess.Popen(
+            ['python', cfg.nzbtomedia_location, task.dldir, task.name, task.category, task.hash, 'generic'],
+            shell=False)
         logger.info('Send to nzbtomedia: %s', task.name)
     else:
         logger.error('Error unable to locate nzbToMedia.py')
@@ -300,12 +307,12 @@ def get_download_stats(task, downloader, total_size_downloaded):
         else:
             tmp = (task.size - size_downloaded) / speed
             eta = ' ' + utils.time_human(tmp, fmt_short=True)
-        task.update(speed=(utils.sizeof_human(speed)+ '/s'), progress=progress, eta=eta)
+        task.update(speed=(utils.sizeof_human(speed) + '/s'), progress=progress, eta=eta)
 
     elif downloader.get_status() == 'combining':
-        task.update(speed='',eta=' Combining files')
+        task.update(speed='', eta=' Combining files')
     elif downloader.get_status() == 'paused':
-        task.update(speed='',eta=' Download paused')
+        task.update(speed='', eta=' Download paused')
     else:
         logger.debug('Want to update stats, but downloader status is invalid.')
 
@@ -335,10 +342,9 @@ def download_file(download_list):
             logger.info('File not downloaded it already exists at: %s', download['path'])
 
 
-
 # TODO continue log statements
 
-def process_dir(task, path, dir_content,change_dldir):
+def process_dir(task, path, dir_content, change_dldir):
     logger.debug('def processing_dir started')
     global download_list, size_remove
     if not dir_content:
@@ -384,7 +390,8 @@ def download_task(task):
         task.update(size=(task.size - size_remove))
     download_file(download_list)
     task.update(local_status='finished', progress=100)
-    logger.info('Download %s  finished in: %s at location %s:', task.name, utils.time_human(task.dltime,fmt_short=True), task.dldir)
+    logger.info('Download %s  finished in: %s at location %s:', task.name,
+                utils.time_human(task.dltime, fmt_short=True), task.dldir)
     if task.dlnzbtomedia:
         notify_nzbtomedia(task)
     if cfg.remove_cloud:
@@ -656,15 +663,26 @@ def settings():
     if request.method == 'POST':
         if 'Restart' in request.form.values():
             logger.info('Restarting')
-            Popen(['python', 'utils.py', '--restart'], shell=False, close_fds=True)
-            sys.exit()
+            if os_arg == '--windows':
+                # windows service will automatically restart on 'failure'
+                sys.exit()
+            else:
+                subprocess.Popen(['python', runningdir + 'utils.py', '--restart'], shell=False, close_fds=True)
+                sys.exit()
         elif 'Shutdown' in request.form.values():
+            print os_arg
             logger.info('Shutdown recieved')
-            sys.exit()
+            if os_arg == '--windows':
+                subprocess.Popen([rootdir + 'Installer\\nssm.exe', 'stop', 'Premiumizer'])
+            else:
+                sys.exit()
         elif 'Update' in request.form.values():
             logger.info('Update - will restart')
-            Popen(['python', 'utils.py', '--update'], shell=False, close_fds=True)
-            sys.exit()
+            if os_arg == '--windows':
+                subprocess.call(['python', runningdir + 'utils.py', '--update', '--windows'])
+            else:
+                subprocess.Popen(['python', runningdir + 'utils.py', '--update'], shell=False, close_fds=True)
+                sys.exit()
         else:
             global prem_config
             if request.form.get('debug_enabled'):
