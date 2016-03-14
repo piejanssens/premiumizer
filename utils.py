@@ -1,8 +1,8 @@
 import ConfigParser
 import os
+import subprocess
 import sys
 import time
-import subprocess
 
 runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0] + '/'
 

@@ -23,12 +23,12 @@ from flask import Flask, flash, request, redirect, url_for, render_template, sen
 from flask.ext.login import LoginManager, login_required, login_user, logout_user, UserMixin
 from flask.ext.socketio import SocketIO, emit
 from flask_apscheduler import APScheduler
-from pySmartDL import SmartDL, utils
 from watchdog.events import PatternMatchingEventHandler
 from watchdog.observers import Observer
 from werkzeug.utils import secure_filename
 
 from DownloadTask import DownloadTask
+from pySmartDL import SmartDL, utils
 
 # "https://www.premiumize.me/static/api/torrent.html"
 print '------------------------------------------------------------------------------------------------------------'
@@ -145,6 +145,7 @@ class PremConfig:
 
     def check_config(self):
         logger.debug('Initializing config')
+        self.bind_ip = prem_config.get('global', 'bind_ip')
         self.web_login_enabled = prem_config.getboolean('security', 'login_enabled')
         if self.web_login_enabled:
             logger.debug('Premiumizer login is enabled')
@@ -717,6 +718,7 @@ def settings():
                 prem_config.set('upload', 'watchdir_enabled', '0')
 
             prem_config.set('global', 'server_port', request.form.get('server_port'))
+            prem_config.set('global', 'bind_ip', request.form.get('bind_ip'))
             prem_config.set('global', 'idle_interval', request.form.get('idle_interval'))
             prem_config.set('security', 'username', request.form.get('username'))
             prem_config.set('security', 'password', request.form.get('password'))
@@ -892,6 +894,6 @@ if __name__ == '__main__':
                                     seconds=active_interval, replace_existing=True, max_instances=1, coalesce=True)
         scheduler.scheduler.add_executor('threadpool', alias='download', max_workers=cfg.download_max)
         scheduler.start()
-        socketio.run(app, port=prem_config.getint('global', 'server_port'), use_reloader=False)
+        socketio.run(app, host=prem_config.get('global', 'bind_ip'), port=prem_config.getint('global', 'server_port'), use_reloader=False)
     except:
         raise
