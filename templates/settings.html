@@ -22,6 +22,9 @@
             <label for="server_port">Server Port:</label>
             <input type="number" class="form-control" aria-describedby="basic-addon1"
                    name="server_port" value="{{ settings.get('global', 'server_port') }}">
+            <label for="bind_port">Bind to ip:</label>
+            <input type="text" class="form-control" aria-describedby="basic-addon1"
+                   name="bind_ip" value="{{ settings.get('global', 'bind_ip') }}">
         </div>
         <p>&nbsp;</p>
         <div class="well well-sm">
@@ -100,9 +103,14 @@
             <label for="download_location">Download Location:</label>
             <input type="text" class="form-control" name="download_location"
                    aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_location') }}">
-            <label for="nzbtomedia_location">path to TorrentToMedia.py in the nzbtomedia folder:</label>
-            <input type="text" class="form-control" name="nzbtomedia_location"
-                   aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'nzbtomedia_location') }}">
+            <p>&nbsp;</p>
+            {% if not cfg.nzbtomedia_builtin %}
+                <label for="nzbtomedia_location">path to TorrentToMedia.py in the nzbtomedia folder:</label>
+                <input type="text" class="form-control" name="nzbtomedia_location"
+                       aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'nzbtomedia_location') }}">
+            {% else %}
+                <p>NzbToMedia is detected at:</p> {{ cfg.nzbtomedia_location }}
+            {% endif %}
         </div>
         <p>&nbsp;</p>
         </div>
@@ -129,11 +137,12 @@
                        name="{{ "cat_size["+x|string+"]" }}"
                        aria-describedby="basic-addon1"
                        value="{{ settings.get('categories', 'cat_size['+x|string+']') }}">
-                {% if settings.get('categories', 'cat_nzbtomedia['+x|string+']') == '1' %}
-                    <input type="checkbox" class="bootstrap_switch" name="{{ "cat_nzbtomedia["+x|string+"]" }}"
+            NzbToMedia:
+                {% if  settings.get('categories', 'cat_nzbtomedia['+x|string+']')    == '1' %}
+                    <input type="checkbox" class="checkbox-inline" name="{{ "cat_nzbtomedia["+x|string+"]" }}"
                            data-size="small" data-label-text="NZBtomedia" checked>
                 {% else %}
-                    <input type="checkbox" class="bootstrap_switch" name="{{ "cat_nzbtomedia["+x|string+"]" }}"
+                    <input type="checkbox" class="checkbox-inline" name="{{ "cat_nzbtomedia["+x|string+"]" }}"
                            data-size="small" data-label-text="NZBtomedia">
                 {% endif %}
             </div>
@@ -146,9 +155,9 @@
         <div class="form-group">
             <label for="watchdir_enabled">Enabled:</label>
             {% if settings.get('upload', 'watchdir_enabled') == '1' %}
-                <input type="checkbox" class="bootstrap_switch" name="watchdir_enabled" data-size="small" checked>
+                <input type="checkbox" class="bootstrap-switch-default" name="watchdir_enabled" data-size="small" checked>
             {% else %}
-                <input type="checkbox" class="bootstrap_switch" name="watchdir_enabled" data-size="small">
+                <input type="checkbox" class="bootstrap-switch-default"  name="watchdir_enabled" data-size="small">
             {% endif %}
             <p>&nbsp;</p>
             <p>Subfolders will be created based on categories names</p>

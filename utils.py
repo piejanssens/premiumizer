@@ -1,5 +1,6 @@
 import ConfigParser
 import os
+import subprocess
 import sys
 import time
 
@@ -7,15 +8,17 @@ runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0] + 
 
 
 def restart():
-    time.sleep(2)
+    print runningdir
+    time.sleep(4)
     execfile(runningdir + 'premiumizer.py', globals(), globals())
 
 
 def update():
     del sys.argv[1:]
     time.sleep(2)
-    from PyGitUp import gitup
-    gitup.run()
+    subprocess.call(['git', '-C', runningdir + 'nzbtomedia', 'pull'])
+    subprocess.call(['git', '-C', runningdir, 'pull'])
+
     prem_config = ConfigParser.RawConfigParser()
     default_config = ConfigParser.RawConfigParser()
     prem_config.read(runningdir + 'settings.cfg')
@@ -31,12 +34,25 @@ def update():
         import shutil
         shutil.copy(runningdir + 'settings.cfg', runningdir + 'settings.cfg.old')
         shutil.copy(runningdir + 'settings.cfg.tpl', runningdir + 'settings.cfg')
-    execfile('premiumizer.py', globals(), globals())
+    if os_arg == '--windows':
+        pass
+    else:
+        time.sleep(3)
+        execfile(runningdir + 'premiumizer.py', globals(), globals())
 
 
-arg = sys.argv[1:]
+try:
+    option_arg = sys.argv[1]
+except:
+    sys.exit()
+try:
+    os_arg = sys.argv[2]
+except:
+    os_arg = ''
+if os_arg == '--windows':
+    rootdir = runningdir[:-12]
 
-if arg == ['--restart']:
+if sys.argv[1] == '--restart':
     restart()
-elif arg == ['--update']:
+elif sys.argv[1] == '--update':
     update()
