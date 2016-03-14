@@ -2,9 +2,9 @@ import ConfigParser
 import os
 import sys
 import time
-from subprocess import Popen
+import subprocess
 
-runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0] + '\\'
+runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0] + '/'
 
 
 def restart():
@@ -16,8 +16,9 @@ def restart():
 def update():
     del sys.argv[1:]
     time.sleep(2)
-    Popen(['git', '-C', runningdir, 'pull'])
-    Popen(['git', '-C', runningdir + 'nzbtomedia', 'pull'])
+    subprocess.call(['git', '-C', runningdir + 'nzbtomedia', 'pull'])
+    subprocess.call(['git', '-C', runningdir, 'pull'])
+
     prem_config = ConfigParser.RawConfigParser()
     default_config = ConfigParser.RawConfigParser()
     prem_config.read(runningdir + 'settings.cfg')
@@ -33,7 +34,7 @@ def update():
         import shutil
         shutil.copy(runningdir + 'settings.cfg', runningdir + 'settings.cfg.old')
         shutil.copy(runningdir + 'settings.cfg.tpl', runningdir + 'settings.cfg')
-    if os_arg == 'windows':
+    if os_arg == '--windows':
         pass
     else:
         time.sleep(3)

@@ -38,7 +38,7 @@ print '|                                                                        
 print '------------------------------------------------------------------------------------------------------------'
 # Initialize config values
 prem_config = ConfigParser.RawConfigParser()
-runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0] + '\\'
+runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0] + '/'
 rootdir = runningdir[:-12]
 try:
     os_arg = sys.argv[1]
@@ -158,8 +158,8 @@ class PremConfig:
         self.download_max = prem_config.getint('downloads', 'download_max')
         self.download_threading = prem_config.getboolean('downloads', 'download_threading')
         self.download_location = prem_config.get('downloads', 'download_location')
-        if os.path.isfile(runningdir + 'nzbtomedia\\NzbToMedia.py'):
-            self.nzbtomedia_location = (runningdir + 'nzbtomedia\\NzbToMedia.py')
+        if os.path.isfile(runningdir + 'nzbtomedia/NzbToMedia.py'):
+            self.nzbtomedia_location = (runningdir + 'nzbtomedia/NzbToMedia.py')
             self.nzbtomedia_builtin = 1
         else:
             self.nzbtomedia_location = prem_config.get('downloads', 'nzbtomedia_location')
@@ -182,7 +182,7 @@ class PremConfig:
             if y != '':
                 cat_name = y
                 if z == '':
-                    cat_dir = self.download_location + '\\' + y
+                    cat_dir = self.download_location + '/' + y
                 else:
                     cat_dir = z
                 cat_ext = prem_config.get('categories', ('cat_ext' + str([x]))).split(',')
@@ -196,7 +196,7 @@ class PremConfig:
                         logger.info('Creating Download Path at: %s', cat_dir)
                         os.makedirs(cat_dir)
                 if self.watchdir_enabled:
-                    sub = self.watchdir_location + '\\' + cat_name
+                    sub = self.watchdir_location + '/' + cat_name
                     if not os.path.exists(sub):
                         logger.info('Creating watchdir Path at %s', sub)
                         os.makedirs(sub)
@@ -673,7 +673,7 @@ def settings():
             print os_arg
             logger.info('Shutdown recieved')
             if os_arg == '--windows':
-                subprocess.Popen([rootdir + 'Installer\\nssm.exe', 'stop', 'Premiumizer'])
+                subprocess.Popen([rootdir + 'Installer/nssm.exe', 'stop', 'Premiumizer'])
             else:
                 sys.exit()
         elif 'Update' in request.form.values():
