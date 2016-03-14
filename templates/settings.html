@@ -137,11 +137,12 @@
                        name="{{ "cat_size["+x|string+"]" }}"
                        aria-describedby="basic-addon1"
                        value="{{ settings.get('categories', 'cat_size['+x|string+']') }}">
-                {% if settings.get('categories', 'cat_nzbtomedia['+x|string+']') == '1' %}
-                    <input type="checkbox" class="bootstrap_switch" name="{{ "cat_nzbtomedia["+x|string+"]" }}"
+            NzbToMedia:
+                {% if  settings.get('categories', 'cat_nzbtomedia['+x|string+']')    == '1' %}
+                    <input type="checkbox" class="checkbox-inline" name="{{ "cat_nzbtomedia["+x|string+"]" }}"
                            data-size="small" data-label-text="NZBtomedia" checked>
                 {% else %}
-                    <input type="checkbox" class="bootstrap_switch" name="{{ "cat_nzbtomedia["+x|string+"]" }}"
+                    <input type="checkbox" class="checkbox-inline" name="{{ "cat_nzbtomedia["+x|string+"]" }}"
                            data-size="small" data-label-text="NZBtomedia">
                 {% endif %}
             </div>
