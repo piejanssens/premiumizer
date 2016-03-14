@@ -48,6 +48,7 @@ Edit autoProcessMedia.cfg.spc & save it to autoProcessMedia.cfg
 or
 
 Manual installation:
+
 Install [Git] (https://git-scm.com/download/win) &  select: Use git from the windows command prompt.
 
 Download [Python] (https://www.python.org/ftp/python/2.7.11/python-2.7.11.msi)
