@@ -37,13 +37,17 @@ optional: NzbToMedia version 10.14 & higher
 Package coming soon(ish).
 
 ### Windows
+Automatic installation
 
 Use the [PremiumizerInstaller] (https://github.com/neox387/PremiumizerInstaller/releases)
+
 Open services.msc & edit Premiumizer service to logon using your account that is an administrator.
+
+Edit autoProcessMedia.cfg.spc & save it to autoProcessMedia.cfg
 
 or
 
-Manual:
+Manual installation:
 Install [Git] (https://git-scm.com/download/win) &  select: Use git from the windows command prompt.
 
 Download [Python] (https://www.python.org/ftp/python/2.7.11/python-2.7.11.msi)
