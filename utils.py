@@ -15,13 +15,9 @@ def restart():
 
 def update():
     del sys.argv[1:]
-    if os_arg == 'windows':
-        Popen([rootdir + 'Git\\cmd\\git.exe', '-C', runningdir, 'pull'])
-        Popen([rootdir + 'Git\\cmd\\git.exe', '-C', runningdir + 'nzbtomedia', 'pull'])
-    else:
-        time.sleep(2)
-        Popen(['git', '-C', runningdir, 'pull'])
-        Popen(['git', '-C', runningdir + 'nzbtomedia', 'pull'])
+    time.sleep(2)
+    Popen(['git', '-C', runningdir, 'pull'])
+    Popen(['git', '-C', runningdir + 'nzbtomedia', 'pull'])
     prem_config = ConfigParser.RawConfigParser()
     default_config = ConfigParser.RawConfigParser()
     prem_config.read(runningdir + 'settings.cfg')
