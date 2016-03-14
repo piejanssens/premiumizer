@@ -169,8 +169,8 @@ class PremConfig:
             self.download_enabled = 0
 
         self.watchdir_enabled = prem_config.getboolean('upload', 'watchdir_enabled')
+        self.watchdir_location = prem_config.get('upload', 'watchdir_location')
         if self.watchdir_enabled:
-            self.watchdir_location = prem_config.get('upload', 'watchdir_location')
             logger.info('Watchdir is enabled at: %s', self.watchdir_location)
             if not os.path.exists(self.watchdir_location):
                 os.makedirs(self.watchdir_location)
@@ -728,7 +728,6 @@ def settings():
             prem_config.set('downloads', 'download_max', request.form.get('download_max'))
             prem_config.set('upload', 'watchdir_location', request.form.get('watchdir_location'))
             prem_config.set('downloads', 'nzbtomedia_location', request.form.get('nzbtomedia_location'))
-
             for x in range(1, 6):
                 prem_config.set('categories', ('cat_name' + str([x])), request.form.get('cat_name' + str([x])))
                 prem_config.set('categories', ('cat_dir' + str([x])), request.form.get('cat_dir' + str([x])))

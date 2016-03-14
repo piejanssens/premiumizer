@@ -155,9 +155,9 @@
         <div class="form-group">
             <label for="watchdir_enabled">Enabled:</label>
             {% if settings.get('upload', 'watchdir_enabled') == '1' %}
-                <input type="checkbox" class="bootstrap_switch" name="watchdir_enabled" data-size="small" checked>
+                <input type="checkbox" class="bootstrap-switch-default" name="watchdir_enabled" data-size="small" checked>
             {% else %}
-                <input type="checkbox" class="bootstrap_switch" name="watchdir_enabled" data-size="small">
+                <input type="checkbox" class="bootstrap-switch-default"  name="watchdir_enabled" data-size="small">
             {% endif %}
             <p>&nbsp;</p>
             <p>Subfolders will be created based on categories names</p>
