@@ -79,7 +79,7 @@ https://github.com/piejanssens/premiumizer.git```
 5. ```pip install -r requirements.txt```
 6. ```./premiumizer.py```
 
-Now use your browser to access [http://localhost:5000/](http://localhost:5000/).
+Now use your browser to access [http://127.0.0.1:5000/](http://127.0.0.1:5000/).
 Extra: Google how you can turn it into a service and run it in background
 
 ## Updating
