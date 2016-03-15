@@ -23,12 +23,12 @@ from flask import Flask, flash, request, redirect, url_for, render_template, sen
 from flask.ext.login import LoginManager, login_required, login_user, logout_user, UserMixin
 from flask.ext.socketio import SocketIO, emit
 from flask_apscheduler import APScheduler
-from pySmartDL import SmartDL, utils
 from watchdog.events import PatternMatchingEventHandler
 from watchdog.observers import Observer
 from werkzeug.utils import secure_filename
 
 from DownloadTask import DownloadTask
+from pySmartDL import SmartDL, utils
 
 # "https://www.premiumize.me/static/api/torrent.html"
 print '------------------------------------------------------------------------------------------------------------'
@@ -202,7 +202,7 @@ class PremConfig:
             logger.info('Watchdir is enabled at: %s', self.watchdir_location)
             if not os.path.exists(self.watchdir_location):
                 os.makedirs(self.watchdir_location)
-                watchdir()
+            watchdir()
         logger.debug('Initializing config complete')
 
 
@@ -866,10 +866,6 @@ def change_category(message):
                 dlnzbtomedia=dlnzbtomedia)
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
 
-
-# Start watchdog if watchdir is enabled
-if cfg.watchdir_enabled:
-    watchdir()
 
 # start the server with the 'run()' method
 logger.info('Starting server on %s:%s ', prem_config.get('global', 'bind_ip'),
