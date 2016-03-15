@@ -22,8 +22,8 @@ Categories can be setup through the web interface's setup page.
 
 ## Web Interface
 By default, premiumizer's web interface listens on port 5000.
-When premiumizer is running you can access it at http://localhost:5000/ 
-If premiumizer is running on a different PC replace localhost with that computer's IP.
+When premiumizer is running you can access it at http://127.0.0.1:5000/ 
+If premiumizer is running on a different PC replace Bind ip in settings with that computer's IP.
 
 ## Installation
 
