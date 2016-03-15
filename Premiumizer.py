@@ -157,7 +157,6 @@ class PremConfig:
         self.remove_cloud = prem_config.getboolean('downloads', 'remove_cloud')
         self.download_enabled = prem_config.getboolean('downloads', 'download_enabled')
         self.download_max = prem_config.getint('downloads', 'download_max')
-        self.download_threading = prem_config.getboolean('downloads', 'download_threading')
         self.download_location = prem_config.get('downloads', 'download_location')
         if os.path.isfile(runningdir + 'nzbtomedia/NzbToMedia.py'):
             self.nzbtomedia_location = (runningdir + 'nzbtomedia/NzbToMedia.py')
@@ -325,7 +324,7 @@ def download_file(download_list):
     for download in download_list:
         logger.debug('Downloading file: %s', download['path'])
         if not os.path.isfile(download['path']):
-            downloader = SmartDL(download['url'], download['path'], progress_bar=False, logger=logger)
+            downloader = SmartDL(download['url'], download['path'], progress_bar=False, logger=logger, threads_count=1)
             downloader.start(blocking=False)
             while not downloader.isFinished():
                 get_download_stats(download['task'], downloader, total_size_downloaded)
@@ -362,11 +361,7 @@ def process_dir(task, path, dir_content, change_dldir):
                 if cfg.download_enabled:
                     if not os.path.exists(path):
                         os.makedirs(path)
-                    if not cfg.download_threading:
-                        url = dir_content[x]['url'].replace('https', 'http', 1)
-                    else:
-                        url = dir_content[x]['url']
-                    download = {'task': task, 'path': path + '/' + clean_name(x), 'url': url}
+                    download = {'task': task, 'path': path + '/' + clean_name(x), 'url': dir_content[x]['url']}
                     download_list.append(download)
                 elif cfg.copylink_toclipboard:
                     logger.info('Link copied to clipboard for: %s', dir_content[x]['name'])
@@ -698,10 +693,6 @@ def settings():
                 prem_config.set('downloads', 'download_enabled', '1')
             else:
                 prem_config.set('downloads', 'download_enabled', '0')
-            if request.form.get('download_threading'):
-                prem_config.set('downloads', 'download_threading', '1')
-            else:
-                prem_config.set('downloads', 'download_threading', '0')
             if request.form.get('remove_cloud'):
                 prem_config.set('downloads', 'remove_cloud', '1')
             else:
