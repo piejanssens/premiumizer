@@ -169,6 +169,10 @@ class PremConfig:
 
         self.watchdir_enabled = prem_config.getboolean('upload', 'watchdir_enabled')
         self.watchdir_location = prem_config.get('upload', 'watchdir_location')
+        if self.watchdir_enabled:
+            logger.info('Watchdir is enabled at: %s', self.watchdir_location)
+            if not os.path.exists(self.watchdir_location):
+                os.makedirs(self.watchdir_location)
 
         self.categories = []
         self.download_categories = ''
@@ -198,11 +202,7 @@ class PremConfig:
                         os.makedirs(sub)
         self.download_categories = self.download_categories[:-1]
         self.download_categories = self.download_categories.split(',')
-        if self.watchdir_enabled:
-            logger.info('Watchdir is enabled at: %s', self.watchdir_location)
-            if not os.path.exists(self.watchdir_location):
-                os.makedirs(self.watchdir_location)
-                watchdir()
+
         logger.debug('Initializing config complete')
 
 
@@ -704,6 +704,7 @@ def settings():
                 prem_config.set('downloads', 'copylink_toclipboard', '0')
             if request.form.get('watchdir_enabled'):
                 prem_config.set('upload', 'watchdir_enabled', '1')
+                watchdir()
             else:
                 prem_config.set('upload', 'watchdir_enabled', '0')
             prem_config.set('global', 'server_port', request.form.get('server_port'))
