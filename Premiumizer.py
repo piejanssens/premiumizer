@@ -23,12 +23,12 @@ from flask import Flask, flash, request, redirect, url_for, render_template, sen
 from flask.ext.login import LoginManager, login_required, login_user, logout_user, UserMixin
 from flask.ext.socketio import SocketIO, emit
 from flask_apscheduler import APScheduler
+from pySmartDL import SmartDL, utils
 from watchdog.events import PatternMatchingEventHandler
 from watchdog.observers import Observer
 from werkzeug.utils import secure_filename
 
 from DownloadTask import DownloadTask
-from pySmartDL import SmartDL, utils
 
 # "https://www.premiumize.me/static/api/torrent.html"
 print '------------------------------------------------------------------------------------------------------------'
@@ -707,7 +707,6 @@ def settings():
                 watchdir()
             else:
                 prem_config.set('upload', 'watchdir_enabled', '0')
-
             prem_config.set('global', 'server_port', request.form.get('server_port'))
             prem_config.set('global', 'bind_ip', request.form.get('bind_ip'))
             prem_config.set('global', 'idle_interval', request.form.get('idle_interval'))
@@ -874,7 +873,8 @@ if cfg.watchdir_enabled:
     watchdir()
 
 # start the server with the 'run()' method
-logger.info('Starting server on port: %s ', prem_config.getint('global', 'server_port'))
+logger.info('Starting server on %s:%s ', prem_config.get('global', 'bind_ip'),
+            prem_config.getint('global', 'server_port'))
 if __name__ == '__main__':
     try:
         load_tasks()
@@ -884,6 +884,7 @@ if __name__ == '__main__':
                                     seconds=active_interval, replace_existing=True, max_instances=1, coalesce=True)
         scheduler.scheduler.add_executor('threadpool', alias='download', max_workers=cfg.download_max)
         scheduler.start()
-        socketio.run(app, host=prem_config.get('global', 'bind_ip'), port=prem_config.getint('global', 'server_port'), use_reloader=False)
+        socketio.run(app, host=prem_config.get('global', 'bind_ip'), port=prem_config.getint('global', 'server_port'),
+                     use_reloader=False)
     except:
         raise
