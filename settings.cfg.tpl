@@ -20,7 +20,6 @@ pin =
 [downloads]
 download_enabled = 0
 download_max = 1
-download_threading = 1
 remove_cloud = 0
 download_location =
 nzbtomedia_location = [Change to path]\NzbToMedia.py
