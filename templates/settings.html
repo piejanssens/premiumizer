@@ -22,6 +22,9 @@
             <label for="server_port">Server Port:</label>
             <input type="number" class="form-control" aria-describedby="basic-addon1"
                    name="server_port" value="{{ settings.get('global', 'server_port') }}">
+            <label for="bind_port">Bind to ip:</label>
+            <input type="text" class="form-control" aria-describedby="basic-addon1"
+                   name="bind_ip" value="{{ settings.get('global', 'bind_ip') }}">
         </div>
         <p>&nbsp;</p>
         <div class="well well-sm">
@@ -30,10 +33,10 @@
         <div class="form-group">
             <label for="login_enabled">Login enabled:</label>
             {% if settings.get('security', 'login_enabled') == '1' %}
-                <input type="checkbox" class="bootstrap_switch bootstrap-switch-small" name="login_enabled"
+                <input type="checkbox" class="form-control bootstrap_switch" name="login_enabled"
                        data-size="small" checked>
             {% else %}
-                <input type="checkbox" class="bootstrap_switch bootstrap-switch-small" name="login_enabled"
+                <input type="checkbox" class="form-control bootstrap_switch" name="login_enabled"
                        data-size="small">
             {% endif %}
             <p>&nbsp;</p>
@@ -63,49 +66,50 @@
         <div class="form-group">
             <label for="download_enabled">Downloads enabled:</label>
             {% if settings.get('downloads', 'download_enabled') == '1' %}
-                <input type="checkbox" class="bootstrap_switch" name="download_enabled" data-size="small" checked>
+                <input type="checkbox" class="form-control bootstrap_switch" name="download_enabled" data-size="small"
+                       checked>
             {% else %}
-                <input type="checkbox" class="bootstrap_switch" name="download_enabled" data-size="small">
+                <input type="checkbox" class="form-control bootstrap_switch" name="download_enabled" data-size="small">
             {% endif %}
-            <p>&nbsp;</p>
-            <label for="download_threading">Enable download threading:</label>
-            {% if settings.get('downloads', 'download_threading') == '1' %}
-                <input type="checkbox" class="bootstrap_switch" name="download_threading" data-size="small" checked>
-            {% else %}
-                <input type="checkbox" class="bootstrap_switch" name="download_threading" data-size="small">
-            {% endif %}
-            <p>Disable if download location is not local or on slow systems</p>
             <p>&nbsp;</p>
             <label for="remove_cloud">Remove torrents from cloud after downloading:</label>
             {% if settings.get('downloads', 'remove_cloud') == '1' %}
-                <input type="checkbox" class="bootstrap_switch" name="remove_cloud" data-size="small" checked>
+                <input type="checkbox" class="form-control bootstrap_switch" name="remove_cloud" data-size="small"
+                       checked>
             {% else %}
-                <input type="checkbox" class="bootstrap_switch" name="remove_cloud" data-size="small">
+                <input type="checkbox" class="form-control bootstrap_switch" name="remove_cloud" data-size="small">
             {% endif %}
             <p>&nbsp;</p>
             <label for="copylink_toclipboard">Instead of downloading: copy links to clipboard (Jdownloader)</label>
             {% if settings.get('downloads', 'copylink_toclipboard') == '1' %}
-                <input type="checkbox" class="bootstrap_switch" name="copylink_toclipboard" data-size="small" checked>
+                <input type="checkbox" class="form-control bootstrap_switch" name="copylink_toclipboard"
+                       data-size="small" checked>
             {% else %}
-                <input type="checkbox" class="bootstrap_switch" name="copylink_toclipboard" data-size="small">
+                <input type="checkbox" class="form-control bootstrap_switch" name="copylink_toclipboard"
+                       data-size="small">
             {% endif %}
             <p>&nbsp;</p>
             <label for="download_max">Max Simultaneous downloads: (requires restart)</label>
-            <input type="number" class="form--inline" name="download_max"
+            <input type="number" class="form-control" name="download_max"
                    aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_max') }}">
             <p>&nbsp;</p>
         </div>
-        <div class="form-group">
 
+        <div class="form-group">
             <label for="download_location">Download Location:</label>
             <input type="text" class="form-control" name="download_location"
                    aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_location') }}">
-            <label for="nzbtomedia_location">path to TorrentToMedia.py in the nzbtomedia folder:</label>
-            <input type="text" class="form-control" name="nzbtomedia_location"
-                   aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'nzbtomedia_location') }}">
+            <p>&nbsp;</p>
+            {% if not cfg.nzbtomedia_builtin %}
+                <label for="nzbtomedia_location">path to TorrentToMedia.py in the nzbtomedia folder:</label>
+                <input type="text" class="form-control" name="nzbtomedia_location"
+                       aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'nzbtomedia_location') }}">
+            {% else %}
+                <p>NzbToMedia is detected at:</p> {{ cfg.nzbtomedia_location }}
+            {% endif %}
         </div>
+
         <p>&nbsp;</p>
-        </div>
 
         <div class="well well-sm">
             <h2> Categories </h2>
@@ -125,15 +129,17 @@
                 <input type="text" class="form-control" placeholder="Extensions" name="{{ "cat_ext["+x|string+"]" }}"
                        aria-describedby="basic-addon1"
                        value="{{ settings.get('categories', 'cat_ext['+x|string+']') }}">
-                <input type="text" class="form-control" placeholder="Minimum Size to download"
+                <input type="number" class="form-control" placeholder="Minimum Size to download"
                        name="{{ "cat_size["+x|string+"]" }}"
                        aria-describedby="basic-addon1"
                        value="{{ settings.get('categories', 'cat_size['+x|string+']') }}">
-                {% if settings.get('categories', 'cat_nzbtomedia['+x|string+']') == '1' %}
-                    <input type="checkbox" class="bootstrap_switch" name="{{ "cat_nzbtomedia["+x|string+"]" }}"
+                {% if  settings.get('categories', 'cat_nzbtomedia['+x|string+']')    == '1' %}
+                    <input type="checkbox" class="form-control bootstrap_switch"
+                           name="{{ "cat_nzbtomedia["+x|string+"]" }}"
                            data-size="small" data-label-text="NZBtomedia" checked>
                 {% else %}
-                    <input type="checkbox" class="bootstrap_switch" name="{{ "cat_nzbtomedia["+x|string+"]" }}"
+                    <input type="checkbox" class="form-control bootstrap_switch"
+                           name="{{ "cat_nzbtomedia["+x|string+"]" }}"
                            data-size="small" data-label-text="NZBtomedia">
                 {% endif %}
             </div>
@@ -146,9 +152,10 @@
         <div class="form-group">
             <label for="watchdir_enabled">Enabled:</label>
             {% if settings.get('upload', 'watchdir_enabled') == '1' %}
-                <input type="checkbox" class="bootstrap_switch" name="watchdir_enabled" data-size="small" checked>
+                <input type="checkbox" class="form-control bootstrap_switch" name="watchdir_enabled" data-size="small"
+                       checked>
             {% else %}
-                <input type="checkbox" class="bootstrap_switch" name="watchdir_enabled" data-size="small">
+                <input type="checkbox" class="form-control bootstrap_switch" name="watchdir_enabled" data-size="small">
             {% endif %}
             <p>&nbsp;</p>
             <p>Subfolders will be created based on categories names</p>
@@ -160,8 +167,8 @@
         <div class="well well-sm">
             <h2>Update</h2>
         </div>
-        <h5>Premiumizer will restart & update</h5>
         <div>
+            <h5>Premiumizer will restart & update</h5>
             <input type="submit" class="btn-danger" name="submit" value="Update">
         </div>
         <p>&nbsp;</p>

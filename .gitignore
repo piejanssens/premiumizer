@@ -17,6 +17,7 @@ __pycache__/
 
 # Distribution / packaging
 .Python
+nzbtomedia/
 env/
 build/
 develop-eggs/
