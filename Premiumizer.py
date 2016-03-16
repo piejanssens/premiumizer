@@ -701,6 +701,7 @@ def settings():
             if request.form.get('copylink_toclipboard'):
                 prem_config.set('downloads', 'copylink_toclipboard', '1')
                 prem_config.set('downloads', 'download_enabled', '0')
+                prem_config.set('downloads', 'remove_cloud', '0')
             else:
                 prem_config.set('downloads', 'copylink_toclipboard', '0')
             if request.form.get('watchdir_enabled'):
