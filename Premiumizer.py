@@ -527,6 +527,8 @@ def get_cat_var(category):
         dlext = None
         dlsize = 0
         dlnzbtomedia = 0
+    if cfg.copylink_toclipboard:
+        dlnzbtomedia = 0
     return dldir, dlext, dlsize, dlnzbtomedia
 
 
