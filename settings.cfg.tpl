@@ -1,5 +1,6 @@
 [global]
 server_port = 5000
+bind_ip = 127.0.0.1
 active_interval = 10
 idle_interval = 120
 debug_enabled = 0
@@ -19,7 +20,6 @@ pin =
 [downloads]
 download_enabled = 0
 download_max = 1
-download_threading = 1
 remove_cloud = 0
 download_location =
 nzbtomedia_location = [Change to path]\NzbToMedia.py

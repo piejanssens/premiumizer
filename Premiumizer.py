@@ -6,11 +6,11 @@ import logging
 import os
 import shelve
 import shutil
+import subprocess
 import sys
 import unicodedata
 from logging.handlers import RotatingFileHandler
 from string import ascii_letters, digits
-from subprocess import Popen
 
 import bencode
 import gevent
@@ -39,6 +39,11 @@ print '-------------------------------------------------------------------------
 # Initialize config values
 prem_config = ConfigParser.RawConfigParser()
 runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0] + '/'
+rootdir = runningdir[:-12]
+try:
+    os_arg = sys.argv[1]
+except:
+    os_arg = ''
 if not os.path.isfile(runningdir + 'settings.cfg'):
     shutil.copy(runningdir + 'settings.cfg.tpl', runningdir + 'settings.cfg')
 prem_config.read(runningdir + 'settings.cfg')
@@ -140,6 +145,7 @@ class PremConfig:
 
     def check_config(self):
         logger.debug('Initializing config')
+        self.bind_ip = prem_config.get('global', 'bind_ip')
         self.web_login_enabled = prem_config.getboolean('security', 'login_enabled')
         if self.web_login_enabled:
             logger.debug('Premiumizer login is enabled')
@@ -151,49 +157,51 @@ class PremConfig:
         self.remove_cloud = prem_config.getboolean('downloads', 'remove_cloud')
         self.download_enabled = prem_config.getboolean('downloads', 'download_enabled')
         self.download_max = prem_config.getint('downloads', 'download_max')
-        self.download_threading = prem_config.getboolean('downloads', 'download_threading')
         self.download_location = prem_config.get('downloads', 'download_location')
-        self.nzbtomedia_location = prem_config.get('downloads', 'nzbtomedia_location')
+        if os.path.isfile(runningdir + 'nzbtomedia/NzbToMedia.py'):
+            self.nzbtomedia_location = (runningdir + 'nzbtomedia/NzbToMedia.py')
+            self.nzbtomedia_builtin = 1
+        else:
+            self.nzbtomedia_location = prem_config.get('downloads', 'nzbtomedia_location')
         self.copylink_toclipboard = prem_config.getboolean('downloads', 'copylink_toclipboard')
         if self.copylink_toclipboard:
             self.download_enabled = 0
 
         self.watchdir_enabled = prem_config.getboolean('upload', 'watchdir_enabled')
+        self.watchdir_location = prem_config.get('upload', 'watchdir_location')
         if self.watchdir_enabled:
-            self.watchdir_location = prem_config.get('upload', 'watchdir_location')
             logger.info('Watchdir is enabled at: %s', self.watchdir_location)
             if not os.path.exists(self.watchdir_location):
                 os.makedirs(self.watchdir_location)
 
-        if self.download_enabled or self.copylink_toclipboard:
-            self.categories = []
-            self.download_categories = ''
-            for x in range(1, 6):
-                y = prem_config.get('categories', ('cat_name' + str([x])))
-                z = prem_config.get('categories', ('cat_dir' + str([x])))
-                if y != '':
-                    cat_name = y
-                    if z == '':
-                        cat_dir = self.download_location + '\\' + y
-                    else:
-                        cat_dir = z
-                    cat_ext = prem_config.get('categories', ('cat_ext' + str([x]))).split(',')
-                    cat_size = prem_config.getint('categories', ('cat_size' + str([x]))) * 1000000
-                    cat_nzbtomedia = prem_config.getboolean('categories', ('cat_nzbtomedia' + str([x])))
-                    cat = {'name': cat_name, 'dir': cat_dir, 'ext': cat_ext, 'size': cat_size, 'nzb': cat_nzbtomedia}
-                    self.categories.append(cat)
-                    self.download_categories += str(cat_name + ',')
-                    if self.download_enabled:
-                        if not os.path.exists(cat_dir):
-                            logger.info('Creating Download Path at: %s', cat_dir)
-                            os.makedirs(cat_dir)
-                    if self.watchdir_enabled:
-                        sub = self.watchdir_location + '\\' + cat_name
-                        if not os.path.exists(sub):
-                            logger.info('Creating watchdir Path at %s', sub)
-                            os.makedirs(sub)
-            self.download_categories = self.download_categories[:-1]
-            self.download_categories = self.download_categories.split(',')
+        self.categories = []
+        self.download_categories = ''
+        for x in range(1, 6):
+            y = prem_config.get('categories', ('cat_name' + str([x])))
+            z = prem_config.get('categories', ('cat_dir' + str([x])))
+            if y != '':
+                cat_name = y
+                if z == '':
+                    cat_dir = self.download_location + '/' + y
+                else:
+                    cat_dir = z
+                cat_ext = prem_config.get('categories', ('cat_ext' + str([x]))).split(',')
+                cat_size = prem_config.getint('categories', ('cat_size' + str([x]))) * 1000000
+                cat_nzbtomedia = prem_config.getboolean('categories', ('cat_nzbtomedia' + str([x])))
+                cat = {'name': cat_name, 'dir': cat_dir, 'ext': cat_ext, 'size': cat_size, 'nzb': cat_nzbtomedia}
+                self.categories.append(cat)
+                self.download_categories += str(cat_name + ',')
+                if self.download_enabled:
+                    if not os.path.exists(cat_dir):
+                        logger.info('Creating Download Path at: %s', cat_dir)
+                        os.makedirs(cat_dir)
+                if self.watchdir_enabled:
+                    sub = self.watchdir_location + '/' + cat_name
+                    if not os.path.exists(sub):
+                        logger.info('Creating watchdir Path at %s', sub)
+                        os.makedirs(sub)
+        self.download_categories = self.download_categories[:-1]
+        self.download_categories = self.download_categories.split(',')
 
         logger.debug('Initializing config complete')
 
@@ -280,7 +288,9 @@ def clean_name(original):
 def notify_nzbtomedia(task):
     logger.debug('def notify_nzbtomedia started')
     if os.path.isfile(cfg.nzbtomedia_location):
-        Popen(['python', cfg.nzbtomedia_location, task.dldir, task.name, task.category, task.hash, 'generic'], shell=False)
+        subprocess.Popen(
+            ['python', cfg.nzbtomedia_location, task.dldir, task.name, task.category, task.hash, 'generic'],
+            shell=False)
         logger.info('Send to nzbtomedia: %s', task.name)
     else:
         logger.error('Error unable to locate nzbToMedia.py')
@@ -297,12 +307,12 @@ def get_download_stats(task, downloader, total_size_downloaded):
         else:
             tmp = (task.size - size_downloaded) / speed
             eta = ' ' + utils.time_human(tmp, fmt_short=True)
-        task.update(speed=(utils.sizeof_human(speed)+ '/s'), progress=progress, eta=eta)
+        task.update(speed=(utils.sizeof_human(speed) + '/s'), progress=progress, eta=eta)
 
     elif downloader.get_status() == 'combining':
-        task.update(speed='',eta=' Combining files')
+        task.update(speed='', eta=' Combining files')
     elif downloader.get_status() == 'paused':
-        task.update(speed='',eta=' Download paused')
+        task.update(speed='', eta=' Download paused')
     else:
         logger.debug('Want to update stats, but downloader status is invalid.')
 
@@ -314,7 +324,7 @@ def download_file(download_list):
     for download in download_list:
         logger.debug('Downloading file: %s', download['path'])
         if not os.path.isfile(download['path']):
-            downloader = SmartDL(download['url'], download['path'], progress_bar=False, logger=logger)
+            downloader = SmartDL(download['url'], download['path'], progress_bar=False, logger=logger, threads_count=1)
             downloader.start(blocking=False)
             while not downloader.isFinished():
                 get_download_stats(download['task'], downloader, total_size_downloaded)
@@ -332,10 +342,9 @@ def download_file(download_list):
             logger.info('File not downloaded it already exists at: %s', download['path'])
 
 
-
 # TODO continue log statements
 
-def process_dir(task, path, dir_content,change_dldir):
+def process_dir(task, path, dir_content, change_dldir):
     logger.debug('def processing_dir started')
     global download_list, size_remove
     if not dir_content:
@@ -352,11 +361,7 @@ def process_dir(task, path, dir_content,change_dldir):
                 if cfg.download_enabled:
                     if not os.path.exists(path):
                         os.makedirs(path)
-                    if not cfg.download_threading:
-                        url = dir_content[x]['url'].replace('https', 'http', 1)
-                    else:
-                        url = dir_content[x]['url']
-                    download = {'task': task, 'path': path + '/' + clean_name(x), 'url': url}
+                    download = {'task': task, 'path': path + '/' + clean_name(x), 'url': dir_content[x]['url']}
                     download_list.append(download)
                 elif cfg.copylink_toclipboard:
                     logger.info('Link copied to clipboard for: %s', dir_content[x]['name'])
@@ -381,7 +386,8 @@ def download_task(task):
         task.update(size=(task.size - size_remove))
     download_file(download_list)
     task.update(local_status='finished', progress=100)
-    logger.info('Download %s  finished in: %s at location %s:', task.name, utils.time_human(task.dltime,fmt_short=True), task.dldir)
+    logger.info('Download %s  finished in: %s at location %s:', task.name,
+                utils.time_human(task.dltime, fmt_short=True), task.dldir)
     if task.dlnzbtomedia:
         notify_nzbtomedia(task)
     if cfg.remove_cloud:
@@ -403,10 +409,10 @@ def update():
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
     r = requests.post("https://www.premiumize.me/torrent/list", payload)
     response_content = json.loads(r.content)
-    torrents = response_content['torrents']
     if response_content['status'] == "success":
         if not response_content['torrents']:
             update_interval *= 2
+        torrents = response_content['torrents']
         idle = parse_tasks(torrents)
     else:
         socketio.emit('premiumize_connect_error', {})
@@ -653,15 +659,26 @@ def settings():
     if request.method == 'POST':
         if 'Restart' in request.form.values():
             logger.info('Restarting')
-            Popen(['python', 'utils.py', '--restart'], shell=False, close_fds=True)
-            sys.exit()
+            if os_arg == '--windows':
+                # windows service will automatically restart on 'failure'
+                sys.exit()
+            else:
+                subprocess.Popen(['python', runningdir + 'utils.py', '--restart'], shell=False, close_fds=True)
+                sys.exit()
         elif 'Shutdown' in request.form.values():
+            print os_arg
             logger.info('Shutdown recieved')
-            sys.exit()
+            if os_arg == '--windows':
+                subprocess.Popen([rootdir + 'Installer/nssm.exe', 'stop', 'Premiumizer'])
+            else:
+                sys.exit()
         elif 'Update' in request.form.values():
             logger.info('Update - will restart')
-            Popen(['python', 'utils.py', '--update'], shell=False, close_fds=True)
-            sys.exit()
+            if os_arg == '--windows':
+                subprocess.call(['python', runningdir + 'utils.py', '--update', '--windows'])
+            else:
+                subprocess.Popen(['python', runningdir + 'utils.py', '--update'], shell=False, close_fds=True)
+                sys.exit()
         else:
             global prem_config
             if request.form.get('debug_enabled'):
@@ -676,10 +693,6 @@ def settings():
                 prem_config.set('downloads', 'download_enabled', '1')
             else:
                 prem_config.set('downloads', 'download_enabled', '0')
-            if request.form.get('download_threading'):
-                prem_config.set('downloads', 'download_threading', '1')
-            else:
-                prem_config.set('downloads', 'download_threading', '0')
             if request.form.get('remove_cloud'):
                 prem_config.set('downloads', 'remove_cloud', '1')
             else:
@@ -691,11 +704,12 @@ def settings():
                 prem_config.set('downloads', 'copylink_toclipboard', '0')
             if request.form.get('watchdir_enabled'):
                 prem_config.set('upload', 'watchdir_enabled', '1')
-                watchdir()
+                enable_watchdir = 1
             else:
                 prem_config.set('upload', 'watchdir_enabled', '0')
-
+                enable_watchdir = 0
             prem_config.set('global', 'server_port', request.form.get('server_port'))
+            prem_config.set('global', 'bind_ip', request.form.get('bind_ip'))
             prem_config.set('global', 'idle_interval', request.form.get('idle_interval'))
             prem_config.set('security', 'username', request.form.get('username'))
             prem_config.set('security', 'password', request.form.get('password'))
@@ -705,7 +719,6 @@ def settings():
             prem_config.set('downloads', 'download_max', request.form.get('download_max'))
             prem_config.set('upload', 'watchdir_location', request.form.get('watchdir_location'))
             prem_config.set('downloads', 'nzbtomedia_location', request.form.get('nzbtomedia_location'))
-
             for x in range(1, 6):
                 prem_config.set('categories', ('cat_name' + str([x])), request.form.get('cat_name' + str([x])))
                 prem_config.set('categories', ('cat_dir' + str([x])), request.form.get('cat_dir' + str([x])))
@@ -720,8 +733,11 @@ def settings():
                 prem_config.write(configfile)
             logger.info('Settings saved, reloading configuration')
             cfg.check_config()
+            if enable_watchdir:
+                watchdir()
 
-    return render_template('settings.html', settings=prem_config)
+
+    return render_template('settings.html', settings=prem_config, cfg=cfg)
 
 
 @app.route('/login', methods=["GET", "POST"])
@@ -861,7 +877,8 @@ if cfg.watchdir_enabled:
     watchdir()
 
 # start the server with the 'run()' method
-logger.info('Starting server on port: %s ', prem_config.getint('global', 'server_port'))
+logger.info('Starting server on %s:%s ', prem_config.get('global', 'bind_ip'),
+            prem_config.getint('global', 'server_port'))
 if __name__ == '__main__':
     try:
         load_tasks()
@@ -871,6 +888,7 @@ if __name__ == '__main__':
                                     seconds=active_interval, replace_existing=True, max_instances=1, coalesce=True)
         scheduler.scheduler.add_executor('threadpool', alias='download', max_workers=cfg.download_max)
         scheduler.start()
-        socketio.run(app, port=prem_config.getint('global', 'server_port'), use_reloader=False)
+        socketio.run(app, host=prem_config.get('global', 'bind_ip'), port=prem_config.getint('global', 'server_port'),
+                     use_reloader=False)
     except:
         raise
