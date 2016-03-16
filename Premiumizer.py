@@ -396,7 +396,8 @@ def download_task(task):
     if size_remove is not 0:
         task.update(size=(task.size - size_remove))
     logger.info('Downloading: %s', task.name)
-    failed = download_file(download_list)
+    if download_list:
+        failed = download_file(download_list)
     if failed:
         task.update(local_status='failed: download')
     else:
