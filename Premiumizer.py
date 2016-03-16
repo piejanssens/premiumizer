@@ -680,6 +680,7 @@ def settings():
                 sys.exit()
         else:
             global prem_config
+            enable_watchdir = 0
             if request.form.get('debug_enabled'):
                 prem_config.set('global', 'debug_enabled', '1')
             else:
@@ -703,10 +704,10 @@ def settings():
                 prem_config.set('downloads', 'copylink_toclipboard', '0')
             if request.form.get('watchdir_enabled'):
                 prem_config.set('upload', 'watchdir_enabled', '1')
-                enable_watchdir = 1
+                if not cfg.watchdir_enabled:
+                    enable_watchdir = 1
             else:
                 prem_config.set('upload', 'watchdir_enabled', '0')
-                enable_watchdir = 0
             prem_config.set('global', 'server_port', request.form.get('server_port'))
             prem_config.set('global', 'bind_ip', request.form.get('bind_ip'))
             prem_config.set('global', 'idle_interval', request.form.get('idle_interval'))
