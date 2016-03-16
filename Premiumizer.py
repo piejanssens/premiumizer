@@ -675,6 +675,7 @@ def settings():
             logger.info('Update - will restart')
             if os_arg == '--windows':
                 subprocess.call(['python', runningdir + 'utils.py', '--update', '--windows'])
+                sys.exit()
             else:
                 subprocess.Popen(['python', runningdir + 'utils.py', '--update'], shell=False, close_fds=True)
                 sys.exit()
