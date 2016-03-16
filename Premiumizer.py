@@ -288,12 +288,20 @@ def clean_name(original):
 def notify_nzbtomedia(task):
     logger.debug('def notify_nzbtomedia started')
     if os.path.isfile(cfg.nzbtomedia_location):
-        subprocess.Popen(
-            ['python', cfg.nzbtomedia_location, task.dldir, task.name, task.category, task.hash, 'generic'],
-            shell=False)
-        logger.info('Send to nzbtomedia: %s', task.name)
+        try:
+            subprocess.check_output(
+                ['python', cfg.nzbtomedia_location, task.dldir, task.name, task.category, task.hash, 'generic'],
+                stderr=subprocess.STDOUT, shell=False)
+            returncode = 0
+            logger.info('Send to nzbtomedia: %s', task.name)
+        except subprocess.CalledProcessError as e:
+            logger.error('nzbtomedia failt for: %s', task.name)
+            logger.error('output: %s', e.output)
+            returncode = 1
     else:
         logger.error('Error unable to locate nzbToMedia.py')
+        returncode = 1
+    return returncode
 
 
 def get_download_stats(task, downloader, total_size_downloaded):
@@ -321,6 +329,7 @@ def download_file(download_list):
     logger.debug('def download_file started')
     total_size_downloaded = 0
     dltime = 0
+    returncode = 0
     for download in download_list:
         logger.debug('Downloading file: %s', download['path'])
         if not os.path.isfile(download['path']):
@@ -338,8 +347,10 @@ def download_file(download_list):
                 logger.error('Error while downloading file from: %s', download['path'])
                 for e in downloader.get_errors():
                     logger.error(str(e))
+                returncode = 1
         else:
             logger.info('File not downloaded it already exists at: %s', download['path'])
+    return returncode
 
 
 # TODO continue log statements
@@ -384,13 +395,18 @@ def download_task(task):
     process_dir(task, task.dldir, json.loads(r.content)['data']['content'], 1)
     if size_remove is not 0:
         task.update(size=(task.size - size_remove))
-    download_file(download_list)
-    task.update(local_status='finished', progress=100)
-    logger.info('Download %s  finished in: %s at location %s:', task.name,
-                utils.time_human(task.dltime, fmt_short=True), task.dldir)
-    if task.dlnzbtomedia:
-        notify_nzbtomedia(task)
-    if cfg.remove_cloud:
+    failt = download_file(download_list)
+    if failt:
+        task.update(local_status='failed: download')
+    else:
+        task.update(progress=100)
+
+    if task.dlnzbtomedia and not failt:
+        failt = notify_nzbtomedia(task)
+        if failt:
+            task.update(local_status='failed: nzbtomedia')
+
+    if cfg.remove_cloud and not failt:
         payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'hash': task.hash}
         r = requests.post("https://www.premiumize.me/torrent/delete", payload)
         responsedict = json.loads(r.content)
@@ -400,6 +416,11 @@ def download_task(task):
             logger.info('Torrent could not be removed from cloud: %s', task.name)
             logger.info(responsedict['message'])
         scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
+
+    if not failt:
+        task.update(local_status='finished')
+        logger.info('Download %s  finished in: %s at location %s:', task.name,
+                    utils.time_human(task.dltime, fmt_short=True), task.dldir)
 
 
 def update():
@@ -737,7 +758,6 @@ def settings():
             cfg.check_config()
             if enable_watchdir:
                 watchdir()
-
 
     return render_template('settings.html', settings=prem_config, cfg=cfg)
 

@@ -67,6 +67,16 @@ function update_task(task) {
         stateStr = 'Waiting on category';
         stateIcon = 'desktop';
         categoryState = '';
+    } else if (task.cloud_status == 'finished' && task.local_status == 'failed: download') {
+        stateColor = 'danger';
+        stateStr = 'Failed: download';
+        stateIcon = 'desktop';
+        categoryState = '';
+    } else if (task.cloud_status == 'finished' && task.local_status == 'failed: nzbtomedia') {
+        stateColor = 'danger';
+        stateStr = 'Failed: nzbtomedia';
+        stateIcon = 'desktop';
+        categoryState = '';
     } else if (task.cloud_status == 'finished' && task.local_status == 'downloading') {
         stateColor = 'primary';
         stateStr = 'Downloading';
