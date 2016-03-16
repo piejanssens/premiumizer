@@ -666,7 +666,6 @@ def settings():
                 subprocess.Popen(['python', runningdir + 'utils.py', '--restart'], shell=False, close_fds=True)
                 sys.exit()
         elif 'Shutdown' in request.form.values():
-            print os_arg
             logger.info('Shutdown recieved')
             if os_arg == '--windows':
                 subprocess.Popen([rootdir + 'Installer/nssm.exe', 'stop', 'Premiumizer'])
