@@ -295,7 +295,7 @@ def notify_nzbtomedia(task):
             returncode = 0
             logger.info('Send to nzbtomedia: %s', task.name)
         except subprocess.CalledProcessError as e:
-            logger.error('nzbtomedia failt for: %s', task.name)
+            logger.error('nzbtomedia failed for: %s', task.name)
             logger.error('output: %s', e.output)
             returncode = 1
     else:
@@ -383,6 +383,7 @@ def process_dir(task, path, dir_content, change_dldir):
 
 #
 def download_task(task):
+    failed = 0
     logger.debug('def download_task started')
     global download_list, size_remove
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
@@ -391,22 +392,22 @@ def download_task(task):
     size_remove = 0
     download_list = []
     task.update(local_status='downloading')
-    logger.info('Downloading: %s', task.name)
     process_dir(task, task.dldir, json.loads(r.content)['data']['content'], 1)
     if size_remove is not 0:
         task.update(size=(task.size - size_remove))
-    failt = download_file(download_list)
-    if failt:
+    logger.info('Downloading: %s', task.name)
+    failed = download_file(download_list)
+    if failed:
         task.update(local_status='failed: download')
     else:
         task.update(progress=100)
 
-    if task.dlnzbtomedia and not failt:
-        failt = notify_nzbtomedia(task)
-        if failt:
+    if task.dlnzbtomedia and not failed:
+        failed = notify_nzbtomedia(task)
+        if failed:
             task.update(local_status='failed: nzbtomedia')
 
-    if cfg.remove_cloud and not failt:
+    if cfg.remove_cloud and not failed:
         payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'hash': task.hash}
         r = requests.post("https://www.premiumize.me/torrent/delete", payload)
         responsedict = json.loads(r.content)
@@ -417,7 +418,7 @@ def download_task(task):
             logger.info(responsedict['message'])
         scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
 
-    if not failt:
+    if not failed:
         task.update(local_status='finished')
         logger.info('Download %s  finished in: %s at location %s:', task.name,
                     utils.time_human(task.dltime, fmt_short=True), task.dldir)
