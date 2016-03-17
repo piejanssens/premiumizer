@@ -154,6 +154,7 @@
             {% if settings.get('upload', 'watchdir_enabled') == '1' %}
                 <input type="checkbox" class="form-control bootstrap_switch" name="watchdir_enabled" data-size="small"
                        checked>
+                <p>Disabling will require restart</p>
             {% else %}
                 <input type="checkbox" class="form-control bootstrap_switch" name="watchdir_enabled" data-size="small">
             {% endif %}

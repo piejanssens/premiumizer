@@ -8,7 +8,6 @@ runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0] + 
 
 
 def restart():
-    print runningdir
     time.sleep(4)
     execfile(runningdir + 'premiumizer.py', globals(), globals())
 

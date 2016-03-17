@@ -288,12 +288,20 @@ def clean_name(original):
 def notify_nzbtomedia(task):
     logger.debug('def notify_nzbtomedia started')
     if os.path.isfile(cfg.nzbtomedia_location):
-        subprocess.Popen(
-            ['python', cfg.nzbtomedia_location, task.dldir, task.name, task.category, task.hash, 'generic'],
-            shell=False)
-        logger.info('Send to nzbtomedia: %s', task.name)
+        try:
+            subprocess.check_output(
+                ['python', cfg.nzbtomedia_location, task.dldir, task.name, task.category, task.hash, 'generic'],
+                stderr=subprocess.STDOUT, shell=False)
+            returncode = 0
+            logger.info('Send to nzbtomedia: %s', task.name)
+        except subprocess.CalledProcessError as e:
+            logger.error('nzbtomedia failed for: %s', task.name)
+            logger.error('output: %s', e.output)
+            returncode = 1
     else:
         logger.error('Error unable to locate nzbToMedia.py')
+        returncode = 1
+    return returncode
 
 
 def get_download_stats(task, downloader, total_size_downloaded):
@@ -321,6 +329,7 @@ def download_file(download_list):
     logger.debug('def download_file started')
     total_size_downloaded = 0
     dltime = 0
+    returncode = 0
     for download in download_list:
         logger.debug('Downloading file: %s', download['path'])
         if not os.path.isfile(download['path']):
@@ -338,8 +347,10 @@ def download_file(download_list):
                 logger.error('Error while downloading file from: %s', download['path'])
                 for e in downloader.get_errors():
                     logger.error(str(e))
+                returncode = 1
         else:
             logger.info('File not downloaded it already exists at: %s', download['path'])
+    return returncode
 
 
 # TODO continue log statements
@@ -372,6 +383,7 @@ def process_dir(task, path, dir_content, change_dldir):
 
 #
 def download_task(task):
+    failed = 0
     logger.debug('def download_task started')
     global download_list, size_remove
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
@@ -380,17 +392,23 @@ def download_task(task):
     size_remove = 0
     download_list = []
     task.update(local_status='downloading')
-    logger.info('Downloading: %s', task.name)
     process_dir(task, task.dldir, json.loads(r.content)['data']['content'], 1)
     if size_remove is not 0:
         task.update(size=(task.size - size_remove))
-    download_file(download_list)
-    task.update(local_status='finished', progress=100)
-    logger.info('Download %s  finished in: %s at location %s:', task.name,
-                utils.time_human(task.dltime, fmt_short=True), task.dldir)
-    if task.dlnzbtomedia:
-        notify_nzbtomedia(task)
-    if cfg.remove_cloud:
+    logger.info('Downloading: %s', task.name)
+    if download_list:
+        failed = download_file(download_list)
+    if failed:
+        task.update(local_status='failed: download')
+    else:
+        task.update(progress=100)
+
+    if task.dlnzbtomedia and not failed:
+        failed = notify_nzbtomedia(task)
+        if failed:
+            task.update(local_status='failed: nzbtomedia')
+
+    if cfg.remove_cloud and not failed:
         payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'hash': task.hash}
         r = requests.post("https://www.premiumize.me/torrent/delete", payload)
         responsedict = json.loads(r.content)
@@ -400,6 +418,11 @@ def download_task(task):
             logger.info('Torrent could not be removed from cloud: %s', task.name)
             logger.info(responsedict['message'])
         scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
+
+    if not failed:
+        task.update(local_status='finished')
+        logger.info('Download %s  finished in: %s at location %s:', task.name,
+                    utils.time_human(task.dltime, fmt_short=True), task.dldir)
 
 
 def update():
@@ -503,6 +526,8 @@ def get_cat_var(category):
         dldir = None
         dlext = None
         dlsize = 0
+        dlnzbtomedia = 0
+    if cfg.copylink_toclipboard:
         dlnzbtomedia = 0
     return dldir, dlext, dlsize, dlnzbtomedia
 
@@ -666,7 +691,6 @@ def settings():
                 subprocess.Popen(['python', runningdir + 'utils.py', '--restart'], shell=False, close_fds=True)
                 sys.exit()
         elif 'Shutdown' in request.form.values():
-            print os_arg
             logger.info('Shutdown recieved')
             if os_arg == '--windows':
                 subprocess.Popen([rootdir + 'Installer/nssm.exe', 'stop', 'Premiumizer'])
@@ -676,11 +700,13 @@ def settings():
             logger.info('Update - will restart')
             if os_arg == '--windows':
                 subprocess.call(['python', runningdir + 'utils.py', '--update', '--windows'])
+                sys.exit()
             else:
                 subprocess.Popen(['python', runningdir + 'utils.py', '--update'], shell=False, close_fds=True)
                 sys.exit()
         else:
             global prem_config
+            enable_watchdir = 0
             if request.form.get('debug_enabled'):
                 prem_config.set('global', 'debug_enabled', '1')
             else:
@@ -700,14 +726,15 @@ def settings():
             if request.form.get('copylink_toclipboard'):
                 prem_config.set('downloads', 'copylink_toclipboard', '1')
                 prem_config.set('downloads', 'download_enabled', '0')
+                prem_config.set('downloads', 'remove_cloud', '0')
             else:
                 prem_config.set('downloads', 'copylink_toclipboard', '0')
             if request.form.get('watchdir_enabled'):
                 prem_config.set('upload', 'watchdir_enabled', '1')
-                enable_watchdir = 1
+                if not cfg.watchdir_enabled:
+                    enable_watchdir = 1
             else:
                 prem_config.set('upload', 'watchdir_enabled', '0')
-                enable_watchdir = 0
             prem_config.set('global', 'server_port', request.form.get('server_port'))
             prem_config.set('global', 'bind_ip', request.form.get('bind_ip'))
             prem_config.set('global', 'idle_interval', request.form.get('idle_interval'))
@@ -735,7 +762,6 @@ def settings():
             cfg.check_config()
             if enable_watchdir:
                 watchdir()
-
 
     return render_template('settings.html', settings=prem_config, cfg=cfg)
 
