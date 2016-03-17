@@ -320,46 +320,45 @@ def notify_nzbtomedia(task):
     return returncode
 
 
-def get_download_stats(task, downloader, total_size_downloaded):
+def get_download_stats(downloader, total_size_downloaded):
     logger.debug('def get_download_stats started')
     if downloader.get_status() == 'downloading':
         size_downloaded = total_size_downloaded + downloader.get_dl_size()
-        progress = round(float(size_downloaded) * 100 / task.size, 1)
+        progress = round(float(size_downloaded) * 100 / greenlet.task.size, 1)
         speed = downloader.get_speed(human=False)
         if speed == 0:
             eta = ''
         else:
-            tmp = (task.size - size_downloaded) / speed
+            tmp = (greenlet.task.size - size_downloaded) / speed
             eta = ' ' + utils.time_human(tmp, fmt_short=True)
-        task.update(speed=(utils.sizeof_human(speed) + '/s'), progress=progress, eta=eta)
+        greenlet.task.update(speed=(utils.sizeof_human(speed) + '/s'), progress=progress, eta=eta)
 
     elif downloader.get_status() == 'combining':
-        task.update(speed='', eta=' Combining files')
+        greenlet.task.update(speed='', eta=' Combining files')
     elif downloader.get_status() == 'paused':
-        task.update(speed='', eta=' Download paused')
+        greenlet.task.update(speed='', eta=' Download paused')
     else:
         logger.debug('Want to update stats, but downloader status is invalid.')
 
 
-def download_file(download_list):
+def download_file():
     logger.debug('def download_file started')
     total_size_downloaded = 0
     dltime = 0
     returncode = 0
-    for download in download_list:
-        retry_on_fail = 1
+    for download in greenlet.download_list:
         logger.debug('Downloading file: %s', download['path'])
         if not os.path.isfile(download['path']):
             downloader = SmartDL(download['url'], download['path'], progress_bar=False, logger=logger, threads_count=1)
             downloader.start(blocking=False)
             while not downloader.isFinished():
-                get_download_stats(download['task'], downloader, total_size_downloaded)
+                get_download_stats(downloader, total_size_downloaded)
                 gevent.sleep(2)
             if downloader.isSuccessful():
                 dltime += downloader.get_dl_time()
                 total_size_downloaded += downloader.get_dl_size()
                 logger.debug('Finished downloading file: %s', download['path'])
-                download['task'].update(dltime=dltime)
+                greenlet.task.update(dltime=dltime)
             else:
                 logger.error('Error while downloading file: %s', download['path'])
                 for e in downloader.get_errors():
@@ -370,7 +369,7 @@ def download_file(download_list):
     return returncode
 
 
-def process_dir(task, path, dir_content, change_dldir):
+def process_dir(dir_content, path, change_dldir=1):
     logger.debug('def processing_dir started')
     if not dir_content:
         return None
@@ -379,14 +378,14 @@ def process_dir(task, path, dir_content, change_dldir):
         if type == 'dir':
             new_path = os.path.join(path, clean_name(x))
             if change_dldir:
-                task.update(dldir=new_path)
-            process_dir(task, new_path, dir_content[x]['children'], 0)
+                greenlet.task.update(dldir=new_path)
+            process_dir(dir_content[x]['children'], new_path, 0)
         elif type == 'file':
-            if (dir_content[x]['size'] >= task.dlsize or dir_content[x]['url'].lower().endswith('.srt')) and dir_content[x]['url'].lower().endswith(tuple(task.dlext)):
+            if (dir_content[x]['size'] >= greenlet.task.dlsize or dir_content[x]['url'].lower().endswith('.srt')) and dir_content[x]['url'].lower().endswith(tuple(greenlet.task.dlext)):
                 if cfg.download_enabled:
                     if not os.path.exists(path):
                         os.makedirs(path)
-                    download = {'task': task, 'path': path + '/' + clean_name(x), 'url': dir_content[x]['url']}
+                    download = {'path': path + '/' + clean_name(x), 'url': dir_content[x]['url']}
                     greenlet.download_list.append(download)
                 elif cfg.copylink_toclipboard:
                     logger.info('Link copied to clipboard for: %s', dir_content[x]['name'])
@@ -395,32 +394,33 @@ def process_dir(task, path, dir_content, change_dldir):
                 greenlet.size_remove += dir_content[x]['size']
 
 
-def download_process(task):
+def download_process():
     logger.debug('def download_process started')
     returncode = 0
     greenlet.download_list = []
     greenlet.size_remove = 0
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
-               'hash': task.hash}
+               'hash': greenlet.task.hash}
     r = requests.post("https://www.premiumize.me/torrent/browse", payload)
-    task.update(local_status='downloading')
-    process_dir(task, task.dldir, json.loads(r.content)['data']['content'], 1)
+    greenlet.task.update(local_status='downloading')
+    process_dir(json.loads(r.content)['data']['content'], greenlet.task.dldir)
     if greenlet.size_remove is not 0:
-        task.update(size=(task.size - greenlet.size_remove))
-    logger.info('Downloading: %s', task.name)
+        greenlet.task.update(size=(greenlet.task.size - greenlet.size_remove))
+    logger.info('Downloading: %s', greenlet.task.name)
     if greenlet.download_list:
-        returncode = download_file(greenlet.download_list)
+        returncode = download_file()
     return returncode
 
 
 def download_task(task):
     logger.debug('def download_task started')
-    failed = download_process(task)
+    greenlet.task = task
+    failed = download_process()
     if failed:
         task.update(local_status='failed: download retrying')
         logger.warning('Retrying failed download in 10 minutes for: %s', task.name)
         gevent.sleep(600)
-        failed = download_process(task)
+        failed = download_process()
         if failed:
             task.update(local_status='failed: download')
             if cfg.email_enabled:

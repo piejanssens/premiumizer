@@ -52,6 +52,11 @@ function update_task(task) {
         stateStr = 'Downloading';
         stateIcon = 'cloud';
         categoryState = '';
+    } else if (task.cloud_status == 'queued') {
+        stateColor = 'warning';
+        stateStr = 'Download queued';
+        stateIcon = 'cloud';
+        categoryState = '';
     } else if (task.cloud_status == 'finished' && task.local_status == null) {
         stateColor = 'success';
         stateStr = 'Finished';
