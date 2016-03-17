@@ -1,14 +1,17 @@
 #! /usr/bin/env python
 import ConfigParser
+import datetime
 import hashlib
 import json
 import logging
 import os
 import shelve
 import shutil
+import smtplib
 import subprocess
 import sys
 import unicodedata
+from email.mime.text import MIMEText
 from logging.handlers import RotatingFileHandler
 from string import ascii_letters, digits
 
@@ -204,7 +207,6 @@ class PremConfig:
         self.download_categories = self.download_categories[:-1]
         self.download_categories = self.download_categories.split(',')
 
-
         self.email_enabled = prem_config.getboolean('notifications', 'email_enabled')
         if self.email_enabled:
             self.email_on_failure = prem_config.getboolean('notifications', 'email_on_failure')
@@ -215,11 +217,6 @@ class PremConfig:
             self.email_encryption = prem_config.getboolean('notifications', 'email_encryption')
             self.email_username = prem_config.get('notifications', 'email_username')
             self.email_password = prem_config.get('notifications', 'email_password')
-
-
-
-
-
 
         logger.debug('Initializing config complete')
 
@@ -248,6 +245,7 @@ logger.debug('Initializing Database complete')
 # Initialise Globals
 tasks = []
 greenlet = local.local()
+
 
 #
 
@@ -306,18 +304,77 @@ def notify_nzbtomedia(task):
     if os.path.isfile(cfg.nzbtomedia_location):
         try:
             subprocess.check_output(
-                ['python', cfg.nzbtomedia_location, task.dldir, task.name, task.category, task.hash, 'generic'],
+                ['python', cfg.nzbtomedia_location, task.dldir, task.name, 'wtf', task.hash, 'generic'],
                 stderr=subprocess.STDOUT, shell=False)
             returncode = 0
             logger.info('Send to nzbtomedia: %s', task.name)
         except subprocess.CalledProcessError as e:
-            logger.error('nzbtomedia failed for: %s', task.name)
-            logger.error('output: %s', e.output)
+            logger.error('nzbtomedia failed for %s', task.name)
+            errorstr = ''
+            tmp = str.splitlines(e.output)
+            for line in tmp:
+                if '[ERROR]' in line:
+                    errorstr += '\n' + line
+            logger.error('%s: output: %s', task.name, errorstr)
             returncode = 1
     else:
-        logger.error('Error unable to locate nzbToMedia.py')
+        logger.error('Error unable to locate nzbToMedia.py for: %s', task.name)
         returncode = 1
     return returncode
+
+
+def email(failed, speed=None):
+    logger.debug('def email started')
+    if not failed:
+        subject = 'Success for "%s"' % greenlet.task.name
+        text = 'Download of "%s" has successfully completed.' % greenlet.task.name
+        text += '\nStatus: SUCCESS'
+        text += '\n\nStatistics:'
+        text += '\nDownloaded size: %s' % utils.sizeof_human(greenlet.task.size)
+        text += '\nDownload Time: %s' % utils.time_human(greenlet.task.dltime, fmt_short=True)
+        text += '\nAverage download speed: %s' % speed
+        text += '\n\nFiles:'
+        for dirname, dirnames, filenames in os.walk(greenlet.task.dldir):
+            for filename in filenames:
+                text += '\n' + filename
+
+    else:
+        subject = 'Failure for "%s"' % greenlet.task.name
+        text = 'Download of "%s" has failed.' % greenlet.task.name
+        text += '\nStatus: FAILED\nError: %s' % greenlet.task.local_status
+        text += '\n\nLog:\n'
+        try:
+            with open(runningdir + 'premiumizer.log', 'r') as f:
+                for line in f:
+                    if greenlet.task.name in line:
+                        text += line
+        except:
+            text += 'could not add log'
+
+    # Create message
+    msg = MIMEText(text)
+    msg['Subject'] = subject
+    msg['From'] = cfg.email_from
+    msg['To'] = cfg.email_to
+    msg['Date'] = datetime.datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
+    msg['X-Application'] = 'Premiumizer'
+
+    # Send message
+    try:
+        smtp = smtplib.SMTP(cfg.email_server, cfg.email_port)
+
+        if cfg.email_encryption:
+            smtp.starttls()
+
+        if cfg.email_username != '' and cfg.email_password != '':
+            smtp.login(cfg.email_username, cfg.email_password)
+
+        smtp.sendmail(cfg.email_from, cfg.email_to, msg.as_string())
+
+        smtp.quit()
+        logger.info('Email send for: %s', greenlet.task.name)
+    except Exception as err:
+        logger.error('Email error for: %s error: %s', greenlet.task.name, err)
 
 
 def get_download_stats(downloader, total_size_downloaded):
@@ -360,12 +417,13 @@ def download_file():
                 logger.debug('Finished downloading file: %s', download['path'])
                 greenlet.task.update(dltime=dltime)
             else:
-                logger.error('Error while downloading file: %s', download['path'])
+                logger.error('Error for %s: while downloading file: %s', greenlet.task.name, download['path'])
                 for e in downloader.get_errors():
-                    logger.error(str(e))
+                    logger.error(str(greenlet.task.name + ": " + e))
                 returncode = 1
         else:
             logger.info('File not downloaded it already exists at: %s', download['path'])
+            returncode = 0
     return returncode
 
 
@@ -381,7 +439,8 @@ def process_dir(dir_content, path, change_dldir=1):
                 greenlet.task.update(dldir=new_path)
             process_dir(dir_content[x]['children'], new_path, 0)
         elif type == 'file':
-            if (dir_content[x]['size'] >= greenlet.task.dlsize or dir_content[x]['url'].lower().endswith('.srt')) and dir_content[x]['url'].lower().endswith(tuple(greenlet.task.dlext)):
+            if (dir_content[x]['size'] >= greenlet.task.dlsize or dir_content[x]['url'].lower().endswith('.srt')) and \
+                    dir_content[x]['url'].lower().endswith(tuple(greenlet.task.dlext)):
                 if cfg.download_enabled:
                     if not os.path.exists(path):
                         os.makedirs(path)
@@ -415,6 +474,7 @@ def download_process():
 def download_task(task):
     logger.debug('def download_task started')
     greenlet.task = task
+    greenlet.failed = 0
     failed = download_process()
     if failed:
         task.update(local_status='failed: download retrying')
@@ -423,15 +483,11 @@ def download_task(task):
         failed = download_process()
         if failed:
             task.update(local_status='failed: download')
-            if cfg.email_enabled:
-                pass
 
     if task.dlnzbtomedia and not failed:
         failed = notify_nzbtomedia(task)
         if failed:
             task.update(local_status='failed: nzbtomedia')
-            if cfg.email_enabled:
-                pass
 
     if cfg.remove_cloud and not failed:
         payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'hash': task.hash}
@@ -442,15 +498,22 @@ def download_task(task):
         else:
             logger.info('Torrent could not be removed from cloud: %s', task.name)
             logger.info(responsedict['message'])
-        scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
 
     if not failed:
         task.update(progress=100, local_status='finished')
-        speed = task.size / task.dltime
-        logger.info('Download finished: %s time: %s speed: %s/s location: %s', task.name,
-                    utils.time_human(task.dltime, fmt_short=True), utils.sizeof_human(speed), task.dldir)
-        if cfg.email_enabled and not cfg.email_on_failure:
-            pass
+        try:
+            speed = str(utils.sizeof_human((task.size / task.dltime)) + '/s')
+        except:
+            speed = "0"
+        logger.info('Download finished: %s time: %s speed: %s location: %s', task.name,
+                    utils.time_human(task.dltime, fmt_short=True), speed, task.dldir)
+    if cfg.email_enabled:
+        if not failed:
+            if not cfg.email_on_failure:
+                email(0, speed)
+        else:
+            email(1)
+    scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
 
 
 def update():
