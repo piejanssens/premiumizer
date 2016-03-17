@@ -299,26 +299,27 @@ def clean_name(original):
     return ' '.join(valid_string.split())
 
 
-def notify_nzbtomedia(task):
+def notify_nzbtomedia():
     logger.debug('def notify_nzbtomedia started')
     if os.path.isfile(cfg.nzbtomedia_location):
         try:
             subprocess.check_output(
-                ['python', cfg.nzbtomedia_location, task.dldir, task.name, task.category, task.hash, 'generic'],
+                ['python', cfg.nzbtomedia_location, greenlet.task.dldir, greenlet.task.name, greenlet.task.category,
+                 greenlet.task.hash, 'generic'],
                 stderr=subprocess.STDOUT, shell=False)
             returncode = 0
-            logger.info('Send to nzbtomedia: %s', task.name)
+            logger.info('Send to nzbtomedia: %s', greenlet.task.name)
         except subprocess.CalledProcessError as e:
-            logger.error('nzbtomedia failed for %s', task.name)
+            logger.error('nzbtomedia failed for %s', greenlet.task.name)
             errorstr = ''
             tmp = str.splitlines(e.output)
             for line in tmp:
                 if '[ERROR]' in line:
-                    errorstr += '\n' + line
-            logger.error('%s: output: %s', task.name, errorstr)
+                    errorstr += line
+            logger.error('%s: output: %s', greenlet.task.name, errorstr)
             returncode = 1
     else:
-        logger.error('Error unable to locate nzbToMedia.py for: %s', task.name)
+        logger.error('Error unable to locate nzbToMedia.py for: %s', greenlet.task.name)
         returncode = 1
     return returncode
 
@@ -484,7 +485,7 @@ def download_task(task):
             task.update(local_status='failed: download')
 
     if task.dlnzbtomedia and not failed:
-        failed = notify_nzbtomedia(task)
+        failed = notify_nzbtomedia()
         if failed:
             task.update(local_status='failed: nzbtomedia')
 
