@@ -368,7 +368,7 @@ def process_dir(task, path, dir_content, change_dldir):
             if change_dldir:
                 task.update(dldir=new_path)
         elif type == 'file':
-            if dir_content[x]['size'] >= task.dlsize and dir_content[x]['url'].lower().endswith(tuple(task.dlext)):
+            if (dir_content[x]['size'] >= task.dlsize or dir_content[x]['url'].lower().endswith('.srt')) and dir_content[x]['url'].lower().endswith(tuple(task.dlext)):
                 if cfg.download_enabled:
                     if not os.path.exists(path):
                         os.makedirs(path)
