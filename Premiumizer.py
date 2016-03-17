@@ -304,7 +304,7 @@ def notify_nzbtomedia(task):
     if os.path.isfile(cfg.nzbtomedia_location):
         try:
             subprocess.check_output(
-                ['python', cfg.nzbtomedia_location, task.dldir, task.name, 'wtf', task.hash, 'generic'],
+                ['python', cfg.nzbtomedia_location, task.dldir, task.name, task.category, task.hash, 'generic'],
                 stderr=subprocess.STDOUT, shell=False)
             returncode = 0
             logger.info('Send to nzbtomedia: %s', task.name)
