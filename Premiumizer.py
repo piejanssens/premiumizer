@@ -348,6 +348,7 @@ def download_file(download_list):
     dltime = 0
     returncode = 0
     for download in download_list:
+        retry_on_fail = 1
         logger.debug('Downloading file: %s', download['path'])
         if not os.path.isfile(download['path']):
             downloader = SmartDL(download['url'], download['path'], progress_bar=False, logger=logger, threads_count=1)
@@ -361,7 +362,7 @@ def download_file(download_list):
                 logger.debug('Finished downloading file: %s', download['path'])
                 download['task'].update(dltime=dltime)
             else:
-                logger.error('Error while downloading file from: %s', download['path'])
+                logger.error('Error while downloading file: %s', download['path'])
                 for e in downloader.get_errors():
                     logger.error(str(e))
                 returncode = 1
@@ -369,8 +370,6 @@ def download_file(download_list):
             logger.info('File not downloaded it already exists at: %s', download['path'])
     return returncode
 
-
-# TODO continue log statements
 
 def process_dir(task, path, dir_content, change_dldir):
     logger.debug('def processing_dir started')
@@ -398,10 +397,8 @@ def process_dir(task, path, dir_content, change_dldir):
                 size_remove += dir_content[x]['size']
 
 
-#
-def download_task(task):
-    failed = 0
-    logger.debug('def download_task started')
+def download_process(task):
+    returncode = 0
     global download_list, size_remove
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
                'hash': task.hash}
@@ -414,13 +411,22 @@ def download_task(task):
         task.update(size=(task.size - size_remove))
     logger.info('Downloading: %s', task.name)
     if download_list:
-        failed = download_file(download_list)
+        returncode = download_file(download_list)
+    return returncode
+
+
+def download_task(task):
+    logger.debug('def download_task started')
+    failed = download_process(task)
     if failed:
-        task.update(local_status='failed: download')
-        if cfg.email_enabled:
-            pass
-    else:
-        task.update(progress=100)
+        task.update(local_status='failed: download retrying')
+        logger.warning('Retrying failed download in 10 minutes for: %s', task.name)
+        gevent.sleep(600)
+        failed = download_process(task)
+        if failed:
+            task.update(local_status='failed: download')
+            if cfg.email_enabled:
+                pass
 
     if task.dlnzbtomedia and not failed:
         failed = notify_nzbtomedia(task)
@@ -441,7 +447,7 @@ def download_task(task):
         scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
 
     if not failed:
-        task.update(local_status='finished')
+        task.update(progress=100, local_status='finished')
         logger.info('Download %s  finished in: %s at location %s:', task.name,
                     utils.time_human(task.dltime, fmt_short=True), task.dldir)
         if cfg.email_enabled and not cfg.email_on_failure:

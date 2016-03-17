@@ -63,8 +63,13 @@ function update_task(task) {
         stateIcon = 'desktop';
         categoryState = '';
     } else if (task.cloud_status == 'finished' && task.local_status == 'waiting') {
-        stateColor = 'primary';
+        stateColor = 'info';
         stateStr = 'Waiting on category';
+        stateIcon = 'desktop';
+        categoryState = '';
+    } else if (task.cloud_status == 'finished' && task.local_status == 'failed: download retrying') {
+        stateColor = 'warning';
+        stateStr = 'Failed: download retrying soon';
         stateIcon = 'desktop';
         categoryState = '';
     } else if (task.cloud_status == 'finished' && task.local_status == 'failed: download') {
