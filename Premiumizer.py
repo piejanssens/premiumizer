@@ -494,7 +494,7 @@ def download_task(task):
         r = requests.post("https://www.premiumize.me/torrent/delete", payload)
         responsedict = json.loads(r.content)
         if responsedict['status'] == "success":
-            logger.info('Torrent removed from cloud: %s', task.name)
+            logger.info('Automatically Deleted: %s from cloud', task.name)
         else:
             logger.info('Torrent could not be removed from cloud: %s', task.name)
             logger.info(responsedict['message'])
@@ -763,7 +763,7 @@ def history():
                     taskad += line
                 if 'Deleted:' in line:
                     taskdel += line
-                if 'Download finished' in line:
+                if 'Download finished:' in line:
                     taskdl += line
     except:
         taskad = 'History is based on premiumizer.log file, error opening or it does not exist.'
@@ -965,7 +965,7 @@ def delete_task(message):
     responsedict = json.loads(r.content)
     task = get_task(message['data'])
     if responsedict['status'] == "success":
-        logger.info('Deleted: %s', task.name)
+        logger.info('Deleted: %s from the cloud', task.name)
         emit('delete_success', {'data': message['data']})
         scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
     else:
