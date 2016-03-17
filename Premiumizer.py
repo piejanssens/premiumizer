@@ -23,12 +23,13 @@ from flask import Flask, flash, request, redirect, url_for, render_template, sen
 from flask.ext.login import LoginManager, login_required, login_user, logout_user, UserMixin
 from flask.ext.socketio import SocketIO, emit
 from flask_apscheduler import APScheduler
-from pySmartDL import SmartDL, utils
+from gevent import local
 from watchdog.events import PatternMatchingEventHandler
 from watchdog.observers import Observer
 from werkzeug.utils import secure_filename
 
 from DownloadTask import DownloadTask
+from pySmartDL import SmartDL, utils
 
 # "https://www.premiumize.me/static/api/torrent.html"
 print '------------------------------------------------------------------------------------------------------------'
@@ -246,9 +247,7 @@ logger.debug('Initializing Database complete')
 
 # Initialise Globals
 tasks = []
-size_remove = 0
-download_list = []
-
+greenlet = local.local()
 
 #
 
@@ -373,45 +372,44 @@ def download_file(download_list):
 
 def process_dir(task, path, dir_content, change_dldir):
     logger.debug('def processing_dir started')
-    global download_list, size_remove
     if not dir_content:
         return None
     for x in dir_content:
         type = dir_content[x]['type']
         if type == 'dir':
             new_path = os.path.join(path, clean_name(x))
-            process_dir(task, new_path, dir_content[x]['children'], 0)
             if change_dldir:
                 task.update(dldir=new_path)
+            process_dir(task, new_path, dir_content[x]['children'], 0)
         elif type == 'file':
             if (dir_content[x]['size'] >= task.dlsize or dir_content[x]['url'].lower().endswith('.srt')) and dir_content[x]['url'].lower().endswith(tuple(task.dlext)):
                 if cfg.download_enabled:
                     if not os.path.exists(path):
                         os.makedirs(path)
                     download = {'task': task, 'path': path + '/' + clean_name(x), 'url': dir_content[x]['url']}
-                    download_list.append(download)
+                    greenlet.download_list.append(download)
                 elif cfg.copylink_toclipboard:
                     logger.info('Link copied to clipboard for: %s', dir_content[x]['name'])
                     pyperclip.copy(dir_content[x]['url'])
             else:
-                size_remove += dir_content[x]['size']
+                greenlet.size_remove += dir_content[x]['size']
 
 
 def download_process(task):
+    logger.debug('def download_process started')
     returncode = 0
-    global download_list, size_remove
+    greenlet.download_list = []
+    greenlet.size_remove = 0
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
                'hash': task.hash}
     r = requests.post("https://www.premiumize.me/torrent/browse", payload)
-    size_remove = 0
-    download_list = []
     task.update(local_status='downloading')
     process_dir(task, task.dldir, json.loads(r.content)['data']['content'], 1)
-    if size_remove is not 0:
-        task.update(size=(task.size - size_remove))
+    if greenlet.size_remove is not 0:
+        task.update(size=(task.size - greenlet.size_remove))
     logger.info('Downloading: %s', task.name)
-    if download_list:
-        returncode = download_file(download_list)
+    if greenlet.download_list:
+        returncode = download_file(greenlet.download_list)
     return returncode
 
 
