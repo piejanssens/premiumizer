@@ -203,6 +203,23 @@ class PremConfig:
         self.download_categories = self.download_categories[:-1]
         self.download_categories = self.download_categories.split(',')
 
+
+        self.email_enabled = prem_config.getboolean('notifications', 'email_enabled')
+        if self.email_enabled:
+            self.email_on_failure = prem_config.getboolean('notifications', 'email_on_failure')
+            self.email_from = prem_config.get('notifications', 'email_from')
+            self.email_to = prem_config.get('notifications', 'email_to')
+            self.email_server = prem_config.get('notifications', 'email_server')
+            self.email_port = prem_config.getint('notifications', 'email_port')
+            self.email_encryption = prem_config.getboolean('notifications', 'email_encryption')
+            self.email_username = prem_config.get('notifications', 'email_username')
+            self.email_password = prem_config.get('notifications', 'email_password')
+
+
+
+
+
+
         logger.debug('Initializing config complete')
 
 
@@ -400,6 +417,8 @@ def download_task(task):
         failed = download_file(download_list)
     if failed:
         task.update(local_status='failed: download')
+        if cfg.email_enabled:
+            pass
     else:
         task.update(progress=100)
 
@@ -407,6 +426,8 @@ def download_task(task):
         failed = notify_nzbtomedia(task)
         if failed:
             task.update(local_status='failed: nzbtomedia')
+            if cfg.email_enabled:
+                pass
 
     if cfg.remove_cloud and not failed:
         payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'hash': task.hash}
@@ -423,6 +444,8 @@ def download_task(task):
         task.update(local_status='finished')
         logger.info('Download %s  finished in: %s at location %s:', task.name,
                     utils.time_human(task.dltime, fmt_short=True), task.dldir)
+        if cfg.email_enabled and not cfg.email_on_failure:
+            pass
 
 
 def update():
@@ -735,6 +758,26 @@ def settings():
                     enable_watchdir = 1
             else:
                 prem_config.set('upload', 'watchdir_enabled', '0')
+
+            if request.form.get('email_enabled'):
+                prem_config.set('notifications', 'email_enabled', '1')
+            else:
+                prem_config.set('notifications', 'email_enabled', '0')
+            if request.form.get('email_on_failure'):
+                prem_config.set('notifications', 'email_on_failure', '1')
+            else:
+                prem_config.set('notifications', 'email_on_failure', '0')
+            if request.form.get('email_encryption'):
+                prem_config.set('notifications', 'email_encryption', '1')
+            else:
+                prem_config.set('notifications', 'email_encryption', '0')
+
+            prem_config.set('notifications', 'email_from', request.form.get('email_from'))
+            prem_config.set('notifications', 'email_to', request.form.get('email_to'))
+            prem_config.set('notifications', 'email_server', request.form.get('email_server'))
+            prem_config.set('notifications', 'email_port', request.form.get('email_port'))
+            prem_config.set('notifications', 'email_username', request.form.get('email_username'))
+            prem_config.set('notifications', 'email_password', request.form.get('email_password'))
             prem_config.set('global', 'server_port', request.form.get('server_port'))
             prem_config.set('global', 'bind_ip', request.form.get('bind_ip'))
             prem_config.set('global', 'idle_interval', request.form.get('idle_interval'))

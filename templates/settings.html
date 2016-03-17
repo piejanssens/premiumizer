@@ -114,8 +114,10 @@
         <div class="well well-sm">
             <h2> Categories </h2>
         </div>
-        <h5>Download Location defaults to above location + subdirectory based on category name</h5>
+        <h5>Download Location: overwrite default download location + subdirectory based on category name</h5>
         <h5>Size: default 0 = download everything</h5>
+        <h5>Extensions: Only download the following files; example mkv,mp4,srt</h5>
+        <h5>Extensions: size is ignored on srt</h5>
         <p>&nbsp;</p>
         {% for x in range(1,6) %}
             <div class="form-inline">
@@ -163,6 +165,55 @@
             <label for="watchdir_location">Folder to Watch:</label>
             <input type="text" class="form-control" name="watchdir_location"
                    aria-describedby="basic-addon1" value="{{ settings.get('upload', 'watchdir_location') }}">
+        </div>
+        <p>&nbsp;</p>
+
+        <div class="well well-sm">
+            <h2>Notifications</h2>
+        </div>
+        <h4>Email</h4>
+        <div>
+            <label for="email_enabled">Enabled:</label>
+            {% if settings.get('notifications', 'email_enabled') == '1' %}
+                <input type="checkbox" class="form-control bootstrap_switch" name="email_enabled" data-size="small"
+                       checked>
+            {% else %}
+                <input type="checkbox" class="form-control bootstrap_switch" name="email_enabled" data-size="small">
+            {% endif %}
+            <label for="email_on_failure">Only on failure:</label>
+            {% if settings.get('notifications', 'email_on_failure') == '1' %}
+                <input type="checkbox" class="form-control bootstrap_switch" name="email_on_failure" data-size="small"
+                       checked>
+            {% else %}
+                <input type="checkbox" class="form-control bootstrap_switch" name="email_on_failure" data-size="small">
+            {% endif %}
+            <label for="email_encryption">Use encryption SSL/TLS:</label>
+            {% if settings.get('notifications', 'email_encryption') == '1' %}
+                <input type="checkbox" class="form-control bootstrap_switch" name="email_encryption" data-size="small"
+                       checked>
+            {% else %}
+                <input type="checkbox" class="form-control bootstrap_switch" name="email_encryption" data-size="small">
+            {% endif %}
+            <p>&nbsp;</p>
+            <label for="email_from">From:</label>
+            <input type="text" class="form-control" name="email_from"
+                   aria-describedby="basic-addon1" value="{{ settings.get('notifications', 'email_from') }}">
+            <label for="email_to">To:</label>
+            <input type="text" class="form-control" name="email_to"
+                   aria-describedby="basic-addon1" value="{{ settings.get('notifications', 'email_to') }}">
+            <label for="email_server">Server:</label>
+            <input type="text" class="form-control" name="email_server"
+                   aria-describedby="basic-addon1" value="{{ settings.get('notifications', 'email_server') }}">
+            <label for="email_port">Port:</label>
+            <input type="number" class="form-control" name="email_port"
+                   aria-describedby="basic-addon1" value="{{ settings.get('notifications', 'email_port') }}">
+            <label for="email_username">Username (if required):</label>
+            <input type="text" class="form-control" name="email_username"
+                   aria-describedby="basic-addon1" value="{{ settings.get('notifications', 'email_username') }}">
+            <label for="email_password">Password (if required):</label>
+            <input type="password" class="form-control" name="email_password"
+                   aria-describedby="basic-addon1" value="{{ settings.get('notifications', 'email_password') }}">
+
         </div>
         <p>&nbsp;</p>
         <div class="well well-sm">
