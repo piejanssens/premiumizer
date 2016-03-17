@@ -334,9 +334,8 @@ def email(failed, speed=None):
         text += '\nDownload Time: %s' % utils.time_human(greenlet.task.dltime, fmt_short=True)
         text += '\nAverage download speed: %s' % speed
         text += '\n\nFiles:'
-        for dirname, dirnames, filenames in os.walk(greenlet.task.dldir):
-            for filename in filenames:
-                text += '\n' + filename
+        for download in greenlet.download_list:
+            text += '\n' + download['path']
 
     else:
         subject = 'Failure for "%s"' % greenlet.task.name
@@ -567,6 +566,7 @@ def parse_tasks(torrents):
                     if task.category in cfg.download_categories:
                         if not (task.local_status == 'queued' or task.local_status == 'downloading'):
                             task.update(local_status='queued')
+                            gevent.sleep(1)
                             scheduler.scheduler.add_job(download_task, args=(task,), name=task.name,
                                                         misfire_grace_time=7200, coalesce=False, max_instances=1,
                                                         executor='download', replace_existing=True)
