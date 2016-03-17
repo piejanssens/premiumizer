@@ -446,8 +446,9 @@ def download_task(task):
 
     if not failed:
         task.update(progress=100, local_status='finished')
-        logger.info('Download %s  finished in: %s at location %s:', task.name,
-                    utils.time_human(task.dltime, fmt_short=True), task.dldir)
+        speed = task.size / task.dltime
+        logger.info('Download finished: %s time: %s speed: %s/s location: %s', task.name,
+                    utils.time_human(task.dltime, fmt_short=True), utils.sizeof_human(speed), task.dldir)
         if cfg.email_enabled and not cfg.email_on_failure:
             pass
 
