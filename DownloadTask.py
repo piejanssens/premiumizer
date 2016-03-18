@@ -4,7 +4,7 @@ import requests
 
 
 class DownloadTask:
-    def __init__(self, callback, hash, size, name, category, dldir, dlext, dlsize, dlnzbtomedia):
+    def __init__(self, callback, hash, size, name, category, dldir, dlext, delsample, dlnzbtomedia):
         self.progress = None
         self.speed = None
         self.size = size
@@ -21,7 +21,7 @@ class DownloadTask:
         self.callback = callback
         self.dldir = dldir
         self.dlext = dlext
-        self.dlsize = dlsize
+        self.delsample = delsample
         self.dlnzbtomedia = dlnzbtomedia
         self.dltime = 0
 
@@ -50,8 +50,8 @@ class DownloadTask:
             self.dldir = kwargs.get('dldir')
         if 'dlext' in kwargs:
             self.dlext = kwargs.get('dlext')
-        if 'dlsize' in kwargs:
-            self.dlsize = kwargs.get('dlsize')
+        if 'delsample' in kwargs:
+            self.delsample = kwargs.get('delsample')
         if 'dlnzbtomedia' in kwargs:
             self.dlnzbtomedia = kwargs.get('dlnzbtomedia')
         if 'dltime' in kwargs:

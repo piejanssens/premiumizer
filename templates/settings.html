@@ -131,10 +131,15 @@
                 <input type="text" class="form-control" placeholder="Extensions" name="{{ "cat_ext["+x|string+"]" }}"
                        aria-describedby="basic-addon1"
                        value="{{ settings.get('categories', 'cat_ext['+x|string+']') }}">
-                <input type="number" class="form-control" placeholder="Minimum Size to download"
-                       name="{{ "cat_size["+x|string+"]" }}"
-                       aria-describedby="basic-addon1"
-                       value="{{ settings.get('categories', 'cat_size['+x|string+']') }}">
+                {% if  settings.get('categories', 'cat_delsample['+x|string+']')    == '1' %}
+                    <input type="checkbox" class="form-control bootstrap_switch"
+                           name="{{ "cat_delsample["+x|string+"]" }}"
+                           data-size="small" data-label-text="Delete samples" checked>
+                {% else %}
+                    <input type="checkbox" class="form-control bootstrap_switch"
+                           name="{{ "cat_delsample["+x|string+"]" }}"
+                           data-size="small" data-label-text="Delete samples">
+                {% endif %}
                 {% if  settings.get('categories', 'cat_nzbtomedia['+x|string+']')    == '1' %}
                     <input type="checkbox" class="form-control bootstrap_switch"
                            name="{{ "cat_nzbtomedia["+x|string+"]" }}"

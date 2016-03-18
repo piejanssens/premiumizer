@@ -190,9 +190,10 @@ class PremConfig:
                 else:
                     cat_dir = z
                 cat_ext = prem_config.get('categories', ('cat_ext' + str([x]))).split(',')
-                cat_size = prem_config.getint('categories', ('cat_size' + str([x]))) * 1000000
+                cat_delsample = prem_config.getboolean('categories', ('cat_delsample' + str([x])))
                 cat_nzbtomedia = prem_config.getboolean('categories', ('cat_nzbtomedia' + str([x])))
-                cat = {'name': cat_name, 'dir': cat_dir, 'ext': cat_ext, 'size': cat_size, 'nzb': cat_nzbtomedia}
+                cat = {'name': cat_name, 'dir': cat_dir, 'ext': cat_ext, 'delsample': cat_delsample,
+                       'nzb': cat_nzbtomedia}
                 self.categories.append(cat)
                 self.download_categories += str(cat_name + ',')
                 if self.download_enabled:
@@ -427,6 +428,15 @@ def download_file():
     return returncode
 
 
+def is_sample(dir_content):
+    media_extensions = [".mkv", ".avi", ".divx", ".xvid", ".mov", ".wmv", ".mp4", ".mpg", ".mpeg", ".vob", ".iso"]
+    media_size = 150 * 1024 * 1024
+    if dir_content['size'] < media_size:
+        if dir_content['url'].lower().endswith(tuple(media_extensions)):
+            if 'sample' or 'RARBG.COM.mp4' in dir_content['url'].lower() and not 'sample' in greenlet.task.name.lower():
+                return True
+    return False
+
 def process_dir(dir_content, path, change_dldir=1):
     logger.debug('def processing_dir started')
     if not dir_content:
@@ -439,8 +449,12 @@ def process_dir(dir_content, path, change_dldir=1):
                 greenlet.task.update(dldir=new_path)
             process_dir(dir_content[x]['children'], new_path, 0)
         elif type == 'file':
-            if (dir_content[x]['size'] >= greenlet.task.dlsize or dir_content[x]['url'].lower().endswith('.srt')) and \
-                    dir_content[x]['url'].lower().endswith(tuple(greenlet.task.dlext)):
+            if dir_content[x]['url'].lower().endswith(tuple(greenlet.task.dlext)):
+                if greenlet.task.delsample:
+                    sample = is_sample(dir_content[x])
+                    if sample:
+                        greenlet.size_remove += dir_content[x]['size']
+                        continue
                 if cfg.download_enabled:
                     if not os.path.exists(path):
                         os.makedirs(path)
@@ -612,22 +626,22 @@ def get_cat_var(category):
             if cat['name'] == category:
                 dldir = cat['dir']
                 dlext = cat['ext']
-                dlsize = cat['size']
+                delsample = cat['delsample']
                 dlnzbtomedia = cat['nzb']
     else:
         dldir = None
         dlext = None
-        dlsize = 0
+        delsample = 0
         dlnzbtomedia = 0
     if cfg.copylink_toclipboard:
         dlnzbtomedia = 0
-    return dldir, dlext, dlsize, dlnzbtomedia
+    return dldir, dlext, delsample, dlnzbtomedia
 
 
 def add_task(hash, size, name, category):
     logger.debug('def add_task started')
-    dldir, dlext, dlsize, dlnzbtomedia = get_cat_var(category)
-    task = DownloadTask(socketio.emit, hash, size, name, category, dldir, dlext, dlsize, dlnzbtomedia)
+    dldir, dlext, delsample, dlnzbtomedia = get_cat_var(category)
+    task = DownloadTask(socketio.emit, hash, size, name, category, dldir, dlext, delsample, dlnzbtomedia)
     tasks.append(task)
     logger.info('Added: %s', task.name)
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
@@ -862,7 +876,10 @@ def settings():
                 prem_config.set('categories', ('cat_name' + str([x])), request.form.get('cat_name' + str([x])))
                 prem_config.set('categories', ('cat_dir' + str([x])), request.form.get('cat_dir' + str([x])))
                 prem_config.set('categories', ('cat_ext' + str([x])), request.form.get('cat_ext' + str([x])))
-                prem_config.set('categories', ('cat_size' + str([x])), request.form.get('cat_size' + str([x])))
+                if request.form.get('cat_delsample' + str([x])):
+                    prem_config.set('categories', ('cat_delsample' + str([x])), '1')
+                else:
+                    prem_config.set('categories', ('cat_delsample' + str([x])), '0')
                 if request.form.get('cat_nzbtomedia' + str([x])):
                     prem_config.set('categories', ('cat_nzbtomedia' + str([x])), '1')
                 else:
@@ -1003,9 +1020,9 @@ def handle_json(json):
 def change_category(message):
     data = message['data']
     task = get_task(data['hash'])
-    dldir, dlext, dlsize, dlnzbtomedia = get_cat_var(data['category'])
+    dldir, dlext, delsample, dlnzbtomedia = get_cat_var(data['category'])
     task.update(local_status=None, process=None, speed=None, category=data['category'], dldir=dldir, dlext=dlext,
-                dlsize=dlsize,
+                delsample=delsample,
                 dlnzbtomedia=dlnzbtomedia)
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
 
