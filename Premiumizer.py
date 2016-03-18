@@ -437,6 +437,7 @@ def is_sample(dir_content):
                 return True
     return False
 
+
 def process_dir(dir_content, path, change_dldir=1):
     logger.debug('def processing_dir started')
     if not dir_content:
@@ -509,9 +510,11 @@ def download_task(task):
         responsedict = json.loads(r.content)
         if responsedict['status'] == "success":
             logger.info('Automatically Deleted: %s from cloud', task.name)
+            emit('delete_success', {'data': task.hash})
         else:
             logger.info('Torrent could not be removed from cloud: %s', task.name)
             logger.info(responsedict['message'])
+            emit('delete_failed', {'data': task.hash})
 
     if not failed:
         task.update(progress=100, local_status='finished')
