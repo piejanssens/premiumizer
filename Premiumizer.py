@@ -324,7 +324,7 @@ def notify_nzbtomedia():
     return returncode
 
 
-def email(failed, speed=None):
+def email(failed):
     logger.debug('def email started')
     if not failed:
         subject = 'Success for "%s"' % greenlet.task.name
@@ -333,7 +333,7 @@ def email(failed, speed=None):
         text += '\n\nStatistics:'
         text += '\nDownloaded size: %s' % utils.sizeof_human(greenlet.task.size)
         text += '\nDownload Time: %s' % utils.time_human(greenlet.task.dltime, fmt_short=True)
-        text += '\nAverage download speed: %s' % speed
+        text += '\nAverage download speed: %s' % greenlet.speed
         text += '\n\nFiles:'
         for download in greenlet.download_list:
             text += '\n' + download['path']
@@ -502,15 +502,15 @@ def download_task(task):
     if not failed:
         task.update(progress=100, local_status='finished')
         try:
-            speed = str(utils.sizeof_human((task.size / task.dltime)) + '/s')
+            greenlet.speed = str(utils.sizeof_human((task.size / task.dltime)) + '/s')
         except:
-            speed = "0"
+            greenlet.speed = "0"
         logger.info('Download finished: %s time: %s speed: %s location: %s', task.name,
-                    utils.time_human(task.dltime, fmt_short=True), speed, task.dldir)
+                    utils.time_human(task.dltime, fmt_short=True), greenlet.speed, task.dldir)
     if cfg.email_enabled:
         if not failed:
             if not cfg.email_on_failure:
-                email(0, speed)
+                email(0)
         else:
             email(1)
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
