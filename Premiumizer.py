@@ -418,6 +418,7 @@ def download_file():
                 if greenlet.task.local_status == "stopped":
                     while not downloader.isFinished():  # Have to use while loop
                         downloader.stop()  # does not stop when calt once ..
+                        gevent.sleep(0.5)  # let's hammer the stop call..
                     return 1
             if downloader.isSuccessful():
                 dltime += downloader.get_dl_time()
