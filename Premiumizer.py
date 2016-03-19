@@ -481,8 +481,11 @@ def download_process():
     if greenlet.size_remove is not 0:
         greenlet.task.update(size=(greenlet.task.size - greenlet.size_remove))
     logger.info('Downloading: %s', greenlet.task.name)
-    if greenlet.download_list:
+    if greenlet.download_list and not cfg.copylink_toclipboard:
         returncode = download_file()
+    else:
+        logger.error('Error for %s: Nothing to download .. Filtered out or bad torrent ?')
+        returncode = 1
     return returncode
 
 
