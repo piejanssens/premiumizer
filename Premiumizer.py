@@ -227,7 +227,7 @@ logger.debug('Initializing Flask')
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24)
 app.config.update(DEBUG=debug_enabled)
-
+app.logger.addHandler(handler)
 socketio = SocketIO(app)
 
 app.config['LOGIN_DISABLED'] = not cfg.web_login_enabled
