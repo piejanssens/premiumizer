@@ -27,12 +27,12 @@ from flask.ext.login import LoginManager, login_required, login_user, logout_use
 from flask.ext.socketio import SocketIO, emit
 from flask_apscheduler import APScheduler
 from gevent import local
+from pySmartDL import SmartDL, utils
 from watchdog.events import PatternMatchingEventHandler
 from watchdog.observers import Observer
 from werkzeug.utils import secure_filename
 
 from DownloadTask import DownloadTask
-from pySmartDL import SmartDL, utils
 
 # "https://www.premiumize.me/static/api/torrent.html"
 print '------------------------------------------------------------------------------------------------------------'
@@ -410,6 +410,15 @@ def download_file():
             while not downloader.isFinished():
                 get_download_stats(downloader, total_size_downloaded)
                 gevent.sleep(2)
+                # if greenlet.task.local_status == "paused":            #   When paused to long
+                #   downloader.pause()                                  #   PysmartDl fails with WARNING :
+                #   while greenlet.task.local_status == "paused":       #   Diff between downloaded files and expected
+                #       gevent.sleep(2)                                 #   filesizes is .... Retrying...
+                #   downloader.unpause()
+                if greenlet.task.local_status == "stopped":
+                    while not downloader.isFinished():  # Have to use while loop
+                        downloader.stop()  # does not stop when calt once ..
+                    return 1
             if downloader.isSuccessful():
                 dltime += downloader.get_dl_time()
                 total_size_downloaded += downloader.get_dl_size()
@@ -431,7 +440,7 @@ def is_sample(dir_content):
     media_size = 150 * 1024 * 1024
     if dir_content['size'] < media_size:
         if dir_content['url'].lower().endswith(tuple(media_extensions)):
-            if 'sample' or 'RARBG.COM.mp4' in dir_content['url'].lower() and not 'sample' in greenlet.task.name.lower():
+            if 'sample' or 'RARBG.COM.mp4' in dir_content['url'].lower() and 'sample' not in greenlet.task.name.lower():
                 return True
     return False
 
@@ -492,7 +501,7 @@ def download_task(task):
     greenlet.task = task
     greenlet.failed = 0
     failed = download_process()
-    if failed:
+    if failed and task.local_status != 'stopped':
         task.update(local_status='failed: download retrying')
         logger.warning('Retrying failed download in 10 minutes for: %s', task.name)
         gevent.sleep(600)
@@ -525,12 +534,16 @@ def download_task(task):
         logger.info('Download finished: %s size: %s time: %s speed: %s location: %s', task.name,
                     utils.sizeof_human(task.size), utils.time_human(task.dltime, fmt_short=True), greenlet.speed,
                     task.dldir)
-    if cfg.email_enabled:
+    if cfg.email_enabled and task.local_status != 'stopped':
         if not failed:
             if not cfg.email_on_failure:
                 email(0)
         else:
             email(1)
+    if task.local_status == 'stopped':
+        logger.warning('Download stopped for: %s', greenlet.task.name)
+        shutil.rmtree(task.dldir)
+        task.update(progress=100, category='', local_status='waiting')
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
 
 
@@ -991,6 +1004,22 @@ def delete_task(message):
         scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
     else:
         emit('delete_failed', {'data': message['data']})
+
+
+# @socketio.on('pause_task')
+# def pause_task(message):
+#    task = get_task(message['data'])
+#    if task.local_status != 'paused':
+#        task.update(local_status='paused')
+#    elif task.local_status == 'paused':
+#        task.update(local_status='downloading')
+
+
+@socketio.on('stop_task')
+def stop_task(message):
+    task = get_task(message['data'])
+    if task.local_status != 'stopped':
+        task.update(local_status='stopped')
 
 
 @socketio.on('connect')
