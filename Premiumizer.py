@@ -96,10 +96,8 @@ else:
 
 # Catch uncaught exceptions in log
 def uncaught_exception(exc_type, exc_value, exc_traceback):
-    if issubclass(exc_type, SystemExit or KeyboardInterrupt):
-        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+    if issubclass(exc_type, (SystemExit, KeyboardInterrupt)):
         return
-
     logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
 
 
