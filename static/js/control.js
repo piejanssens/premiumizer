@@ -72,11 +72,23 @@ function update_task(task) {
         stateStr = 'Waiting on category';
         stateIcon = 'desktop';
         categoryState = '';
+        /*
     } else if (task.cloud_status == 'finished' && task.local_status == 'paused') {
         stateColor = 'warning';
         stateStr = 'Download paused';
         stateIcon = 'desktop';
         categoryState = '';
+         */
+    } else if (task.cloud_status == 'finished' && task.local_status == 'downloading') {
+        stateColor = 'primary';
+        stateStr = 'Downloading';
+        stateIcon = 'desktop';
+        categoryState = '';
+    } else if (task.cloud_status == 'finished' && task.local_status == 'finished') {
+        stateColor = 'success';
+        stateStr = 'Finished';
+        stateIcon = 'desktop';
+        categoryState = ' disabled';
     } else if (task.cloud_status == 'finished' && task.local_status == 'stopped') {
         stateColor = 'warning';
         stateStr = 'Download stopped';
@@ -97,16 +109,6 @@ function update_task(task) {
         stateStr = 'Failed: nzbtomedia';
         stateIcon = 'desktop';
         categoryState = '';
-    } else if (task.cloud_status == 'finished' && task.local_status == 'downloading') {
-        stateColor = 'primary';
-        stateStr = 'Downloading';
-        stateIcon = 'desktop';
-        categoryState = '';
-    } else if (task.cloud_status == 'finished' && task.local_status == 'finished') {
-        stateColor = 'success';
-        stateStr = 'Finished';
-        stateIcon = 'desktop';
-        categoryState = ' disabled';
     } else {
         stateColor = 'danger';
         stateStr = 'check js console';

@@ -440,7 +440,8 @@ def is_sample(dir_content):
     media_size = 150 * 1024 * 1024
     if dir_content['size'] < media_size:
         if dir_content['url'].lower().endswith(tuple(media_extensions)):
-            if 'sample' or 'RARBG.COM.mp4' in dir_content['url'].lower() and 'sample' not in greenlet.task.name.lower():
+            if ('sample' or 'RARBG.COM.mp4' in dir_content['url'].lower()) and (
+                'sample' not in greenlet.task.name.lower()):
                 return True
     return False
 
