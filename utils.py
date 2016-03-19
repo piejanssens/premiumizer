@@ -40,7 +40,7 @@ def update():
                 for key in prem_config.options(section):
                     if key in default_config.options(section):
                         default_config.set(section, key, (prem_config.get(section, key)))
-        with open('settings.cfg', 'w') as configfile:
+        with open(runningdir + 'settings.cfg', 'w') as configfile:
             default_config.write(configfile)
 
     if os_arg == '--windows':
