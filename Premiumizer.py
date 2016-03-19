@@ -498,7 +498,6 @@ def download_task(task):
         failed = download_process()
         if failed:
             task.update(local_status='failed: download')
-
     if task.dlnzbtomedia and not failed:
         failed = notify_nzbtomedia()
         if failed:
@@ -522,8 +521,9 @@ def download_task(task):
             greenlet.speed = str(utils.sizeof_human((task.size / task.dltime)) + '/s')
         except:
             greenlet.speed = "0"
-        logger.info('Download finished: %s time: %s speed: %s location: %s', task.name,
-                    utils.time_human(task.dltime, fmt_short=True), greenlet.speed, task.dldir)
+        logger.info('Download finished: %s size: %s time: %s speed: %s location: %s', task.name,
+                    utils.sizeof_human(task.size), utils.time_human(task.dltime, fmt_short=True), greenlet.speed,
+                    task.dldir)
     if cfg.email_enabled:
         if not failed:
             if not cfg.email_on_failure:
