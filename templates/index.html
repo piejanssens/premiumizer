@@ -82,5 +82,5 @@
 {% block js_footer %}
     {{ super() }}
     <script type="text/javascript" src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
-    <script type="text/javascript" src="{{ url_for('static', filename='js/control.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/control.js') }}?v=2"></script>
 {% endblock %}
