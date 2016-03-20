@@ -809,6 +809,7 @@ def settings():
     if request.method == 'POST':
         if 'Restart' in request.form.values():
             logger.info('Restarting')
+            scheduler.shutdown(wait=False)
             if os_arg == '--windows':
                 # windows service will automatically restart on 'failure'
                 sys.exit()
@@ -817,12 +818,14 @@ def settings():
                 sys.exit()
         elif 'Shutdown' in request.form.values():
             logger.info('Shutdown recieved')
+            scheduler.shutdown(wait=False)
             if os_arg == '--windows':
-                subprocess.Popen([rootdir + 'Installer/nssm.exe', 'stop', 'Premiumizer'])
+                subprocess.call([rootdir + 'Installer/nssm.exe', 'stop', 'Premiumizer'])
             else:
                 sys.exit()
         elif 'Update' in request.form.values():
             logger.info('Update - will restart')
+            scheduler.shutdown(wait=False)
             if os_arg == '--windows':
                 subprocess.call(['python', runningdir + 'utils.py', '--update', '--windows'])
                 sys.exit()
