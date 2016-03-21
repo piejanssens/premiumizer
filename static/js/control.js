@@ -52,6 +52,11 @@ function update_task(task) {
         stateStr = 'Downloading';
         stateIcon = 'cloud';
         categoryState = '';
+    } else if (task.cloud_status == 'queued') {
+        stateColor = 'warning';
+        stateStr = 'Download queued';
+        stateIcon = 'cloud';
+        categoryState = '';
     } else if (task.cloud_status == 'finished' && task.local_status == null) {
         stateColor = 'success';
         stateStr = 'Finished';
@@ -63,8 +68,35 @@ function update_task(task) {
         stateIcon = 'desktop';
         categoryState = '';
     } else if (task.cloud_status == 'finished' && task.local_status == 'waiting') {
-        stateColor = 'primary';
+        stateColor = 'info';
         stateStr = 'Waiting on category';
+        stateIcon = 'desktop';
+        categoryState = '';
+        /*
+    } else if (task.cloud_status == 'finished' && task.local_status == 'paused') {
+        stateColor = 'warning';
+        stateStr = 'Download paused';
+        stateIcon = 'desktop';
+        categoryState = '';
+         */
+    } else if (task.cloud_status == 'finished' && task.local_status == 'downloading') {
+        stateColor = 'primary';
+        stateStr = 'Downloading';
+        stateIcon = 'desktop';
+        categoryState = '';
+    } else if (task.cloud_status == 'finished' && task.local_status == 'finished') {
+        stateColor = 'success';
+        stateStr = 'Finished';
+        stateIcon = 'desktop';
+        categoryState = ' disabled';
+    } else if (task.cloud_status == 'finished' && task.local_status == 'stopped') {
+        stateColor = 'warning';
+        stateStr = 'Download stopped';
+        stateIcon = 'desktop';
+        categoryState = '';
+    } else if (task.cloud_status == 'finished' && task.local_status == 'failed: download retrying') {
+        stateColor = 'warning';
+        stateStr = 'Failed: download retrying soon';
         stateIcon = 'desktop';
         categoryState = '';
     } else if (task.cloud_status == 'finished' && task.local_status == 'failed: download') {
@@ -77,16 +109,6 @@ function update_task(task) {
         stateStr = 'Failed: nzbtomedia';
         stateIcon = 'desktop';
         categoryState = '';
-    } else if (task.cloud_status == 'finished' && task.local_status == 'downloading') {
-        stateColor = 'primary';
-        stateStr = 'Downloading';
-        stateIcon = 'desktop';
-        categoryState = '';
-    } else if (task.cloud_status == 'finished' && task.local_status == 'finished') {
-        stateColor = 'success';
-        stateStr = 'Finished';
-        stateIcon = 'desktop';
-        categoryState = ' disabled';
     } else {
         stateColor = 'danger';
         stateStr = 'check js console';
@@ -121,7 +143,7 @@ function update_task(task) {
         '<div class="row"><h6>' + (task.progress != 100 ? "Speed: " + task.speed + " ETA: " + task.eta : '') + '</h6></div>' +
         '</span>' +
         '<span class="col-md-3">' +
-        '<div class="btn-toolbar text-center"><a class="btn btn-danger delete_btn" href="#" onclick="delete_task(event)"><i class="fa fa-trash-o fa-lg"></i> Delete</a>' + (task.cloud_status == "finished" ? '<a class="btn btn-success" href="https://www.premiumize.me/browsetorrent?hash=' + task.hash + '" target="_blank"><i class="fa fa-folder-open-o fa-lg"></i> Browse</a>' : "") + '</div>' +
+        '<div class="btn-toolbar text-center"><a class="btn btn-danger delete_btn" href="#" onclick="delete_task(event)"><i class="fa fa-trash-o fa-lg"></i> Delete</a>' + (task.cloud_status == "finished" ? '<a class="btn btn-success" href="https://www.premiumize.me/browsetorrent?hash=' + task.hash + '" target="_blank"><i class="fa fa-folder-open-o fa-lg"></i> Browse</a>' : "") + (task.local_status == "downloading" ? '<a class="btn btn-warning"href="#" onclick="stop_task(event)"><i class="fa fa-trash-o fa-lg"></i> Stop DL</a>' : "") + '</div>' +
         '</span>' +
         '</div>' +
         '</div>' +
@@ -302,6 +324,22 @@ function delete_task(e) {
     var elem = $(e.target);
     var hash = elem.closest('.panel').attr('id');
     socket.emit('delete_task', {
+        data: hash
+    });
+}
+/*
+ function pause_task(e) {
+ var elem = $(e.target);
+ var hash = elem.closest('.panel').attr('id');
+ socket.emit('pause_task', {
+ data: hash
+ });
+ }
+ */
+function stop_task(e) {
+    var elem = $(e.target);
+    var hash = elem.closest('.panel').attr('id');
+    socket.emit('stop_task', {
         data: hash
     });
 }

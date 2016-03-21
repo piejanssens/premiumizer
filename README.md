@@ -28,16 +28,18 @@ If premiumizer is running on a different PC replace Bind ip in settings with tha
 ## Installation
 
 ### Requirements
-Git & Python 2.7 (with pip+virtualenv)
+Git & Python 2.7 (with pip)
 
-optional: NzbToMedia version 10.14 & higher
+Optional: 
+[virtualenv] (https://pypi.python.org/pypi/virtualenv)
+[NzbToMedia] (https://github.com/clinton-hall/nzbToMedia) version 10.14 & higher
 
 
 ### Synology
 Package coming soon(ish).
 
 ### Windows
-Automatic installation
+Automatic installation:
 
 Use the [PremiumizerInstaller] (https://github.com/neox387/PremiumizerInstaller/releases)
 
@@ -45,8 +47,7 @@ Open services.msc & edit Premiumizer service to logon using your account that is
 
 Edit autoProcessMedia.cfg.spc & save it to autoProcessMedia.cfg
 
-or
-
+&nbsp;
 Manual installation:
 
 Install [Git] (https://git-scm.com/download/win) &  select: Use git from the windows command prompt.
@@ -62,7 +63,7 @@ https://github.com/piejanssens/premiumizer.git [to a folder]```
 6. ```python premiumizer.py```
 
 Optional:
-Install NzbToMedia, pywin32 required:
+Install NzbToMedia & pywin32:
 
 4. ```git clone https://github.com/clinton-hall/nzbToMedia.git [your folder]\nzbtomedia```
 5. ```easy_install pywin32```
@@ -83,7 +84,8 @@ Now use your browser to access [http://127.0.0.1:5000/](http://127.0.0.1:5000/).
 Extra: Google how you can turn it into a service and run it in background
 
 ## Updating
-Use update from settings page, Premiumizer will restart & check for updates with git pull.
+Update from the settings page.
+Premiumizer will restart & check for updates with git pull.
 
 
 ## Settings
@@ -92,3 +94,4 @@ Once you can access the premiumizer web interface make sure you head over to the
 ## Development
 Want to contribute? Great!
 Just fork the github repo, do some awesome stuff and create a pull request.
+Report issues or feature enhancements/requests on the [Issues] (https://github.com/piejanssens/premiumizer/issues) page

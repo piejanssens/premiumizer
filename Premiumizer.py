@@ -1,14 +1,17 @@
 #! /usr/bin/env python
 import ConfigParser
+import datetime
 import hashlib
 import json
 import logging
 import os
 import shelve
 import shutil
+import smtplib
 import subprocess
 import sys
 import unicodedata
+from email.mime.text import MIMEText
 from logging.handlers import RotatingFileHandler
 from string import ascii_letters, digits
 
@@ -23,6 +26,7 @@ from flask import Flask, flash, request, redirect, url_for, render_template, sen
 from flask.ext.login import LoginManager, login_required, login_user, logout_user, UserMixin
 from flask.ext.socketio import SocketIO, emit
 from flask_apscheduler import APScheduler
+from gevent import local
 from pySmartDL import SmartDL, utils
 from watchdog.events import PatternMatchingEventHandler
 from watchdog.observers import Observer
@@ -92,10 +96,8 @@ else:
 
 # Catch uncaught exceptions in log
 def uncaught_exception(exc_type, exc_value, exc_traceback):
-    if issubclass(exc_type, SystemExit or KeyboardInterrupt):
-        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+    if issubclass(exc_type, (SystemExit, KeyboardInterrupt)):
         return
-
     logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
 
 
@@ -186,9 +188,10 @@ class PremConfig:
                 else:
                     cat_dir = z
                 cat_ext = prem_config.get('categories', ('cat_ext' + str([x]))).split(',')
-                cat_size = prem_config.getint('categories', ('cat_size' + str([x]))) * 1000000
+                cat_delsample = prem_config.getboolean('categories', ('cat_delsample' + str([x])))
                 cat_nzbtomedia = prem_config.getboolean('categories', ('cat_nzbtomedia' + str([x])))
-                cat = {'name': cat_name, 'dir': cat_dir, 'ext': cat_ext, 'size': cat_size, 'nzb': cat_nzbtomedia}
+                cat = {'name': cat_name, 'dir': cat_dir, 'ext': cat_ext, 'delsample': cat_delsample,
+                       'nzb': cat_nzbtomedia}
                 self.categories.append(cat)
                 self.download_categories += str(cat_name + ',')
                 if self.download_enabled:
@@ -203,6 +206,17 @@ class PremConfig:
         self.download_categories = self.download_categories[:-1]
         self.download_categories = self.download_categories.split(',')
 
+        self.email_enabled = prem_config.getboolean('notifications', 'email_enabled')
+        if self.email_enabled:
+            self.email_on_failure = prem_config.getboolean('notifications', 'email_on_failure')
+            self.email_from = prem_config.get('notifications', 'email_from')
+            self.email_to = prem_config.get('notifications', 'email_to')
+            self.email_server = prem_config.get('notifications', 'email_server')
+            self.email_port = prem_config.getint('notifications', 'email_port')
+            self.email_encryption = prem_config.getboolean('notifications', 'email_encryption')
+            self.email_username = prem_config.get('notifications', 'email_username')
+            self.email_password = prem_config.get('notifications', 'email_password')
+
         logger.debug('Initializing config complete')
 
 
@@ -213,7 +227,7 @@ logger.debug('Initializing Flask')
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24)
 app.config.update(DEBUG=debug_enabled)
-
+app.logger.addHandler(handler)
 socketio = SocketIO(app)
 
 app.config['LOGIN_DISABLED'] = not cfg.web_login_enabled
@@ -229,8 +243,7 @@ logger.debug('Initializing Database complete')
 
 # Initialise Globals
 tasks = []
-size_remove = 0
-download_list = []
+greenlet = local.local()
 
 
 #
@@ -285,126 +298,220 @@ def clean_name(original):
     return ' '.join(valid_string.split())
 
 
-def notify_nzbtomedia(task):
+def notify_nzbtomedia():
     logger.debug('def notify_nzbtomedia started')
     if os.path.isfile(cfg.nzbtomedia_location):
         try:
             subprocess.check_output(
-                ['python', cfg.nzbtomedia_location, task.dldir, task.name, task.category, task.hash, 'generic'],
+                ['python', cfg.nzbtomedia_location, greenlet.task.dldir, greenlet.task.name, greenlet.task.category,
+                 greenlet.task.hash, 'generic'],
                 stderr=subprocess.STDOUT, shell=False)
             returncode = 0
-            logger.info('Send to nzbtomedia: %s', task.name)
+            logger.info('Send to nzbtomedia: %s', greenlet.task.name)
         except subprocess.CalledProcessError as e:
-            logger.error('nzbtomedia failed for: %s', task.name)
-            logger.error('output: %s', e.output)
+            logger.error('nzbtomedia failed for %s', greenlet.task.name)
+            errorstr = ''
+            tmp = str.splitlines(e.output)
+            for line in tmp:
+                if '[ERROR]' in line:
+                    errorstr += line
+            logger.error('%s: output: %s', greenlet.task.name, errorstr)
             returncode = 1
     else:
-        logger.error('Error unable to locate nzbToMedia.py')
+        logger.error('Error unable to locate nzbToMedia.py for: %s', greenlet.task.name)
         returncode = 1
     return returncode
 
 
-def get_download_stats(task, downloader, total_size_downloaded):
+def email(failed):
+    logger.debug('def email started')
+    if not failed:
+        subject = 'Success for "%s"' % greenlet.task.name
+        text = 'Download of "%s" has successfully completed.' % greenlet.task.name
+        text += '\nStatus: SUCCESS'
+        text += '\n\nStatistics:'
+        text += '\nDownloaded size: %s' % utils.sizeof_human(greenlet.task.size)
+        text += '\nDownload Time: %s' % utils.time_human(greenlet.task.dltime, fmt_short=True)
+        text += '\nAverage download speed: %s' % greenlet.speed
+        text += '\n\nFiles:'
+        for download in greenlet.download_list:
+            text += '\n' + download['path']
+
+    else:
+        subject = 'Failure for "%s"' % greenlet.task.name
+        text = 'Download of "%s" has failed.' % greenlet.task.name
+        text += '\nStatus: FAILED\nError: %s' % greenlet.task.local_status
+        text += '\n\nLog:\n'
+        try:
+            with open(runningdir + 'premiumizer.log', 'r') as f:
+                for line in f:
+                    if greenlet.task.name in line:
+                        text += line
+        except:
+            text += 'could not add log'
+
+    # Create message
+    msg = MIMEText(text)
+    msg['Subject'] = subject
+    msg['From'] = cfg.email_from
+    msg['To'] = cfg.email_to
+    msg['Date'] = datetime.datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
+    msg['X-Application'] = 'Premiumizer'
+
+    # Send message
+    try:
+        smtp = smtplib.SMTP(cfg.email_server, cfg.email_port)
+
+        if cfg.email_encryption:
+            smtp.starttls()
+
+        if cfg.email_username != '' and cfg.email_password != '':
+            smtp.login(cfg.email_username, cfg.email_password)
+
+        smtp.sendmail(cfg.email_from, cfg.email_to, msg.as_string())
+
+        smtp.quit()
+        logger.info('Email send for: %s', greenlet.task.name)
+    except Exception as err:
+        logger.error('Email error for: %s error: %s', greenlet.task.name, err)
+
+
+def get_download_stats(downloader, total_size_downloaded):
     logger.debug('def get_download_stats started')
     if downloader.get_status() == 'downloading':
         size_downloaded = total_size_downloaded + downloader.get_dl_size()
-        progress = round(float(size_downloaded) * 100 / task.size, 1)
+        progress = round(float(size_downloaded) * 100 / greenlet.task.size, 1)
         speed = downloader.get_speed(human=False)
         if speed == 0:
             eta = ''
         else:
-            tmp = (task.size - size_downloaded) / speed
+            tmp = (greenlet.task.size - size_downloaded) / speed
             eta = ' ' + utils.time_human(tmp, fmt_short=True)
-        task.update(speed=(utils.sizeof_human(speed) + '/s'), progress=progress, eta=eta)
+        greenlet.task.update(speed=(utils.sizeof_human(speed) + '/s'), progress=progress, eta=eta)
 
     elif downloader.get_status() == 'combining':
-        task.update(speed='', eta=' Combining files')
+        greenlet.task.update(speed='', eta=' Combining files')
     elif downloader.get_status() == 'paused':
-        task.update(speed='', eta=' Download paused')
+        greenlet.task.update(speed='', eta=' Download paused')
     else:
         logger.debug('Want to update stats, but downloader status is invalid.')
 
 
-def download_file(download_list):
+def download_file():
     logger.debug('def download_file started')
     total_size_downloaded = 0
     dltime = 0
     returncode = 0
-    for download in download_list:
+    for download in greenlet.download_list:
         logger.debug('Downloading file: %s', download['path'])
         if not os.path.isfile(download['path']):
             downloader = SmartDL(download['url'], download['path'], progress_bar=False, logger=logger, threads_count=1)
             downloader.start(blocking=False)
             while not downloader.isFinished():
-                get_download_stats(download['task'], downloader, total_size_downloaded)
+                get_download_stats(downloader, total_size_downloaded)
                 gevent.sleep(2)
+                # if greenlet.task.local_status == "paused":            #   When paused to long
+                #   downloader.pause()                                  #   PysmartDl fails with WARNING :
+                #   while greenlet.task.local_status == "paused":       #   Diff between downloaded files and expected
+                #       gevent.sleep(2)                                 #   filesizes is .... Retrying...
+                #   downloader.unpause()
+                if greenlet.task.local_status == "stopped":
+                    while not downloader.isFinished():  # Have to use while loop
+                        downloader.stop()  # does not stop when calt once ..
+                        gevent.sleep(0.5)  # let's hammer the stop call..
+                    return 1
             if downloader.isSuccessful():
                 dltime += downloader.get_dl_time()
                 total_size_downloaded += downloader.get_dl_size()
                 logger.debug('Finished downloading file: %s', download['path'])
-                download['task'].update(dltime=dltime)
+                greenlet.task.update(dltime=dltime)
             else:
-                logger.error('Error while downloading file from: %s', download['path'])
+                logger.error('Error for %s: while downloading file: %s', greenlet.task.name, download['path'])
                 for e in downloader.get_errors():
-                    logger.error(str(e))
+                    logger.error(str(greenlet.task.name + ": " + e))
                 returncode = 1
         else:
             logger.info('File not downloaded it already exists at: %s', download['path'])
+            returncode = 0
     return returncode
 
 
-# TODO continue log statements
+def is_sample(dir_content):
+    media_extensions = [".mkv", ".avi", ".divx", ".xvid", ".mov", ".wmv", ".mp4", ".mpg", ".mpeg", ".vob", ".iso"]
+    media_size = 150 * 1024 * 1024
+    if dir_content['size'] < media_size:
+        if dir_content['url'].lower().endswith(tuple(media_extensions)):
+            if ('sample' or 'RARBG.COM.mp4' in dir_content['url'].lower()) and (
+                'sample' not in greenlet.task.name.lower()):
+                return True
+    return False
 
-def process_dir(task, path, dir_content, change_dldir):
+
+def process_dir(dir_content, path, change_dldir=1):
     logger.debug('def processing_dir started')
-    global download_list, size_remove
     if not dir_content:
         return None
     for x in dir_content:
         type = dir_content[x]['type']
         if type == 'dir':
             new_path = os.path.join(path, clean_name(x))
-            process_dir(task, new_path, dir_content[x]['children'], 0)
             if change_dldir:
-                task.update(dldir=new_path)
+                greenlet.task.update(dldir=new_path)
+            process_dir(dir_content[x]['children'], new_path, 0)
         elif type == 'file':
-            if dir_content[x]['size'] >= task.dlsize and dir_content[x]['url'].lower().endswith(tuple(task.dlext)):
+            if dir_content[x]['url'].lower().endswith(tuple(greenlet.task.dlext)):
+                if greenlet.task.delsample:
+                    sample = is_sample(dir_content[x])
+                    if sample:
+                        greenlet.size_remove += dir_content[x]['size']
+                        continue
                 if cfg.download_enabled:
                     if not os.path.exists(path):
                         os.makedirs(path)
-                    download = {'task': task, 'path': path + '/' + clean_name(x), 'url': dir_content[x]['url']}
-                    download_list.append(download)
+                    download = {'path': path + '/' + clean_name(x), 'url': dir_content[x]['url']}
+                    greenlet.download_list.append(download)
                 elif cfg.copylink_toclipboard:
                     logger.info('Link copied to clipboard for: %s', dir_content[x]['name'])
                     pyperclip.copy(dir_content[x]['url'])
             else:
-                size_remove += dir_content[x]['size']
+                greenlet.size_remove += dir_content[x]['size']
 
 
-#
-def download_task(task):
-    failed = 0
-    logger.debug('def download_task started')
-    global download_list, size_remove
+def download_process():
+    logger.debug('def download_process started')
+    returncode = 0
+    greenlet.download_list = []
+    greenlet.size_remove = 0
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
-               'hash': task.hash}
+               'hash': greenlet.task.hash}
     r = requests.post("https://www.premiumize.me/torrent/browse", payload)
-    size_remove = 0
-    download_list = []
-    task.update(local_status='downloading')
-    process_dir(task, task.dldir, json.loads(r.content)['data']['content'], 1)
-    if size_remove is not 0:
-        task.update(size=(task.size - size_remove))
-    logger.info('Downloading: %s', task.name)
-    if download_list:
-        failed = download_file(download_list)
-    if failed:
-        task.update(local_status='failed: download')
+    greenlet.task.update(local_status='downloading')
+    process_dir(json.loads(r.content)['data']['content'], greenlet.task.dldir)
+    if greenlet.size_remove is not 0:
+        greenlet.task.update(size=(greenlet.task.size - greenlet.size_remove))
+    logger.info('Downloading: %s', greenlet.task.name)
+    if greenlet.download_list and not cfg.copylink_toclipboard:
+        returncode = download_file()
     else:
-        task.update(progress=100)
+        logger.error('Error for %s: Nothing to download .. Filtered out or bad torrent ?')
+        returncode = 1
+    return returncode
 
+
+def download_task(task):
+    logger.debug('def download_task started')
+    greenlet.task = task
+    greenlet.failed = 0
+    failed = download_process()
+    if failed and task.local_status != 'stopped':
+        task.update(local_status='failed: download retrying')
+        logger.warning('Retrying failed download in 10 minutes for: %s', task.name)
+        gevent.sleep(600)
+        failed = download_process()
+        if failed:
+            task.update(local_status='failed: download')
     if task.dlnzbtomedia and not failed:
-        failed = notify_nzbtomedia(task)
+        failed = notify_nzbtomedia()
         if failed:
             task.update(local_status='failed: nzbtomedia')
 
@@ -413,16 +520,33 @@ def download_task(task):
         r = requests.post("https://www.premiumize.me/torrent/delete", payload)
         responsedict = json.loads(r.content)
         if responsedict['status'] == "success":
-            logger.info('Torrent removed from cloud: %s', task.name)
+            logger.info('Automatically Deleted: %s from cloud', task.name)
+            emit('delete_success', {'data': task.hash})
         else:
             logger.info('Torrent could not be removed from cloud: %s', task.name)
             logger.info(responsedict['message'])
-        scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
+            emit('delete_failed', {'data': task.hash})
 
     if not failed:
-        task.update(local_status='finished')
-        logger.info('Download %s  finished in: %s at location %s:', task.name,
-                    utils.time_human(task.dltime, fmt_short=True), task.dldir)
+        task.update(progress=100, local_status='finished')
+        try:
+            greenlet.speed = str(utils.sizeof_human((task.size / task.dltime)) + '/s')
+        except:
+            greenlet.speed = "0"
+        logger.info('Download finished: %s size: %s time: %s speed: %s location: %s', task.name,
+                    utils.sizeof_human(task.size), utils.time_human(task.dltime, fmt_short=True), greenlet.speed,
+                    task.dldir)
+    if cfg.email_enabled and task.local_status != 'stopped':
+        if not failed:
+            if not cfg.email_on_failure:
+                email(0)
+        else:
+            email(1)
+    if task.local_status == 'stopped':
+        logger.warning('Download stopped for: %s', greenlet.task.name)
+        shutil.rmtree(task.dldir)
+        task.update(progress=100, category='', local_status='waiting')
+    scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
 
 
 def update():
@@ -476,6 +600,7 @@ def parse_tasks(torrents):
                     if task.category in cfg.download_categories:
                         if not (task.local_status == 'queued' or task.local_status == 'downloading'):
                             task.update(local_status='queued')
+                            gevent.sleep(1)
                             scheduler.scheduler.add_job(download_task, args=(task,), name=task.name,
                                                         misfire_grace_time=7200, coalesce=False, max_instances=1,
                                                         executor='download', replace_existing=True)
@@ -520,22 +645,22 @@ def get_cat_var(category):
             if cat['name'] == category:
                 dldir = cat['dir']
                 dlext = cat['ext']
-                dlsize = cat['size']
+                delsample = cat['delsample']
                 dlnzbtomedia = cat['nzb']
     else:
         dldir = None
         dlext = None
-        dlsize = 0
+        delsample = 0
         dlnzbtomedia = 0
     if cfg.copylink_toclipboard:
         dlnzbtomedia = 0
-    return dldir, dlext, dlsize, dlnzbtomedia
+    return dldir, dlext, delsample, dlnzbtomedia
 
 
 def add_task(hash, size, name, category):
     logger.debug('def add_task started')
-    dldir, dlext, dlsize, dlnzbtomedia = get_cat_var(category)
-    task = DownloadTask(socketio.emit, hash, size, name, category, dldir, dlext, dlsize, dlnzbtomedia)
+    dldir, dlext, delsample, dlnzbtomedia = get_cat_var(category)
+    task = DownloadTask(socketio.emit, hash, size, name, category, dldir, dlext, delsample, dlnzbtomedia)
     tasks.append(task)
     logger.info('Added: %s', task.name)
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
@@ -671,7 +796,7 @@ def history():
                     taskad += line
                 if 'Deleted:' in line:
                     taskdel += line
-                if 'Download finished' in line:
+                if 'Download finished:' in line:
                     taskdl += line
     except:
         taskad = 'History is based on premiumizer.log file, error opening or it does not exist.'
@@ -684,6 +809,7 @@ def settings():
     if request.method == 'POST':
         if 'Restart' in request.form.values():
             logger.info('Restarting')
+            scheduler.shutdown(wait=False)
             if os_arg == '--windows':
                 # windows service will automatically restart on 'failure'
                 sys.exit()
@@ -692,12 +818,14 @@ def settings():
                 sys.exit()
         elif 'Shutdown' in request.form.values():
             logger.info('Shutdown recieved')
+            scheduler.shutdown(wait=False)
             if os_arg == '--windows':
-                subprocess.Popen([rootdir + 'Installer/nssm.exe', 'stop', 'Premiumizer'])
+                subprocess.call([rootdir + 'Installer/nssm.exe', 'stop', 'Premiumizer'])
             else:
                 sys.exit()
         elif 'Update' in request.form.values():
             logger.info('Update - will restart')
+            scheduler.shutdown(wait=False)
             if os_arg == '--windows':
                 subprocess.call(['python', runningdir + 'utils.py', '--update', '--windows'])
                 sys.exit()
@@ -735,6 +863,26 @@ def settings():
                     enable_watchdir = 1
             else:
                 prem_config.set('upload', 'watchdir_enabled', '0')
+
+            if request.form.get('email_enabled'):
+                prem_config.set('notifications', 'email_enabled', '1')
+            else:
+                prem_config.set('notifications', 'email_enabled', '0')
+            if request.form.get('email_on_failure'):
+                prem_config.set('notifications', 'email_on_failure', '1')
+            else:
+                prem_config.set('notifications', 'email_on_failure', '0')
+            if request.form.get('email_encryption'):
+                prem_config.set('notifications', 'email_encryption', '1')
+            else:
+                prem_config.set('notifications', 'email_encryption', '0')
+
+            prem_config.set('notifications', 'email_from', request.form.get('email_from'))
+            prem_config.set('notifications', 'email_to', request.form.get('email_to'))
+            prem_config.set('notifications', 'email_server', request.form.get('email_server'))
+            prem_config.set('notifications', 'email_port', request.form.get('email_port'))
+            prem_config.set('notifications', 'email_username', request.form.get('email_username'))
+            prem_config.set('notifications', 'email_password', request.form.get('email_password'))
             prem_config.set('global', 'server_port', request.form.get('server_port'))
             prem_config.set('global', 'bind_ip', request.form.get('bind_ip'))
             prem_config.set('global', 'idle_interval', request.form.get('idle_interval'))
@@ -750,7 +898,10 @@ def settings():
                 prem_config.set('categories', ('cat_name' + str([x])), request.form.get('cat_name' + str([x])))
                 prem_config.set('categories', ('cat_dir' + str([x])), request.form.get('cat_dir' + str([x])))
                 prem_config.set('categories', ('cat_ext' + str([x])), request.form.get('cat_ext' + str([x])))
-                prem_config.set('categories', ('cat_size' + str([x])), request.form.get('cat_size' + str([x])))
+                if request.form.get('cat_delsample' + str([x])):
+                    prem_config.set('categories', ('cat_delsample' + str([x])), '1')
+                else:
+                    prem_config.set('categories', ('cat_delsample' + str([x])), '0')
                 if request.form.get('cat_nzbtomedia' + str([x])):
                     prem_config.set('categories', ('cat_nzbtomedia' + str([x])), '1')
                 else:
@@ -853,11 +1004,27 @@ def delete_task(message):
     responsedict = json.loads(r.content)
     task = get_task(message['data'])
     if responsedict['status'] == "success":
-        logger.info('Deleted: %s', task.name)
+        logger.info('Deleted: %s from the cloud', task.name)
         emit('delete_success', {'data': message['data']})
         scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
     else:
         emit('delete_failed', {'data': message['data']})
+
+
+# @socketio.on('pause_task')
+# def pause_task(message):
+#    task = get_task(message['data'])
+#    if task.local_status != 'paused':
+#        task.update(local_status='paused')
+#    elif task.local_status == 'paused':
+#        task.update(local_status='downloading')
+
+
+@socketio.on('stop_task')
+def stop_task(message):
+    task = get_task(message['data'])
+    if task.local_status != 'stopped':
+        task.update(local_status='stopped')
 
 
 @socketio.on('connect')
@@ -891,9 +1058,9 @@ def handle_json(json):
 def change_category(message):
     data = message['data']
     task = get_task(data['hash'])
-    dldir, dlext, dlsize, dlnzbtomedia = get_cat_var(data['category'])
+    dldir, dlext, delsample, dlnzbtomedia = get_cat_var(data['category'])
     task.update(local_status=None, process=None, speed=None, category=data['category'], dldir=dldir, dlext=dlext,
-                dlsize=dlsize,
+                delsample=delsample,
                 dlnzbtomedia=dlnzbtomedia)
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
 
