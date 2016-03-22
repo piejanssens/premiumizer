@@ -15,12 +15,12 @@ jinja2==2.8
 MarkupSafe==0.23
 pathtools==0.1.2
 git+https://github.com/neox387/pySmartDL.git@1.2.5#egg=pySmartDL
-pyperclip==1.5.26
 requests==2.9.1
-python-socketio==1.1
+python-socketio==1.2
 tzlocal==1.2.2
 werkzeug==0.11.4
 itsdangerous==0.24
 six==1.10.0
 gevent==1.1.0
 python-dateutil==2.5.1
+pycrypto==2.6.1

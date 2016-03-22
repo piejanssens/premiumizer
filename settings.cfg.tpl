@@ -23,7 +23,10 @@ download_max = 1
 remove_cloud = 0
 download_location =
 nzbtomedia_location = [Change to path]\NzbToMedia.py
-copylink_toclipboard = 0
+jd_enabled = 0
+jd_username =
+jd_password =
+jd_device =
 
 
 [categories]
@@ -74,5 +77,5 @@ email_password =
 [update]
 #Do not change these values#
 updated = 1
-config_version = 1.1
-req_version = 1.1
+config_version = 1.2
+req_version = 1.2
