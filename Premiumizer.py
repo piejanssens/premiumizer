@@ -428,7 +428,8 @@ def get_download_stats_jd(jd, name):
                 else:
                     eta = " " + utils.time_human(link['eta'], fmt_short=True)
                 progress = round(float(link['bytesLoaded']) * 100 / link["bytesTotal"], 1)
-                greenlet.task.update(speed=(utils.sizeof_human(speed) + '/s'), progress=progress, eta=eta)
+                greenlet.task.update(speed=(utils.sizeof_human(speed) + '/s --- ' + utils.sizeof_human(
+                    link['bytesLoaded']) + ' / ' + utils.sizeof_human(link['bytesTotal'])), progress=progress, eta=eta)
                 gevent.sleep(2)
                 link = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
                                                      "speed": True, "eta": True, "packageUUIDs": [x]}])
@@ -458,7 +459,9 @@ def get_download_stats(downloader, total_size_downloaded):
         else:
             tmp = (greenlet.task.size - size_downloaded) / speed
             eta = ' ' + utils.time_human(tmp, fmt_short=True)
-        greenlet.task.update(speed=(utils.sizeof_human(speed) + '/s'), progress=progress, eta=eta)
+        greenlet.task.update(speed=(
+        utils.sizeof_human(speed) + '/s --- ' + utils.sizeof_human(size_downloaded) + ' / ' + utils.sizeof_human(
+            greenlet.task.size)), progress=progress, eta=eta)
 
     elif downloader.get_status() == 'combining':
         greenlet.task.update(speed='', eta=' Combining files')
