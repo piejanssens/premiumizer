@@ -353,7 +353,7 @@ def email(failed):
         text += '\n\nStatistics:'
         text += '\nDownloaded size: %s' % utils.sizeof_human(greenlet.task.size)
         text += '\nDownload Time: %s' % utils.time_human(greenlet.task.dltime, fmt_short=True)
-        text += '\nAverage download speed: %s' % greenlet.speed
+        text += '\nAverage download speed: %s' % greenlet.avgspeed
         text += '\n\nFiles:'
         for download in greenlet.download_list:
             text += '\n' + os.path.basename(download['path'])
@@ -619,11 +619,11 @@ def download_task(task):
         if not cfg.remove_cloud:
             task.update(progress=100, local_status='finished')
         try:
-            greenlet.speed = str(utils.sizeof_human((task.size / task.dltime)) + '/s')
+            greenlet.avgspeed = str(utils.sizeof_human((task.size / task.dltime)) + '/s')
         except:
-            greenlet.speed = "0"
+            greenlet.avgspeed = "0"
         logger.info('Download finished: %s size: %s time: %s speed: %s location: %s', task.name,
-                    utils.sizeof_human(task.size), utils.time_human(task.dltime, fmt_short=True), greenlet.speed,
+                    utils.sizeof_human(task.size), utils.time_human(task.dltime, fmt_short=True), greenlet.avgspeed,
                     task.dldir)
     if cfg.email_enabled and task.local_status != 'stopped':
         if not failed:
