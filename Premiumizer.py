@@ -31,9 +31,9 @@ from watchdog.events import PatternMatchingEventHandler
 from watchdog.observers import Observer
 from werkzeug.utils import secure_filename
 
-
 from DownloadTask import DownloadTask
 from pySmartDL import SmartDL, utils
+
 try:
     import myjdapi
 except:
@@ -180,7 +180,7 @@ class PremConfig:
             self.download_builtin = 0
             self.jd = myjdapi.Myjdapi()
             try:
-                self.jd.connect(self.jd_username,self.jd_password)
+                self.jd.connect(self.jd_username, self.jd_password)
                 self.jd_connected = 1
             except:
                 logger.error('Could not connect to My Jdownloader')
@@ -431,10 +431,10 @@ def get_download_stats_jd(jd, name):
                 link = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
                                                      "speed": True, "eta": True, "packageUUIDs": [x]}])
                 link = link[0]
-            #cfg.jd.disconnect()
+            # cfg.jd.disconnect()
             if link['status'] == 'Failed':
                 return 1
-            #jd.downloads.cleanup("DELETE_FINISHED","REMOVE_LINKS_ONLY","ALL",packages_ids=[x])
+            # jd.downloads.cleanup("DELETE_FINISHED","REMOVE_LINKS_ONLY","ALL",packages_ids=[x])
             return 0
 
 
@@ -471,8 +471,9 @@ def download_file():
                 cfg.jd.get_device(cfg.jd_device)
                 cfg.jd_connected = 1
             except:
-                logger.error('Could not connect to My Jdownloader check username/password & device name, task failt: %s',
-                         greenlet.task.name)
+                logger.error(
+                    'Could not connect to My Jdownloader check username/password & device name, task failt: %s',
+                    greenlet.task.name)
                 return 1
         jd = cfg.jd.get_device(cfg.jd_device)
         tmp = jd.downloads.query_links()

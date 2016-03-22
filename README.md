@@ -31,7 +31,9 @@ If premiumizer is running on a different PC replace Bind ip in settings with tha
 Git & Python 2.7 (with pip)
 
 Optional: 
+
 [virtualenv] (https://pypi.python.org/pypi/virtualenv)
+
 [NzbToMedia] (https://github.com/clinton-hall/nzbToMedia) version 10.14 & higher
 
 
@@ -47,7 +49,7 @@ Open services.msc & edit Premiumizer service to logon using your account that is
 
 Edit autoProcessMedia.cfg.spc & save it to autoProcessMedia.cfg
 
-&nbsp;
+
 Manual installation:
 
 Install [Git] (https://git-scm.com/download/win) &  select: Use git from the windows command prompt.
@@ -94,4 +96,5 @@ Once you can access the premiumizer web interface make sure you head over to the
 ## Development
 Want to contribute? Great!
 Just fork the github repo, do some awesome stuff and create a pull request.
+
 Report issues or feature enhancements/requests on the [Issues] (https://github.com/piejanssens/premiumizer/issues) page

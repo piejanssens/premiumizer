@@ -80,11 +80,11 @@
             {% else %}
                 <input type="checkbox" class="form-control bootstrap_switch" name="remove_cloud" data-size="small">
             {% endif %}
-        <p>&nbsp;</p>
+            <p>&nbsp;</p>
         </div>
 
         <div class="form-group">
-                    <label for="download_max">Max Simultaneous downloads: (requires restart)</label>
+            <label for="download_max">Max Simultaneous downloads: (requires restart)</label>
             <input type="number" class="form-control" name="download_max"
                    aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_max') }}">
             <label for="download_location">Download Location:</label>
@@ -102,8 +102,7 @@
         <p>&nbsp;</p>
 
         <div class="form-group">
-            <label for="jd_enabled">Use Jdownloader for downloads instead of builtin downloader:</label>
-            <p>WARNING: directories will be flattend</p>
+            <label for="jd_enabled">Use Jdownloader for downloads instead of builtin downloader:</label
             {% if settings.get('downloads', 'jd_enabled') == '1' %}
                 <input type="checkbox" class="form-control bootstrap_switch" name="jd_enabled"
                        data-size="small" checked>
@@ -111,6 +110,7 @@
                 <input type="checkbox" class="form-control bootstrap_switch" name="jd_enabled"
                        data-size="small">
             {% endif %}
+            <p>WARNING: directories will be flattend</p>
             <p>&nbsp;</p>
             <label for="jd_username">JD Username:</label>
             <input type="email" class="form-control" name="jd_username"
