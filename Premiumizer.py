@@ -434,7 +434,10 @@ def get_download_stats_jd(jd, name):
             # cfg.jd.disconnect()
             if link['status'] == 'Failed':
                 return 1
-            # jd.downloads.cleanup("DELETE_FINISHED","REMOVE_LINKS_ONLY","ALL",packages_ids=[x])
+            try:
+                jd.downloads.cleanup("DELETE_FINISHED", "REMOVE_LINKS_ONLY", "ALL", packages_ids=[x])
+            except:
+                pass
             return 0
 
 
