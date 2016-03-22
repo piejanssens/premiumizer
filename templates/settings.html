@@ -102,7 +102,7 @@
         <p>&nbsp;</p>
 
         <div class="form-group">
-            <label for="jd_enabled">Use Jdownloader for downloads instead of builtin downloader:</label
+            <label for="jd_enabled">Use Jdownloader for downloads instead of builtin downloader:</label>
             {% if settings.get('downloads', 'jd_enabled') == '1' %}
                 <input type="checkbox" class="form-control bootstrap_switch" name="jd_enabled"
                        data-size="small" checked>
@@ -111,7 +111,6 @@
                        data-size="small">
             {% endif %}
             <p>WARNING: directories will be flattend</p>
-            <p>&nbsp;</p>
             <label for="jd_username">JD Username:</label>
             <input type="email" class="form-control" name="jd_username"
                    aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'jd_username') }}">
