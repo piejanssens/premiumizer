@@ -473,6 +473,7 @@ def get_download_stats(downloader, total_size_downloaded):
 
 def download_file():
     logger.debug('def download_file started')
+    files_downloaded = 0
     total_size_downloaded = 0
     dltime = 0
     returncode = 0
@@ -494,6 +495,7 @@ def download_file():
     for download in greenlet.download_list:
         logger.debug('Downloading file: %s', download['path'])
         if not os.path.isfile(download['path']):
+            files_downloaded = 1
             if cfg.download_builtin:
                 downloader = SmartDL(download['url'], download['path'], progress_bar=False, logger=logger,
                                      threads_count=1)
@@ -532,7 +534,7 @@ def download_file():
         else:
             logger.info('File not downloaded it already exists at: %s', download['path'])
 
-    if cfg.jd_enabled:
+    if cfg.jd_enabled and files_downloaded:
         if cfg.jd_connected:
             returncode = get_download_stats_jd(jd, name)
 
