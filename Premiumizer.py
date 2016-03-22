@@ -520,8 +520,9 @@ def download_file():
         else:
             logger.info('File not downloaded it already exists at: %s', download['path'])
 
-    if cfg.jd_connected:
-        returncode = get_download_stats_jd(jd, name)
+    if cfg.jd_enabled:
+        if cfg.jd_connected:
+            returncode = get_download_stats_jd(jd, name)
 
     return returncode
 
