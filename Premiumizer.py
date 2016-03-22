@@ -11,6 +11,7 @@ import shutil
 import smtplib
 import subprocess
 import sys
+import time
 import unicodedata
 from email.mime.text import MIMEText
 from logging.handlers import RotatingFileHandler
@@ -398,6 +399,7 @@ def email(failed):
 
 
 def get_download_stats_jd(jd, name):
+    start_time = time.time()
     count = 0
     gevent.sleep(10)
     tmp = jd.downloads.query_packages()
@@ -434,6 +436,10 @@ def get_download_stats_jd(jd, name):
             # cfg.jd.disconnect()
             if link['status'] == 'Failed':
                 return 1
+            stop_time = time.time()
+            dltime = int(stop_time - start_time)
+            greenlet.task.update(dltime=dltime)
+
             try:
                 jd.downloads.cleanup("DELETE_FINISHED", "REMOVE_LINKS_ONLY", "ALL", packages_ids=[x])
             except:
