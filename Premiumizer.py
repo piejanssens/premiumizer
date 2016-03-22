@@ -616,7 +616,8 @@ def download_task(task):
             socketio.emit('delete_failed', {'data': task.hash})
 
     if not failed:
-        task.update(progress=100, local_status='finished')
+        if not cfg.remove_cloud:
+            task.update(progress=100, local_status='finished')
         try:
             greenlet.speed = str(utils.sizeof_human((task.size / task.dltime)) + '/s')
         except:
