@@ -72,6 +72,7 @@
                 <input type="checkbox" class="form-control bootstrap_switch" name="download_enabled" data-size="small">
             {% endif %}
             <p>&nbsp;</p>
+
             <label for="remove_cloud">Remove torrents from cloud after downloading:</label>
             {% if settings.get('downloads', 'remove_cloud') == '1' %}
                 <input type="checkbox" class="form-control bootstrap_switch" name="remove_cloud" data-size="small"
@@ -80,26 +81,15 @@
                 <input type="checkbox" class="form-control bootstrap_switch" name="remove_cloud" data-size="small">
             {% endif %}
             <p>&nbsp;</p>
-            <label for="copylink_toclipboard">Instead of downloading: copy links to clipboard (Jdownloader)</label>
-            {% if settings.get('downloads', 'copylink_toclipboard') == '1' %}
-                <input type="checkbox" class="form-control bootstrap_switch" name="copylink_toclipboard"
-                       data-size="small" checked>
-            {% else %}
-                <input type="checkbox" class="form-control bootstrap_switch" name="copylink_toclipboard"
-                       data-size="small">
-            {% endif %}
-            <p>&nbsp;</p>
-            <label for="download_max">Max Simultaneous downloads: (requires restart)</label>
-            <input type="number" class="form-control" name="download_max"
-                   aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_max') }}">
-            <p>&nbsp;</p>
         </div>
 
         <div class="form-group">
+            <label for="download_max">Max Simultaneous downloads: (requires restart)</label>
+            <input type="number" class="form-control" name="download_max"
+                   aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_max') }}">
             <label for="download_location">Download Location:</label>
             <input type="text" class="form-control" name="download_location"
                    aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_location') }}">
-            <p>&nbsp;</p>
             {% if not cfg.nzbtomedia_builtin %}
                 <label for="nzbtomedia_location">path to NzbToMedia.py in the nzbtomedia folder:</label>
                 <input type="text" class="form-control" name="nzbtomedia_location"
@@ -110,6 +100,29 @@
         </div>
 
         <p>&nbsp;</p>
+
+        <div class="form-group">
+            <label for="jd_enabled">Use Jdownloader for downloads instead of builtin downloader:</label>
+            {% if settings.get('downloads', 'jd_enabled') == '1' %}
+                <input type="checkbox" class="form-control bootstrap_switch" name="jd_enabled"
+                       data-size="small" checked>
+            {% else %}
+                <input type="checkbox" class="form-control bootstrap_switch" name="jd_enabled"
+                       data-size="small">
+            {% endif %}
+            <p>WARNING: directories will be flattend</p>
+            <label for="jd_username">JD Username:</label>
+            <input type="email" class="form-control" name="jd_username"
+                   aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'jd_username') }}">
+            <label for="jd_password">JD Password:</label>
+            <input type="password" class="form-control" name="jd_password"
+                   aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'jd_password') }}">
+            <label for="jd_device">Device Name:</label>
+            <input type="text" class="form-control" name="jd_device"
+                   aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'jd_device') }}">
+
+            <p>&nbsp;</p>
+        </div>
 
         <div class="well well-sm">
             <h2> Categories </h2>

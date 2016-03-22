@@ -5,11 +5,13 @@ import hashlib
 import json
 import logging
 import os
+import re
 import shelve
 import shutil
 import smtplib
 import subprocess
 import sys
+import time
 import unicodedata
 from email.mime.text import MIMEText
 from logging.handlers import RotatingFileHandler
@@ -17,7 +19,6 @@ from string import ascii_letters, digits
 
 import bencode
 import gevent
-import pyperclip
 import requests
 import six
 from apscheduler.schedulers.gevent import GeventScheduler
@@ -27,12 +28,17 @@ from flask.ext.login import LoginManager, login_required, login_user, logout_use
 from flask.ext.socketio import SocketIO, emit
 from flask_apscheduler import APScheduler
 from gevent import local
-from pySmartDL import SmartDL, utils
 from watchdog.events import PatternMatchingEventHandler
 from watchdog.observers import Observer
 from werkzeug.utils import secure_filename
 
 from DownloadTask import DownloadTask
+from pySmartDL import SmartDL, utils
+
+try:
+    import myjdapi
+except:
+    pass
 
 # "https://www.premiumize.me/static/api/torrent.html"
 print '------------------------------------------------------------------------------------------------------------'
@@ -158,6 +164,8 @@ class PremConfig:
         self.prem_pin = prem_config.get('premiumize', 'pin')
         self.remove_cloud = prem_config.getboolean('downloads', 'remove_cloud')
         self.download_enabled = prem_config.getboolean('downloads', 'download_enabled')
+        if self.download_enabled:
+            self.download_builtin = 1
         self.download_max = prem_config.getint('downloads', 'download_max')
         self.download_location = prem_config.get('downloads', 'download_location')
         if os.path.isfile(runningdir + 'nzbtomedia/NzbToMedia.py'):
@@ -165,9 +173,23 @@ class PremConfig:
             self.nzbtomedia_builtin = 1
         else:
             self.nzbtomedia_location = prem_config.get('downloads', 'nzbtomedia_location')
-        self.copylink_toclipboard = prem_config.getboolean('downloads', 'copylink_toclipboard')
-        if self.copylink_toclipboard:
-            self.download_enabled = 0
+        self.jd_enabled = prem_config.getboolean('downloads', 'jd_enabled')
+        self.jd_username = prem_config.get('downloads', 'jd_username')
+        self.jd_password = prem_config.get('downloads', 'jd_password')
+        self.jd_device = prem_config.get('downloads', 'jd_device')
+        if self.jd_enabled:
+            self.download_builtin = 0
+            self.jd = myjdapi.Myjdapi()
+            try:
+                self.jd.connect(self.jd_username, self.jd_password)
+                self.jd_connected = 1
+            except:
+                logger.error('Could not connect to My Jdownloader')
+                self.jd_connected = 0
+            try:
+                self.jd.get_device(self.jd_device)
+            except:
+                logger.error('Could not get device name for My Jdownloader')
 
         self.watchdir_enabled = prem_config.getboolean('upload', 'watchdir_enabled')
         self.watchdir_location = prem_config.get('upload', 'watchdir_location')
@@ -332,10 +354,10 @@ def email(failed):
         text += '\n\nStatistics:'
         text += '\nDownloaded size: %s' % utils.sizeof_human(greenlet.task.size)
         text += '\nDownload Time: %s' % utils.time_human(greenlet.task.dltime, fmt_short=True)
-        text += '\nAverage download speed: %s' % greenlet.speed
+        text += '\nAverage download speed: %s' % greenlet.avgspeed
         text += '\n\nFiles:'
         for download in greenlet.download_list:
-            text += '\n' + download['path']
+            text += '\n' + os.path.basename(download['path'])
 
     else:
         subject = 'Failure for "%s"' % greenlet.task.name
@@ -376,6 +398,56 @@ def email(failed):
         logger.error('Email error for: %s error: %s', greenlet.task.name, err)
 
 
+def get_download_stats_jd(jd, name):
+    start_time = time.time()
+    count = 0
+    gevent.sleep(10)
+    tmp = jd.downloads.query_packages()
+    while not len(tmp):
+        gevent.sleep(5)
+        tmp = jd.downloads.query_packages()
+        count += 1
+        if count == 10:
+            return 1
+    while not any(link['name'] in name for link in tmp):
+        gevent.sleep(5)
+        tmp = jd.downloads.query_packages()
+        count += 1
+        if count == 10:
+            return 1
+    for link in tmp:
+        if link['name'] in name:
+            x = str(link['uuid'])
+            while link['status'] != 'Finished':
+                try:
+                    speed = link['speed']
+                except:
+                    speed = 0
+                if speed == 0:
+                    eta = ''
+                else:
+                    eta = " " + utils.time_human(link['eta'], fmt_short=True)
+                progress = round(float(link['bytesLoaded']) * 100 / link["bytesTotal"], 1)
+                greenlet.task.update(speed=(utils.sizeof_human(speed) + '/s --- ' + utils.sizeof_human(
+                    link['bytesLoaded']) + ' / ' + utils.sizeof_human(link['bytesTotal'])), progress=progress, eta=eta)
+                gevent.sleep(2)
+                link = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
+                                                     "speed": True, "eta": True, "packageUUIDs": [x]}])
+                link = link[0]
+            # cfg.jd.disconnect()
+            if link['status'] == 'Failed':
+                return 1
+            stop_time = time.time()
+            dltime = int(stop_time - start_time)
+            greenlet.task.update(dltime=dltime)
+
+            try:
+                jd.downloads.cleanup("DELETE_FINISHED", "REMOVE_LINKS_ONLY", "ALL", packages_ids=[x])
+            except:
+                pass
+            return 0
+
+
 def get_download_stats(downloader, total_size_downloaded):
     logger.debug('def get_download_stats started')
     if downloader.get_status() == 'downloading':
@@ -387,7 +459,9 @@ def get_download_stats(downloader, total_size_downloaded):
         else:
             tmp = (greenlet.task.size - size_downloaded) / speed
             eta = ' ' + utils.time_human(tmp, fmt_short=True)
-        greenlet.task.update(speed=(utils.sizeof_human(speed) + '/s'), progress=progress, eta=eta)
+        greenlet.task.update(speed=(
+        utils.sizeof_human(speed) + '/s --- ' + utils.sizeof_human(size_downloaded) + ' / ' + utils.sizeof_human(
+            greenlet.task.size)), progress=progress, eta=eta)
 
     elif downloader.get_status() == 'combining':
         greenlet.task.update(speed='', eta=' Combining files')
@@ -399,40 +473,71 @@ def get_download_stats(downloader, total_size_downloaded):
 
 def download_file():
     logger.debug('def download_file started')
+    files_downloaded = 0
     total_size_downloaded = 0
     dltime = 0
     returncode = 0
+    if cfg.jd_enabled:
+        if not cfg.jd_connected:
+            try:
+                cfg.jd.connect(cfg.jd_username, cfg.jd_password)
+                cfg.jd.get_device(cfg.jd_device)
+                cfg.jd_connected = 1
+            except:
+                logger.error(
+                    'Could not connect to My Jdownloader check username/password & device name, task failt: %s',
+                    greenlet.task.name)
+                return 1
+        jd = cfg.jd.get_device(cfg.jd_device)
+        tmp = jd.downloads.query_links()
+        name = str(re.sub('[^0-9a-zA-Z]+', ' ', greenlet.task.name).lower())
+
     for download in greenlet.download_list:
         logger.debug('Downloading file: %s', download['path'])
         if not os.path.isfile(download['path']):
-            downloader = SmartDL(download['url'], download['path'], progress_bar=False, logger=logger, threads_count=1)
-            downloader.start(blocking=False)
-            while not downloader.isFinished():
-                get_download_stats(downloader, total_size_downloaded)
-                gevent.sleep(2)
-                # if greenlet.task.local_status == "paused":            #   When paused to long
-                #   downloader.pause()                                  #   PysmartDl fails with WARNING :
-                #   while greenlet.task.local_status == "paused":       #   Diff between downloaded files and expected
-                #       gevent.sleep(2)                                 #   filesizes is .... Retrying...
-                #   downloader.unpause()
-                if greenlet.task.local_status == "stopped":
-                    while not downloader.isFinished():  # Have to use while loop
-                        downloader.stop()  # does not stop when calt once ..
-                        gevent.sleep(0.5)  # let's hammer the stop call..
-                    return 1
-            if downloader.isSuccessful():
-                dltime += downloader.get_dl_time()
-                total_size_downloaded += downloader.get_dl_size()
-                logger.debug('Finished downloading file: %s', download['path'])
-                greenlet.task.update(dltime=dltime)
-            else:
-                logger.error('Error for %s: while downloading file: %s', greenlet.task.name, download['path'])
-                for e in downloader.get_errors():
-                    logger.error(str(greenlet.task.name + ": " + e))
-                returncode = 1
+            files_downloaded = 1
+            if cfg.download_builtin:
+                downloader = SmartDL(download['url'], download['path'], progress_bar=False, logger=logger,
+                                     threads_count=1)
+                downloader.start(blocking=False)
+                while not downloader.isFinished():
+                    get_download_stats(downloader, total_size_downloaded)
+                    gevent.sleep(2)
+                    # if greenlet.task.local_status == "paused":            #   When paused to long
+                    #   downloader.pause()                                  #   PysmartDl fails with WARNING :
+                    #   while greenlet.task.local_status == "paused":       #   Diff between downloaded files and expected
+                    #       gevent.sleep(2)                                 #   filesizes is .... Retrying...
+                    #   downloader.unpause()
+                    if greenlet.task.local_status == "stopped":
+                        while not downloader.isFinished():  # Have to use while loop
+                            downloader.stop()  # does not stop when calt once ..
+                            gevent.sleep(0.5)  # let's hammer the stop call..
+                        return 1
+                if downloader.isSuccessful():
+                    dltime += downloader.get_dl_time()
+                    total_size_downloaded += downloader.get_dl_size()
+                    logger.debug('Finished downloading file: %s', download['path'])
+                    greenlet.task.update(dltime=dltime)
+                else:
+                    logger.error('Error for %s: while downloading file: %s', greenlet.task.name, download['path'])
+                    for e in downloader.get_errors():
+                        logger.error(str(greenlet.task.name + ": " + e))
+                    returncode = 1
+            elif cfg.jd_connected:
+                url = str(download['url'])
+                filename = os.path.basename(download['path'])
+                if len(tmp):
+                    if any(link['name'] == filename for link in tmp):
+                        continue
+                jd.linkgrabber.add_links([{"autostart": True, "links": url, "packageName": name,
+                                           "destinationFolder": greenlet.task.dldir, "overwritePackagizerRules": True}])
         else:
             logger.info('File not downloaded it already exists at: %s', download['path'])
-            returncode = 0
+
+    if cfg.jd_enabled and files_downloaded:
+        if cfg.jd_connected:
+            returncode = get_download_stats_jd(jd, name)
+
     return returncode
 
 
@@ -442,7 +547,7 @@ def is_sample(dir_content):
     if dir_content['size'] < media_size:
         if dir_content['url'].lower().endswith(tuple(media_extensions)):
             if ('sample' or 'RARBG.COM.mp4' in dir_content['url'].lower()) and (
-                'sample' not in greenlet.task.name.lower()):
+                        'sample' not in greenlet.task.name.lower()):
                 return True
     return False
 
@@ -470,9 +575,6 @@ def process_dir(dir_content, path, change_dldir=1):
                         os.makedirs(path)
                     download = {'path': path + '/' + clean_name(x), 'url': dir_content[x]['url']}
                     greenlet.download_list.append(download)
-                elif cfg.copylink_toclipboard:
-                    logger.info('Link copied to clipboard for: %s', dir_content[x]['name'])
-                    pyperclip.copy(dir_content[x]['url'])
             else:
                 greenlet.size_remove += dir_content[x]['size']
 
@@ -485,12 +587,12 @@ def download_process():
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
                'hash': greenlet.task.hash}
     r = requests.post("https://www.premiumize.me/torrent/browse", payload)
-    greenlet.task.update(local_status='downloading')
+    greenlet.task.update(local_status='downloading', progress=0, speed='', eta='')
     process_dir(json.loads(r.content)['data']['content'], greenlet.task.dldir)
     if greenlet.size_remove is not 0:
         greenlet.task.update(size=(greenlet.task.size - greenlet.size_remove))
     logger.info('Downloading: %s', greenlet.task.name)
-    if greenlet.download_list and not cfg.copylink_toclipboard:
+    if greenlet.download_list:
         returncode = download_file()
     else:
         logger.error('Error for %s: Nothing to download .. Filtered out or bad torrent ?')
@@ -521,20 +623,21 @@ def download_task(task):
         responsedict = json.loads(r.content)
         if responsedict['status'] == "success":
             logger.info('Automatically Deleted: %s from cloud', task.name)
-            emit('delete_success', {'data': task.hash})
+            socketio.emit('delete_success', {'data': task.hash})
         else:
             logger.info('Torrent could not be removed from cloud: %s', task.name)
             logger.info(responsedict['message'])
-            emit('delete_failed', {'data': task.hash})
+            socketio.emit('delete_failed', {'data': task.hash})
 
     if not failed:
-        task.update(progress=100, local_status='finished')
+        if not cfg.remove_cloud:
+            task.update(progress=100, local_status='finished')
         try:
-            greenlet.speed = str(utils.sizeof_human((task.size / task.dltime)) + '/s')
+            greenlet.avgspeed = str(utils.sizeof_human((task.size / task.dltime)) + '/s')
         except:
-            greenlet.speed = "0"
+            greenlet.avgspeed = "0"
         logger.info('Download finished: %s size: %s time: %s speed: %s location: %s', task.name,
-                    utils.sizeof_human(task.size), utils.time_human(task.dltime, fmt_short=True), greenlet.speed,
+                    utils.sizeof_human(task.size), utils.time_human(task.dltime, fmt_short=True), greenlet.avgspeed,
                     task.dldir)
     if cfg.email_enabled and task.local_status != 'stopped':
         if not failed:
@@ -596,11 +699,11 @@ def parse_tasks(torrents):
                             size=torrent['size'], speed=speed, eta=eta)
                 idle = False
             if task.cloud_status == 'finished':
-                if cfg.download_enabled or cfg.copylink_toclipboard:
+                if cfg.download_enabled:
                     if task.category in cfg.download_categories:
                         if not (task.local_status == 'queued' or task.local_status == 'downloading'):
                             task.update(local_status='queued')
-                            gevent.sleep(1)
+                            gevent.sleep(3)
                             scheduler.scheduler.add_job(download_task, args=(task,), name=task.name,
                                                         misfire_grace_time=7200, coalesce=False, max_instances=1,
                                                         executor='download', replace_existing=True)
@@ -651,8 +754,6 @@ def get_cat_var(category):
         dldir = None
         dlext = None
         delsample = 0
-        dlnzbtomedia = 0
-    if cfg.copylink_toclipboard:
         dlnzbtomedia = 0
     return dldir, dlext, delsample, dlnzbtomedia
 
@@ -851,12 +952,10 @@ def settings():
                 prem_config.set('downloads', 'remove_cloud', '1')
             else:
                 prem_config.set('downloads', 'remove_cloud', '0')
-            if request.form.get('copylink_toclipboard'):
-                prem_config.set('downloads', 'copylink_toclipboard', '1')
-                prem_config.set('downloads', 'download_enabled', '0')
-                prem_config.set('downloads', 'remove_cloud', '0')
+            if request.form.get('jd_enabled'):
+                prem_config.set('downloads', 'jd_enabled', '1')
             else:
-                prem_config.set('downloads', 'copylink_toclipboard', '0')
+                prem_config.set('downloads', 'jd_enabled', '0')
             if request.form.get('watchdir_enabled'):
                 prem_config.set('upload', 'watchdir_enabled', '1')
                 if not cfg.watchdir_enabled:
@@ -877,6 +976,9 @@ def settings():
             else:
                 prem_config.set('notifications', 'email_encryption', '0')
 
+            prem_config.set('downloads', 'jd_username', request.form.get('jd_username'))
+            prem_config.set('downloads', 'jd_password', request.form.get('jd_password'))
+            prem_config.set('downloads', 'jd_device', request.form.get('jd_device'))
             prem_config.set('notifications', 'email_from', request.form.get('email_from'))
             prem_config.set('notifications', 'email_to', request.form.get('email_to'))
             prem_config.set('notifications', 'email_server', request.form.get('email_server'))
@@ -1023,8 +1125,11 @@ def delete_task(message):
 @socketio.on('stop_task')
 def stop_task(message):
     task = get_task(message['data'])
-    if task.local_status != 'stopped':
-        task.update(local_status='stopped')
+    if not cfg.download_builtin:
+        logger.warning('Cannot stop download when using external downloader for: %s', task.name)
+    else:
+        if task.local_status != 'stopped':
+            task.update(local_status='stopped')
 
 
 @socketio.on('connect')
