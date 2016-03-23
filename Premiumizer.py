@@ -285,10 +285,10 @@ def check_update(auto_update=cfg.auto_update):
                     for task in tasks:
                         if task.local_status == (
                                             'downloading' or 'queued' or 'failed: download' or 'failed: nzbtomedia'):
-                            update = 0
                             scheduler.scheduler.reschedule_job('check_update', trigger='interval', minutes=30)
                             logger.info(
                                 'Tried to update but downloads are not done or failed, trying again in 30 minutes')
+                            cfg.update_status = 'Update available, but not yet updated because downloads are not done or failed'
                             return
                     update_self()
         scheduler.scheduler.reschedule_job('check_update', trigger='interval', hours=6)

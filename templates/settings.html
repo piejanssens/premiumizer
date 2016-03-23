@@ -254,7 +254,7 @@
             {% if cfg.update_available %}
                 <input type="submit" class="btn-danger" name="submit" value="Update">
                 <p class="text-primary">You are on commit: {{ cfg.update_localcommit }}</p>
-                <p class="text-primary">Difference:</p>
+                <p class="text-primary">Changes:</p>
                 <pre>{{ cfg.update_diffcommit }}</pre>
             {% endif %}
         </div>
