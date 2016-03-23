@@ -259,9 +259,7 @@ def check_update(auto_update=cfg.auto_update):
     time_now = datetime.datetime.now()
     diff = time_job - time_now
     diff = 21600 - diff.total_seconds()
-    cfg.update_status = 'No update available, last checked: ' + utils.time_human(
-        diff) + ' ago -- last time updated: ' + cfg.update_date
-    if diff > 120:
+    if (diff > 120) or (cfg.update_status == ''):
         try:
             subprocess.check_call(['git', '-C', runningdir, 'fetch'])
         except:
@@ -291,6 +289,9 @@ def check_update(auto_update=cfg.auto_update):
                             cfg.update_status = 'Update available, but not yet updated because downloads are not done or failed'
                             return
                     update_self()
+            else:
+                cfg.update_status = 'No update available, last time checked: ' + datetime.datetime.now().strftime(
+                    "%d-%m %H:%M:%S") + ' --- last time updated: ' + cfg.update_date
         scheduler.scheduler.reschedule_job('check_update', trigger='interval', hours=6)
 
 

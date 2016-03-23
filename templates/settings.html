@@ -256,6 +256,8 @@
                 <p class="text-primary">You are on commit: {{ cfg.update_localcommit }}</p>
                 <p class="text-primary">Changes:</p>
                 <pre>{{ cfg.update_diffcommit }}</pre>
+            {% else %}
+                <p>Update check is done every 6 hours or when opening the settings page with a 2 minute gap.</p>
             {% endif %}
         </div>
         <p>&nbsp;</p>

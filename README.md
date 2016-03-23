@@ -86,8 +86,8 @@ Now use your browser to access [http://127.0.0.1:5000/](http://127.0.0.1:5000/).
 Extra: Google how you can turn it into a service and run it in background
 
 ## Updating
-Update from the settings page.
-Premiumizer will restart & check for updates with git pull.
+Update from the settings page / enable automatic updates
+Update button & changes will be displayed when an update is available.
 
 
 ## Settings
