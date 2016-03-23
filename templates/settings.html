@@ -250,14 +250,12 @@
             <p>WARNING: When the settings change Premiumizer will try to import your old settings, current settings.cfg
                 is saved as settings.cfg.old</p>
             <p>&nbsp;</p>
+            <p class="text-primary">{{ cfg.update_status }}</p>
             {% if cfg.update_available %}
                 <input type="submit" class="btn-danger" name="submit" value="Update">
-                <p class="text-primary">Update available !!</p>
                 <p class="text-primary">You are on commit: {{ cfg.update_localcommit }}</p>
-                <a href="https://github.com/piejanssens/premiumizer/commits/master" target="_blank">Click for online
-                    commits</a>
-            {% else %}
-                <p class="text-warning">No update available</p>
+                <p class="text-primary">Difference:</p>
+                <pre>{{ cfg.update_diffcommit }}</pre>
             {% endif %}
         </div>
         <p>&nbsp;</p>

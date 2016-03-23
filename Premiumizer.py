@@ -162,6 +162,9 @@ class PremConfig:
 
         self.update_available = 0
         self.update_localcommit = ''
+        self.update_diffcommit = ''
+        self.update_status = ''
+        self.update_date = prem_config.get('update', 'update_date')
         self.auto_update = prem_config.getboolean('update', 'auto_update')
         self.prem_customer_id = prem_config.get('premiumize', 'customer_id')
         self.prem_pin = prem_config.get('premiumize', 'pin')
@@ -256,31 +259,48 @@ def check_update(auto_update=cfg.auto_update):
     time_now = datetime.datetime.now()
     diff = time_job - time_now
     diff = 21600 - diff.total_seconds()
+    cfg.update_status = 'No update available, last checked: ' + utils.time_human(
+        diff) + ' ago -- last time updated: ' + cfg.update_date
     if diff > 120:
-        cfg.update_localcommit = subprocess.check_output(
-            ['git', '-C', runningdir, 'log', '-n', '1', '--pretty=format:%h'])
-        subprocess.call(['git', '-C', runningdir, 'fetch'])
-        remote_git = subprocess.check_output(
-            ['git', '-C', runningdir, 'log', '-n', '1', 'origin/dev', '--pretty=format:%h'])
+        try:
+            subprocess.check_call(['git', '-C', runningdir, 'fetch'])
+        except:
+            cfg.update_status = 'failed'
+            logger.error('Update failed: could not git fetch: %s', runningdir)
+        if cfg.update_status != 'failed':
+            cfg.update_localcommit = subprocess.check_output(
+                ['git', '-C', runningdir, 'log', '-n', '1', '--pretty=format:%h'])
+            local_branch = str(
+                subprocess.check_output(['git', '-C', runningdir, 'rev-parse', '--abbrev-ref', 'HEAD'])).rstrip('\n')
+            remote_commit = subprocess.check_output(
+                ['git', '-C', runningdir, 'log', '-n', '1', 'origin/' + local_branch, '--pretty=format:%h'])
 
-        if cfg.update_localcommit != remote_git:
-            cfg.update_available = 1
-            if auto_update:
-                update = 1
-                for task in tasks:
-                    if task.local_status == ('downloading' or 'queued' or 'failed: download' or 'failed: nzbtomedia'):
-                        update = 0
-                        scheduler.scheduler.reschedule_job('check_update', trigger='interval', minutes=30)
-                        break
-                if update:
+            if cfg.update_localcommit != remote_commit:
+                cfg.update_diffcommit = subprocess.check_output(
+                    ['git', '-C', runningdir, 'log', '--oneline', local_branch + '..origin/' + local_branch])
+
+                cfg.update_available = 1
+                cfg.update_status = 'Update Available !!'
+                if auto_update:
+                    for task in tasks:
+                        if task.local_status == (
+                                    'downloading' or 'queued' or 'failed: download' or 'failed: nzbtomedia'):
+                            update = 0
+                            scheduler.scheduler.reschedule_job('check_update', trigger='interval', minutes=30)
+                            logger.info(
+                                'Tried to update but downloads are not done or failed, trying again in 30 minutes')
+                            return
                     update_self()
-
-    scheduler.scheduler.reschedule_job('check_update', trigger='interval', hours=6)
+        scheduler.scheduler.reschedule_job('check_update', trigger='interval', hours=6)
 
 
 def update_self():
     logger.debug('def update_self started')
     logger.info('Update - will restart')
+    cfg.update_date = datetime.datetime.now().strftime("%d-%m %H:%M:%S")
+    prem_config.set('update', 'update_date', cfg.update_date)
+    with open(runningdir + 'settings.cfg', 'w') as configfile:  # save
+        prem_config.write(configfile)
     scheduler.shutdown(wait=False)  # TODO: seems to be not working ?
     if os_arg == '--windows':
         subprocess.call(['python', runningdir + 'utils.py', '--update', '--windows'])
