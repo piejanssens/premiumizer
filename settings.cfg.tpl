@@ -79,4 +79,4 @@ email_password =
 updated = 1
 auto_update = 0
 config_version = 1.3
-req_version = 1.2
+req_version = 1.3

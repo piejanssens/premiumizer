@@ -18,7 +18,7 @@ git+https://github.com/neox387/pySmartDL.git@1.2.5#egg=pySmartDL
 requests==2.9.1
 python-socketio==1.2
 tzlocal==1.2.2
-werkzeug==0.11.4
+werkzeug==0.11.5
 itsdangerous==0.24
 six==1.10.0
 gevent==1.1.0
