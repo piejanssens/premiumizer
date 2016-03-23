@@ -475,8 +475,8 @@ def get_download_stats(downloader, total_size_downloaded):
             tmp = (greenlet.task.size - size_downloaded) / speed
             eta = ' ' + utils.time_human(tmp, fmt_short=True)
         greenlet.task.update(speed=(
-        utils.sizeof_human(speed) + '/s --- ' + utils.sizeof_human(size_downloaded) + ' / ' + utils.sizeof_human(
-            greenlet.task.size)), progress=progress, eta=eta)
+            utils.sizeof_human(speed) + '/s --- ' + utils.sizeof_human(size_downloaded) + ' / ' + utils.sizeof_human(
+                greenlet.task.size)), progress=progress, eta=eta)
 
     elif downloader.get_status() == 'combining':
         greenlet.task.update(speed='', eta=' Combining files')
@@ -493,7 +493,10 @@ def download_file():
     dltime = 0
     returncode = 0
     if cfg.jd_enabled:
-        if not cfg.jd_connected:
+        try:
+            cfg.jd.reconnect()
+            cfg.jd_connected = 1
+        except:
             try:
                 cfg.jd.connect(cfg.jd_username, cfg.jd_password)
                 cfg.jd.get_device(cfg.jd_device)
@@ -502,6 +505,7 @@ def download_file():
                 logger.error(
                     'Could not connect to My Jdownloader check username/password & device name, task failt: %s',
                     greenlet.task.name)
+                cfg.jd_connected = 0
                 return 1
         jd = cfg.jd.get_device(cfg.jd_device)
         tmp = jd.downloads.query_links()
