@@ -266,9 +266,19 @@ logger.debug('Initializing Database complete')
 # Initialise Globals
 tasks = []
 greenlet = local.local()
+client_connected = 0
 
 
 #
+def gevent_sleep_time():
+    global client_connected
+    if client_connected:
+        gevent.sleep(2)
+    else:
+        gevent.sleep(10)
+
+
+
 
 class User(UserMixin):
     def __init__(self, userid, password):
@@ -442,7 +452,7 @@ def get_download_stats_jd(jd, name):
                 progress = round(float(link['bytesLoaded']) * 100 / link["bytesTotal"], 1)
                 greenlet.task.update(speed=(utils.sizeof_human(speed) + '/s --- ' + utils.sizeof_human(
                     link['bytesLoaded']) + ' / ' + utils.sizeof_human(link['bytesTotal'])), progress=progress, eta=eta)
-                gevent.sleep(2)
+                gevent_sleep_time()
                 link = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
                                                      "speed": True, "eta": True, "packageUUIDs": [x]}])
                 try:
@@ -521,11 +531,11 @@ def download_file():
                 downloader.start(blocking=False)
                 while not downloader.isFinished():
                     get_download_stats(downloader, total_size_downloaded)
-                    gevent.sleep(2)
+                    gevent_sleep_time()
                     # if greenlet.task.local_status == "paused":            #   When paused to long
                     #   downloader.pause()                                  #   PysmartDl fails with WARNING :
                     #   while greenlet.task.local_status == "paused":       #   Diff between downloaded files and expected
-                    #       gevent.sleep(2)                                 #   filesizes is .... Retrying...
+                    #       gevent_sleep_time()                               #   filesizes is .... Retrying...
                     #   downloader.unpause()
                     if greenlet.task.local_status == "stopped":
                         while not downloader.isFinished():  # Have to use while loop
@@ -1153,11 +1163,15 @@ def stop_task(message):
 
 @socketio.on('connect')
 def test_message():
+    global client_connected
+    client_connected = 1
     emit('hello_client', {'data': 'Server says hello!'})
 
 
 @socketio.on('disconnect')
 def test_disconnect():
+    global client_connected
+    client_connected = 0
     print('Client disconnected')
 
 
