@@ -249,15 +249,15 @@
             <p>On update Premiumizer will restart</p>
             <p>WARNING: When the settings change Premiumizer will try to import your old settings, current settings.cfg
                 is saved as settings.cfg.old</p>
-            <input type="submit" class="btn-danger" name="submit" value="Update">
             <p>&nbsp;</p>
             {% if cfg.update_available %}
+                <input type="submit" class="btn-danger" name="submit" value="Update">
                 <p class="text-primary">Update available !!</p>
                 <p class="text-primary">You are on commit: {{ cfg.update_localcommit }}</p>
                 <a href="https://github.com/piejanssens/premiumizer/commits/master" target="_blank">Click for online
                     commits</a>
             {% else %}
-                <p class="text-warning">No updates available</p>
+                <p class="text-warning">No update available</p>
             {% endif %}
         </div>
         <p>&nbsp;</p>
