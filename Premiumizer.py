@@ -311,6 +311,26 @@ def update_self():
         sys.exit()
 
 
+def restart():
+    logger.info('Restarting')
+    scheduler.shutdown(wait=False)
+    if os_arg == '--windows':
+        # windows service will automatically restart on 'failure'
+        sys.exit()
+    else:
+        subprocess.Popen(['python', runningdir + 'utils.py', '--restart'], shell=False, close_fds=True)
+        sys.exit()
+
+
+def shutdown():
+    logger.info('Shutdown recieved')
+    scheduler.shutdown(wait=False)
+    if os_arg == '--windows':
+        subprocess.call([rootdir + 'Installer/nssm.exe', 'stop', 'Premiumizer'])
+    else:
+        sys.exit()
+
+
 #
 logger.debug('Initializing Flask')
 app = Flask(__name__)
@@ -1004,23 +1024,14 @@ def history():
 def settings():
     if request.method == 'POST':
         if 'Restart' in request.form.values():
-            logger.info('Restarting')
-            scheduler.shutdown(wait=False)
-            if os_arg == '--windows':
-                # windows service will automatically restart on 'failure'
-                sys.exit()
-            else:
-                subprocess.Popen(['python', runningdir + 'utils.py', '--restart'], shell=False, close_fds=True)
-                sys.exit()
+            gevent.spawn_later(1, restart)
+            return 'Restarting, please try and refresh the page in a few seconds...'
         elif 'Shutdown' in request.form.values():
-            logger.info('Shutdown recieved')
-            scheduler.shutdown(wait=False)
-            if os_arg == '--windows':
-                subprocess.call([rootdir + 'Installer/nssm.exe', 'stop', 'Premiumizer'])
-            else:
-                sys.exit()
+            gevent.spawn_later(1, shutdown)
+            return 'Shutting down...'
         elif 'Update' in request.form.values():
-            update_self()
+            gevent.spawn_later(1, update_self)
+            return 'Updating, please try and refresh the page in a few seconds...'
         else:
             global prem_config
             enable_watchdir = 0
