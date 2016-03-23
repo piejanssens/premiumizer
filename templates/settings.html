@@ -238,10 +238,27 @@
             <h2>Update</h2>
         </div>
         <div>
-            <h5>Premiumizer will restart & update</h5>
+            <label for="auto_update">Enable automatic updates (checks every 6 hours):</label>
+            {% if settings.get('update', 'auto_update') == '1' %}
+                <input type="checkbox" class="form-control bootstrap_switch" name="auto_update"
+                       data-size="small" checked>
+            {% else %}
+                <input type="checkbox" class="form-control bootstrap_switch" name="auto_update"
+                       data-size="small">
+            {% endif %}
+            <p>On update Premiumizer will restart</p>
             <p>WARNING: When the settings change Premiumizer will try to import your old settings, current settings.cfg
                 is saved as settings.cfg.old</p>
             <input type="submit" class="btn-danger" name="submit" value="Update">
+            <p>&nbsp;</p>
+            {% if cfg.update_available %}
+                <p class="text-primary">Update available !!</p>
+                <p class="text-primary">You are on commit: {{ cfg.update_localcommit }}</p>
+                <a href="https://github.com/piejanssens/premiumizer/commits/master" target="_blank">Click for online
+                    commits</a>
+            {% else %}
+                <p class="text-warning">No updates available</p>
+            {% endif %}
         </div>
         <p>&nbsp;</p>
 

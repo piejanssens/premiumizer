@@ -160,6 +160,9 @@ class PremConfig:
             self.web_username = prem_config.get('security', 'username')
             self.web_password = prem_config.get('security', 'password')
 
+        self.update_available = 0
+        self.update_localcommit = ''
+        self.auto_update = prem_config.getboolean('update', 'auto_update')
         self.prem_customer_id = prem_config.get('premiumize', 'customer_id')
         self.prem_pin = prem_config.get('premiumize', 'pin')
         self.remove_cloud = prem_config.getboolean('downloads', 'remove_cloud')
@@ -244,6 +247,49 @@ class PremConfig:
 
 cfg = PremConfig()
 
+
+# Automatic update checker
+def check_update(auto_update=cfg.auto_update):
+    logger.debug('def check_update started')
+
+    time_job = scheduler.scheduler.get_job('check_update').next_run_time.replace(tzinfo=None)
+    time_now = datetime.datetime.now()
+    diff = time_job - time_now
+    diff = 21600 - diff.total_seconds()
+    if diff > 120:
+        cfg.update_localcommit = subprocess.check_output(
+            ['git', '-C', runningdir, 'log', '-n', '1', '--pretty=format:%h'])
+        subprocess.call(['git', '-C', runningdir, 'fetch'])
+        remote_git = subprocess.check_output(
+            ['git', '-C', runningdir, 'log', '-n', '1', 'origin/dev', '--pretty=format:%h'])
+
+        if cfg.update_localcommit != remote_git:
+            cfg.update_available = 1
+            if auto_update:
+                update = 1
+                for task in tasks:
+                    if task.local_status == ('downloading' or 'queued' or 'failed: download' or 'failed: nzbtomedia'):
+                        update = 0
+                        scheduler.scheduler.reschedule_job('check_update', trigger='interval', minutes=30)
+                        break
+                if update:
+                    update_self()
+
+    scheduler.scheduler.reschedule_job('check_update', trigger='interval', hours=6)
+
+
+def update_self():
+    logger.debug('def update_self started')
+    logger.info('Update - will restart')
+    scheduler.shutdown(wait=False)  # TODO: seems to be not working ?
+    if os_arg == '--windows':
+        subprocess.call(['python', runningdir + 'utils.py', '--update', '--windows'])
+        sys.exit()
+    else:
+        subprocess.Popen(['python', runningdir + 'utils.py', '--update'], shell=False, close_fds=True)
+        sys.exit()
+
+
 #
 logger.debug('Initializing Flask')
 app = Flask(__name__)
@@ -276,8 +322,6 @@ def gevent_sleep_time():
         gevent.sleep(2)
     else:
         gevent.sleep(10)
-
-
 
 
 class User(UserMixin):
@@ -575,7 +619,7 @@ def is_sample(dir_content):
     media_size = 150 * 1024 * 1024
     if dir_content['size'] < media_size:
         if dir_content['url'].lower().endswith(tuple(media_extensions)):
-            if ('sample' or 'RARBG.COM.mp4' in dir_content['url'].lower()) and (
+            if ('sample' or 'rarbg.com' in dir_content['url'].lower()) and (
                         'sample' not in greenlet.task.name.lower()):
                 return True
     return False
@@ -716,11 +760,11 @@ def parse_tasks(torrents):
             task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], speed=torrent['speed_down'])
         if task.local_status is None:
             if task.cloud_status != 'finished':
-                if torrent['eta'] is None or torrent['eta'] == 0:
+                if torrent['eta'] == (None or 0):
                     eta = ''
                 else:
                     eta = utils.time_human(torrent['eta'], fmt_short=True)
-                if torrent['speed_down'] is None or torrent['speed_down'] == 0:
+                if torrent['speed_down'] == (None or 0):
                     speed = ''
                 else:
                     speed = utils.sizeof_human(torrent['speed_down']) + '/s '
@@ -730,12 +774,13 @@ def parse_tasks(torrents):
             if task.cloud_status == 'finished':
                 if cfg.download_enabled:
                     if task.category in cfg.download_categories:
-                        if not (task.local_status == 'queued' or task.local_status == 'downloading'):
+                        if not task.local_status == ('queued' or 'downloading'):
                             task.update(local_status='queued')
                             gevent.sleep(3)
                             scheduler.scheduler.add_job(download_task, args=(task,), name=task.name,
                                                         misfire_grace_time=7200, coalesce=False, max_instances=1,
-                                                        executor='download', replace_existing=True)
+                                                        jobstore='downloads', executor='downloads',
+                                                        replace_existing=True)
                     elif task.category == '':
                         task.update(local_status='waiting')
                 else:
@@ -954,14 +999,7 @@ def settings():
             else:
                 sys.exit()
         elif 'Update' in request.form.values():
-            logger.info('Update - will restart')
-            scheduler.shutdown(wait=False)
-            if os_arg == '--windows':
-                subprocess.call(['python', runningdir + 'utils.py', '--update', '--windows'])
-                sys.exit()
-            else:
-                subprocess.Popen(['python', runningdir + 'utils.py', '--update'], shell=False, close_fds=True)
-                sys.exit()
+            update_self()
         else:
             global prem_config
             enable_watchdir = 0
@@ -1004,6 +1042,10 @@ def settings():
                 prem_config.set('notifications', 'email_encryption', '1')
             else:
                 prem_config.set('notifications', 'email_encryption', '0')
+            if request.form.get('auto_update'):
+                prem_config.set('update', 'auto_update', '1')
+            else:
+                prem_config.set('update', 'auto_update', '0')
 
             prem_config.set('downloads', 'jd_username', request.form.get('jd_username'))
             prem_config.set('downloads', 'jd_password', request.form.get('jd_password'))
@@ -1044,7 +1086,7 @@ def settings():
             cfg.check_config()
             if enable_watchdir:
                 watchdir()
-
+    check_update(0)
     return render_template('settings.html', settings=prem_config, cfg=cfg)
 
 
@@ -1215,10 +1257,14 @@ if __name__ == '__main__':
         load_tasks()
         scheduler = APScheduler(GeventScheduler())
         scheduler.init_app(app)
+        scheduler.scheduler.add_jobstore('memory', alias='downloads')
+        scheduler.scheduler.add_executor('threadpool', alias='downloads', max_workers=cfg.download_max)
+        scheduler.start()
         scheduler.scheduler.add_job(update, 'interval', id='update',
                                     seconds=active_interval, replace_existing=True, max_instances=1, coalesce=True)
-        scheduler.scheduler.add_executor('threadpool', alias='download', max_workers=cfg.download_max)
-        scheduler.start()
+        scheduler.scheduler.add_job(check_update, 'interval', id='check_update',
+                                    hours=6, replace_existing=True, max_instances=1, coalesce=True)
+
         socketio.run(app, host=prem_config.get('global', 'bind_ip'), port=prem_config.getint('global', 'server_port'),
                      use_reloader=False)
     except:
