@@ -160,6 +160,12 @@ class PremConfig:
             self.web_username = prem_config.get('security', 'username')
             self.web_password = prem_config.get('security', 'password')
 
+        self.update_available = 0
+        self.update_localcommit = ''
+        self.update_diffcommit = ''
+        self.update_status = ''
+        self.update_date = prem_config.get('update', 'update_date')
+        self.auto_update = prem_config.getboolean('update', 'auto_update')
         self.prem_customer_id = prem_config.get('premiumize', 'customer_id')
         self.prem_pin = prem_config.get('premiumize', 'pin')
         self.remove_cloud = prem_config.getboolean('downloads', 'remove_cloud')
@@ -244,6 +250,87 @@ class PremConfig:
 
 cfg = PremConfig()
 
+
+# Automatic update checker
+def check_update(auto_update=cfg.auto_update):
+    logger.debug('def check_update started')
+
+    time_job = scheduler.scheduler.get_job('check_update').next_run_time.replace(tzinfo=None)
+    time_now = datetime.datetime.now()
+    diff = time_job - time_now
+    diff = 21600 - diff.total_seconds()
+    if (diff > 120) or (cfg.update_status == ''):
+        try:
+            subprocess.check_call(['git', '-C', runningdir, 'fetch'])
+        except:
+            cfg.update_status = 'failed'
+            logger.error('Update failed: could not git fetch: %s', runningdir)
+        if cfg.update_status != 'failed':
+            cfg.update_localcommit = subprocess.check_output(
+                ['git', '-C', runningdir, 'log', '-n', '1', '--pretty=format:%h'])
+            local_branch = str(
+                subprocess.check_output(['git', '-C', runningdir, 'rev-parse', '--abbrev-ref', 'HEAD'])).rstrip('\n')
+            remote_commit = subprocess.check_output(
+                ['git', '-C', runningdir, 'log', '-n', '1', 'origin/' + local_branch, '--pretty=format:%h'])
+
+            if cfg.update_localcommit != remote_commit:
+                cfg.update_diffcommit = subprocess.check_output(
+                    ['git', '-C', runningdir, 'log', '--oneline', local_branch + '..origin/' + local_branch])
+
+                cfg.update_available = 1
+                cfg.update_status = 'Update Available !!'
+                if auto_update:
+                    for task in tasks:
+                        if task.local_status == (
+                                            'downloading' or 'queued' or 'failed: download' or 'failed: nzbtomedia'):
+                            scheduler.scheduler.reschedule_job('check_update', trigger='interval', minutes=30)
+                            logger.info(
+                                'Tried to update but downloads are not done or failed, trying again in 30 minutes')
+                            cfg.update_status = 'Update available, but not yet updated because downloads are not done or failed'
+                            return
+                    update_self()
+            else:
+                cfg.update_status = 'No update available, last time checked: ' + datetime.datetime.now().strftime(
+                    "%d-%m %H:%M:%S") + ' --- last time updated: ' + cfg.update_date
+        scheduler.scheduler.reschedule_job('check_update', trigger='interval', hours=6)
+
+
+def update_self():
+    logger.debug('def update_self started')
+    logger.info('Update - will restart')
+    cfg.update_date = datetime.datetime.now().strftime("%d-%m %H:%M:%S")
+    prem_config.set('update', 'update_date', cfg.update_date)
+    with open(runningdir + 'settings.cfg', 'w') as configfile:  # save
+        prem_config.write(configfile)
+    scheduler.shutdown(wait=False)  # TODO: seems to be not working ?
+    if os_arg == '--windows':
+        subprocess.call(['python', runningdir + 'utils.py', '--update', '--windows'])
+        sys.exit()
+    else:
+        subprocess.Popen(['python', runningdir + 'utils.py', '--update'], shell=False, close_fds=True)
+        sys.exit()
+
+
+def restart():
+    logger.info('Restarting')
+    scheduler.shutdown(wait=False)
+    if os_arg == '--windows':
+        # windows service will automatically restart on 'failure'
+        sys.exit()
+    else:
+        subprocess.Popen(['python', runningdir + 'utils.py', '--restart'], shell=False, close_fds=True)
+        sys.exit()
+
+
+def shutdown():
+    logger.info('Shutdown recieved')
+    scheduler.shutdown(wait=False)
+    if os_arg == '--windows':
+        subprocess.call([rootdir + 'Installer/nssm.exe', 'stop', 'Premiumizer'])
+    else:
+        sys.exit()
+
+
 #
 logger.debug('Initializing Flask')
 app = Flask(__name__)
@@ -266,9 +353,17 @@ logger.debug('Initializing Database complete')
 # Initialise Globals
 tasks = []
 greenlet = local.local()
+client_connected = 0
 
 
 #
+def gevent_sleep_time():
+    global client_connected
+    if client_connected:
+        gevent.sleep(2)
+    else:
+        gevent.sleep(10)
+
 
 class User(UserMixin):
     def __init__(self, userid, password):
@@ -415,9 +510,21 @@ def get_download_stats_jd(jd, name):
         count += 1
         if count == 10:
             return 1
+
     for link in tmp:
         if link['name'] in name:
             x = str(link['uuid'])
+            while not 'status' in link:
+                gevent.sleep(5)
+                link = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
+                                                     "speed": True, "eta": True, "packageUUIDs": [x]}])
+                try:
+                    link = link[0]
+                except:
+                    pass
+                count += 1
+                if count == 10:
+                    return 1
             while link['status'] != 'Finished':
                 try:
                     speed = link['speed']
@@ -430,10 +537,13 @@ def get_download_stats_jd(jd, name):
                 progress = round(float(link['bytesLoaded']) * 100 / link["bytesTotal"], 1)
                 greenlet.task.update(speed=(utils.sizeof_human(speed) + '/s --- ' + utils.sizeof_human(
                     link['bytesLoaded']) + ' / ' + utils.sizeof_human(link['bytesTotal'])), progress=progress, eta=eta)
-                gevent.sleep(2)
+                gevent_sleep_time()
                 link = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
                                                      "speed": True, "eta": True, "packageUUIDs": [x]}])
-                link = link[0]
+                try:
+                    link = link[0]
+                except:
+                    pass
             # cfg.jd.disconnect()
             if link['status'] == 'Failed':
                 return 1
@@ -460,8 +570,8 @@ def get_download_stats(downloader, total_size_downloaded):
             tmp = (greenlet.task.size - size_downloaded) / speed
             eta = ' ' + utils.time_human(tmp, fmt_short=True)
         greenlet.task.update(speed=(
-        utils.sizeof_human(speed) + '/s --- ' + utils.sizeof_human(size_downloaded) + ' / ' + utils.sizeof_human(
-            greenlet.task.size)), progress=progress, eta=eta)
+            utils.sizeof_human(speed) + '/s --- ' + utils.sizeof_human(size_downloaded) + ' / ' + utils.sizeof_human(
+                greenlet.task.size)), progress=progress, eta=eta)
 
     elif downloader.get_status() == 'combining':
         greenlet.task.update(speed='', eta=' Combining files')
@@ -478,7 +588,10 @@ def download_file():
     dltime = 0
     returncode = 0
     if cfg.jd_enabled:
-        if not cfg.jd_connected:
+        try:
+            cfg.jd.reconnect()
+            cfg.jd_connected = 1
+        except:
             try:
                 cfg.jd.connect(cfg.jd_username, cfg.jd_password)
                 cfg.jd.get_device(cfg.jd_device)
@@ -487,6 +600,7 @@ def download_file():
                 logger.error(
                     'Could not connect to My Jdownloader check username/password & device name, task failt: %s',
                     greenlet.task.name)
+                cfg.jd_connected = 0
                 return 1
         jd = cfg.jd.get_device(cfg.jd_device)
         tmp = jd.downloads.query_links()
@@ -502,11 +616,11 @@ def download_file():
                 downloader.start(blocking=False)
                 while not downloader.isFinished():
                     get_download_stats(downloader, total_size_downloaded)
-                    gevent.sleep(2)
+                    gevent_sleep_time()
                     # if greenlet.task.local_status == "paused":            #   When paused to long
                     #   downloader.pause()                                  #   PysmartDl fails with WARNING :
                     #   while greenlet.task.local_status == "paused":       #   Diff between downloaded files and expected
-                    #       gevent.sleep(2)                                 #   filesizes is .... Retrying...
+                    #       gevent_sleep_time()                               #   filesizes is .... Retrying...
                     #   downloader.unpause()
                     if greenlet.task.local_status == "stopped":
                         while not downloader.isFinished():  # Have to use while loop
@@ -546,7 +660,7 @@ def is_sample(dir_content):
     media_size = 150 * 1024 * 1024
     if dir_content['size'] < media_size:
         if dir_content['url'].lower().endswith(tuple(media_extensions)):
-            if ('sample' or 'RARBG.COM.mp4' in dir_content['url'].lower()) and (
+            if ('sample' or 'rarbg.com' in dir_content['url'].lower()) and (
                         'sample' not in greenlet.task.name.lower()):
                 return True
     return False
@@ -687,11 +801,11 @@ def parse_tasks(torrents):
             task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], speed=torrent['speed_down'])
         if task.local_status is None:
             if task.cloud_status != 'finished':
-                if torrent['eta'] is None or torrent['eta'] == 0:
+                if torrent['eta'] == (None or 0):
                     eta = ''
                 else:
                     eta = utils.time_human(torrent['eta'], fmt_short=True)
-                if torrent['speed_down'] is None or torrent['speed_down'] == 0:
+                if torrent['speed_down'] == (None or 0):
                     speed = ''
                 else:
                     speed = utils.sizeof_human(torrent['speed_down']) + '/s '
@@ -701,12 +815,13 @@ def parse_tasks(torrents):
             if task.cloud_status == 'finished':
                 if cfg.download_enabled:
                     if task.category in cfg.download_categories:
-                        if not (task.local_status == 'queued' or task.local_status == 'downloading'):
+                        if not task.local_status == ('queued' or 'downloading'):
                             task.update(local_status='queued')
                             gevent.sleep(3)
                             scheduler.scheduler.add_job(download_task, args=(task,), name=task.name,
                                                         misfire_grace_time=7200, coalesce=False, max_instances=1,
-                                                        executor='download', replace_existing=True)
+                                                        jobstore='downloads', executor='downloads',
+                                                        replace_existing=True)
                     elif task.category == '':
                         task.update(local_status='waiting')
                 else:
@@ -909,30 +1024,14 @@ def history():
 def settings():
     if request.method == 'POST':
         if 'Restart' in request.form.values():
-            logger.info('Restarting')
-            scheduler.shutdown(wait=False)
-            if os_arg == '--windows':
-                # windows service will automatically restart on 'failure'
-                sys.exit()
-            else:
-                subprocess.Popen(['python', runningdir + 'utils.py', '--restart'], shell=False, close_fds=True)
-                sys.exit()
+            gevent.spawn_later(1, restart)
+            return 'Restarting, please try and refresh the page in a few seconds...'
         elif 'Shutdown' in request.form.values():
-            logger.info('Shutdown recieved')
-            scheduler.shutdown(wait=False)
-            if os_arg == '--windows':
-                subprocess.call([rootdir + 'Installer/nssm.exe', 'stop', 'Premiumizer'])
-            else:
-                sys.exit()
+            gevent.spawn_later(1, shutdown)
+            return 'Shutting down...'
         elif 'Update' in request.form.values():
-            logger.info('Update - will restart')
-            scheduler.shutdown(wait=False)
-            if os_arg == '--windows':
-                subprocess.call(['python', runningdir + 'utils.py', '--update', '--windows'])
-                sys.exit()
-            else:
-                subprocess.Popen(['python', runningdir + 'utils.py', '--update'], shell=False, close_fds=True)
-                sys.exit()
+            gevent.spawn_later(1, update_self)
+            return 'Updating, please try and refresh the page in a few seconds...'
         else:
             global prem_config
             enable_watchdir = 0
@@ -975,6 +1074,10 @@ def settings():
                 prem_config.set('notifications', 'email_encryption', '1')
             else:
                 prem_config.set('notifications', 'email_encryption', '0')
+            if request.form.get('auto_update'):
+                prem_config.set('update', 'auto_update', '1')
+            else:
+                prem_config.set('update', 'auto_update', '0')
 
             prem_config.set('downloads', 'jd_username', request.form.get('jd_username'))
             prem_config.set('downloads', 'jd_password', request.form.get('jd_password'))
@@ -1015,7 +1118,7 @@ def settings():
             cfg.check_config()
             if enable_watchdir:
                 watchdir()
-
+    check_update(0)
     return render_template('settings.html', settings=prem_config, cfg=cfg)
 
 
@@ -1134,11 +1237,15 @@ def stop_task(message):
 
 @socketio.on('connect')
 def test_message():
+    global client_connected
+    client_connected = 1
     emit('hello_client', {'data': 'Server says hello!'})
 
 
 @socketio.on('disconnect')
 def test_disconnect():
+    global client_connected
+    client_connected = 0
     print('Client disconnected')
 
 
@@ -1182,10 +1289,14 @@ if __name__ == '__main__':
         load_tasks()
         scheduler = APScheduler(GeventScheduler())
         scheduler.init_app(app)
+        scheduler.scheduler.add_jobstore('memory', alias='downloads')
+        scheduler.scheduler.add_executor('threadpool', alias='downloads', max_workers=cfg.download_max)
+        scheduler.start()
         scheduler.scheduler.add_job(update, 'interval', id='update',
                                     seconds=active_interval, replace_existing=True, max_instances=1, coalesce=True)
-        scheduler.scheduler.add_executor('threadpool', alias='download', max_workers=cfg.download_max)
-        scheduler.start()
+        scheduler.scheduler.add_job(check_update, 'interval', id='check_update',
+                                    hours=6, replace_existing=True, max_instances=1, coalesce=True)
+
         socketio.run(app, host=prem_config.get('global', 'bind_ip'), port=prem_config.getint('global', 'server_port'),
                      use_reloader=False)
     except:

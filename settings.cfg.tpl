@@ -77,5 +77,7 @@ email_password =
 [update]
 #Do not change these values#
 updated = 1
-config_version = 1.2
-req_version = 1.2
+auto_update = 0
+update_date = Never
+config_version = 1.3
+req_version = 1.3
