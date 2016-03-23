@@ -415,9 +415,21 @@ def get_download_stats_jd(jd, name):
         count += 1
         if count == 10:
             return 1
+
     for link in tmp:
         if link['name'] in name:
             x = str(link['uuid'])
+            while not 'status' in link:
+                gevent.sleep(5)
+                link = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
+                                                     "speed": True, "eta": True, "packageUUIDs": [x]}])
+                try:
+                    link = link[0]
+                except:
+                    pass
+                count += 1
+                if count == 10:
+                    return 1
             while link['status'] != 'Finished':
                 try:
                     speed = link['speed']
@@ -433,7 +445,10 @@ def get_download_stats_jd(jd, name):
                 gevent.sleep(2)
                 link = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
                                                      "speed": True, "eta": True, "packageUUIDs": [x]}])
-                link = link[0]
+                try:
+                    link = link[0]
+                except:
+                    pass
             # cfg.jd.disconnect()
             if link['status'] == 'Failed':
                 return 1
