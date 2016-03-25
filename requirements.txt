@@ -3,10 +3,10 @@ APScheduler==3.0.5
 greenlet==0.4.9
 bencode==1.0
 chardet==2.3.0
-click==6.3
+click==6.4
 futures==3.0.5
 python-engineio==0.9.0
-git+https://github.com/mitsuhiko/flask.git@c9b29f4072b66be4c751af060d64ea749c6991c1#egg=flask
+https://github.com/mitsuhiko/flask/archive/3d7857344a7e61e6f6aa1acdfdbe44d3830883ee.zip#egg=flask
 flask_apscheduler==1.3.7
 flask_socketio==2.2
 flask-login==0.3.2
@@ -14,7 +14,7 @@ gevent-websocket==0.9.5
 jinja2==2.8
 MarkupSafe==0.23
 pathtools==0.1.2
-git+https://github.com/neox387/pySmartDL.git@1.2.5#egg=pySmartDL
+https://github.com/neox387/pySmartDL/archive/1.2.5.zip#egg=PySmartDL
 requests==2.9.1
 python-socketio==1.2
 tzlocal==1.2.2
