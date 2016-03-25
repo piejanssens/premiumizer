@@ -149,6 +149,7 @@ logger.info('Running at %s', runningdir)
 # noinspection PyAttributeOutsideInit
 class PremConfig:
     def __init__(self):
+        self.jd_connected = 0
         self.check_config()
 
     def check_config(self):
@@ -185,17 +186,19 @@ class PremConfig:
         self.jd_device = prem_config.get('downloads', 'jd_device')
         if self.jd_enabled:
             self.download_builtin = 0
-            self.jd = myjdapi.Myjdapi()
-            try:
-                self.jd.connect(self.jd_username, self.jd_password)
-                self.jd_connected = 1
-            except:
-                logger.error('Could not connect to My Jdownloader')
-                self.jd_connected = 0
-            try:
-                self.jd.get_device(self.jd_device)
-            except:
-                logger.error('Could not get device name for My Jdownloader')
+            if not self.jd_connected:
+                self.jd = myjdapi.Myjdapi()
+                try:
+                    self.jd.set_app_key('https://git.io/vaDti')
+                    self.jd.connect(self.jd_username, self.jd_password)
+                    self.jd_connected = 1
+                except:
+                    logger.error('Could not connect to My Jdownloader')
+                    self.jd_connected = 0
+                try:
+                    self.jd.get_device(self.jd_device)
+                except:
+                    logger.error('Could not get device name for My Jdownloader')
 
         self.watchdir_enabled = prem_config.getboolean('upload', 'watchdir_enabled')
         self.watchdir_location = prem_config.get('upload', 'watchdir_location')
