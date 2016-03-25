@@ -2,7 +2,7 @@
 server_port = 5000
 bind_ip = 127.0.0.1
 active_interval = 10
-idle_interval = 120
+idle_interval = 300
 debug_enabled = 0
 
 
