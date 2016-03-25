@@ -302,33 +302,36 @@ def update_self():
     prem_config.set('update', 'update_date', cfg.update_date)
     with open(runningdir + 'settings.cfg', 'w') as configfile:  # save
         prem_config.write(configfile)
-    scheduler.shutdown(wait=False)  # TODO: seems to be not working ?
+    scheduler.shutdown(wait=False)
+    socketio.stop()
     if os_arg == '--windows':
         subprocess.call(['python', runningdir + 'utils.py', '--update', '--windows'])
-        sys.exit()
+        os._exit(1)
     else:
         subprocess.Popen(['python', runningdir + 'utils.py', '--update'], shell=False, close_fds=True)
-        sys.exit()
+        os._exit(1)
 
 
 def restart():
     logger.info('Restarting')
     scheduler.shutdown(wait=False)
+    socketio.stop()
     if os_arg == '--windows':
         # windows service will automatically restart on 'failure'
-        sys.exit()
+        os._exit(1)
     else:
         subprocess.Popen(['python', runningdir + 'utils.py', '--restart'], shell=False, close_fds=True)
-        sys.exit()
+        os._exit(1)
 
 
 def shutdown():
     logger.info('Shutdown recieved')
     scheduler.shutdown(wait=False)
+    socketio.stop()
     if os_arg == '--windows':
         subprocess.call([rootdir + 'Installer/nssm.exe', 'stop', 'Premiumizer'])
     else:
-        sys.exit()
+        os._exit(1)
 
 
 #
