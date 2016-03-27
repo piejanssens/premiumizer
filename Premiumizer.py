@@ -28,12 +28,12 @@ from flask.ext.login import LoginManager, login_required, login_user, logout_use
 from flask.ext.socketio import SocketIO, emit
 from flask_apscheduler import APScheduler
 from gevent import local
+from pySmartDL import SmartDL, utils
 from watchdog.events import PatternMatchingEventHandler
 from watchdog.observers import Observer
 from werkzeug.utils import secure_filename
 
 from DownloadTask import DownloadTask
-from pySmartDL import SmartDL, utils
 
 try:
     import myjdapi
@@ -781,7 +781,7 @@ def update():
     response_content = json.loads(r.content)
     if response_content['status'] == "success":
         if not response_content['torrents']:
-            update_interval *= 2
+            update_interval *= 3
         torrents = response_content['torrents']
         idle = parse_tasks(torrents)
     else:
@@ -1258,7 +1258,7 @@ def test_disconnect():
 @socketio.on('hello_server')
 def hello_server(message):
     send_categories()
-    scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=2)
+    scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
     print(message['data'])
 
 
