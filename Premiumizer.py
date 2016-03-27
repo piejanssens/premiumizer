@@ -499,59 +499,59 @@ def email(failed):
         logger.error('Email error for: %s error: %s', greenlet.task.name, err)
 
 
-def get_download_stats_jd(jd, name):
+def get_download_stats_jd(jd, package_name):
     start_time = time.time()
     count = 0
     gevent.sleep(10)
-    tmp = jd.downloads.query_packages()
-    while not len(tmp):
+    query_packages = jd.downloads.query_packages()
+    while not len(query_packages):
         gevent.sleep(5)
-        tmp = jd.downloads.query_packages()
+        query_packages = jd.downloads.query_packages()
         count += 1
         if count == 10:
             return 1
-    while not any(link['name'] in name for link in tmp):
+    while not any(package['name'] in package_name for package in query_packages):
         gevent.sleep(5)
-        tmp = jd.downloads.query_packages()
+        query_packages = jd.downloads.query_packages()
         count += 1
         if count == 10:
             return 1
 
-    for link in tmp:
-        if link['name'] in name:
-            x = str(link['uuid'])
-            while not 'status' in link:
+    for package in query_packages:
+        if package['name'] in package_name:
+            x = str(package['uuid'])
+            while not 'status' in package:
                 gevent.sleep(5)
-                link = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
+                package = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
                                                      "speed": True, "eta": True, "packageUUIDs": [x]}])
                 try:
-                    link = link[0]
+                    package = package[0]
                 except:
                     pass
                 count += 1
                 if count == 10:
                     return 1
-            while link['status'] != 'Finished':
+            while package['status'] != 'Finished':
                 try:
-                    speed = link['speed']
+                    speed = package['speed']
                 except:
                     speed = 0
                 if speed == 0:
                     eta = ''
                 else:
-                    eta = " " + utils.time_human(link['eta'], fmt_short=True)
-                progress = round(float(link['bytesLoaded']) * 100 / link["bytesTotal"], 1)
+                    eta = " " + utils.time_human(package['eta'], fmt_short=True)
+                progress = round(float(package['bytesLoaded']) * 100 / package["bytesTotal"], 1)
                 greenlet.task.update(speed=(utils.sizeof_human(speed) + '/s --- ' + utils.sizeof_human(
-                    link['bytesLoaded']) + ' / ' + utils.sizeof_human(link['bytesTotal'])), progress=progress, eta=eta)
+                    package['bytesLoaded']) + ' / ' + utils.sizeof_human(package['bytesTotal'])), progress=progress, eta=eta)
                 gevent_sleep_time()
-                link = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
+                package = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
                                                      "speed": True, "eta": True, "packageUUIDs": [x]}])
                 try:
-                    link = link[0]
+                    package = package[0]
                 except:
                     pass
             # cfg.jd.disconnect()
-            if link['status'] == 'Failed':
+            if package['status'] == 'Failed':
                 return 1
             stop_time = time.time()
             dltime = int(stop_time - start_time)
@@ -609,8 +609,8 @@ def download_file():
                 cfg.jd_connected = 0
                 return 1
         jd = cfg.jd.get_device(cfg.jd_device)
-        tmp = jd.downloads.query_links()
-        name = str(re.sub('[^0-9a-zA-Z]+', ' ', greenlet.task.name).lower())
+        query_links = jd.downloads.query_links()
+        package_name = str(re.sub('[^0-9a-zA-Z]+', ' ', greenlet.task.name).lower())
 
     for download in greenlet.download_list:
         logger.debug('Downloading file: %s', download['path'])
@@ -646,17 +646,17 @@ def download_file():
             elif cfg.jd_connected:
                 url = str(download['url'])
                 filename = os.path.basename(download['path'])
-                if len(tmp):
-                    if any(link['name'] == filename for link in tmp):
+                if len(query_links):
+                    if any(link['name'] == filename for link in query_links):
                         continue
-                jd.linkgrabber.add_links([{"autostart": True, "links": url, "packageName": name,
+                jd.linkgrabber.add_links([{"autostart": True, "links": url, "packageName": package_name,
                                            "destinationFolder": greenlet.task.dldir, "overwritePackagizerRules": True}])
         else:
             logger.info('File not downloaded it already exists at: %s', download['path'])
 
     if cfg.jd_enabled and files_downloaded:
         if cfg.jd_connected:
-            returncode = get_download_stats_jd(jd, name)
+            returncode = get_download_stats_jd(jd, package_name)
 
     return returncode
 
