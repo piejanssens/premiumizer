@@ -24,3 +24,4 @@ six==1.10.0
 gevent==1.1.0
 python-dateutil==2.5.1
 pycrypto==2.6.1
+https://github.com/mmarquezs/My.Jdownloader-API-Python-Library/archive/df9194274a7f2b58a9774b23e3c5b61bf9d224e2.zip#egg=myjdapi
