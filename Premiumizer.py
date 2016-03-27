@@ -807,11 +807,11 @@ def parse_tasks(torrents):
             task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], speed=torrent['speed_down'])
         if task.local_status is None:
             if task.cloud_status != 'finished':
-                if torrent['eta'] == (None or 0):
+                if torrent['eta'] is None or 0:
                     eta = ''
                 else:
                     eta = utils.time_human(torrent['eta'], fmt_short=True)
-                if torrent['speed_down'] == (None or 0):
+                if torrent['speed_down'] is None or 0:
                     speed = ''
                 else:
                     speed = utils.sizeof_human(torrent['speed_down']) + '/s '
