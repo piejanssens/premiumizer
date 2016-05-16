@@ -596,11 +596,12 @@ def download_file():
     if cfg.jd_enabled:
         try:
             cfg.jd.reconnect()
+            jd = cfg.jd.get_device(cfg.jd_device)
             cfg.jd_connected = 1
         except:
             try:
                 cfg.jd.connect(cfg.jd_username, cfg.jd_password)
-                cfg.jd.get_device(cfg.jd_device)
+                jd = cfg.jd.get_device(cfg.jd_device)
                 cfg.jd_connected = 1
             except:
                 logger.error(
@@ -608,7 +609,6 @@ def download_file():
                     greenlet.task.name)
                 cfg.jd_connected = 0
                 return 1
-        jd = cfg.jd.get_device(cfg.jd_device)
         query_links = jd.downloads.query_links()
         package_name = str(re.sub('[^0-9a-zA-Z]+', ' ', greenlet.task.name).lower())
 
