@@ -360,6 +360,7 @@ logger.debug('Initializing Database complete')
 tasks = []
 greenlet = local.local()
 client_connected = 0
+prem_session = requests.Session()
 
 
 #
@@ -706,7 +707,7 @@ def download_process():
     greenlet.size_remove = 0
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
                'hash': greenlet.task.hash}
-    r = requests.post("https://www.premiumize.me/torrent/browse", payload)
+    r = prem_session.post("https://www.premiumize.me/torrent/browse", payload)
     greenlet.task.update(local_status='downloading', progress=0, speed='', eta='')
     process_dir(json.loads(r.content)['data']['content'], greenlet.task.dldir)
     if greenlet.size_remove is not 0:
@@ -739,7 +740,7 @@ def download_task(task):
 
     if cfg.remove_cloud and not failed:
         payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'hash': task.hash}
-        r = requests.post("https://www.premiumize.me/torrent/delete", payload)
+        r = prem_session.post("https://www.premiumize.me/torrent/delete", payload)
         responsedict = json.loads(r.content)
         if responsedict['status'] == "success":
             logger.info('Automatically Deleted: %s from cloud', task.name)
@@ -777,7 +778,7 @@ def update():
     idle = True
     update_interval = idle_interval
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
-    r = requests.post("https://www.premiumize.me/torrent/list", payload)
+    r = prem_session.post("https://www.premiumize.me/torrent/list", payload)
     response_content = json.loads(r.content)
     if response_content['status'] == "success":
         if not response_content['torrents']:
@@ -893,7 +894,7 @@ def upload_torrent(filename):
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
     files = {'file': open(filename, 'rb')}
     logger.debug('Uploading torrent to the cloud: %s', filename)
-    r = requests.post("https://www.premiumize.me/torrent/add", payload, files=files)
+    r = prem_session.post("https://www.premiumize.me/torrent/add", payload, files=files)
     response_content = json.loads(r.content)
     if response_content['status'] == "success":
         logger.debug('Upload successful: %s', filename)
@@ -905,7 +906,7 @@ def upload_torrent(filename):
 def upload_magnet(magnet):
     logger.debug('def upload_magnet started')
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'url': magnet}
-    r = requests.post("https://www.premiumize.me/torrent/add", payload)
+    r = prem_session.post("https://www.premiumize.me/torrent/add", payload)
     response_content = json.loads(r.content)
     if response_content['status'] == "success":
         logger.debug('Upload magnet successful')
@@ -1188,7 +1189,7 @@ def about():
 @login_required
 def list():
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
-    r = requests.get("https://www.premiumize.me/torrent/list", params=payload)
+    r = prem_session.get("https://www.premiumize.me/torrent/list", params=payload)
     return r.text
 
 
@@ -1211,7 +1212,7 @@ def load_user(userid):
 def delete_task(message):
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
                'hash': message['data']}
-    r = requests.post("https://www.premiumize.me/torrent/delete", payload)
+    r = prem_session.post("https://www.premiumize.me/torrent/delete", payload)
     responsedict = json.loads(r.content)
     task = get_task(message['data'])
     if responsedict['status'] == "success":
