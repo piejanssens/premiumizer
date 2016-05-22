@@ -702,12 +702,22 @@ def process_dir(dir_content, path, change_dldir=1):
 
 def download_process():
     logger.debug('def download_process started')
+    r = None
+    r_count = 0
     returncode = 0
     greenlet.download_list = []
     greenlet.size_remove = 0
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
                'hash': greenlet.task.hash}
-    r = prem_session.post("https://www.premiumize.me/torrent/browse", payload)
+    while r is None:
+        try:
+            r_count += 1
+            r = prem_session.post("https://www.premiumize.me/torrent/browse", payload, timeout=5)
+        except:
+            logger.warning('Connection to premiumize.me timed out')
+            pass
+        if r_count == 10:
+            logger.ERROR('Connection to premiumize.me timed out 10 times')
     greenlet.task.update(local_status='downloading', progress=0, speed='', eta='')
     process_dir(json.loads(r.content)['data']['content'], greenlet.task.dldir)
     if greenlet.size_remove is not 0:
@@ -739,8 +749,18 @@ def download_task(task):
             task.update(local_status='failed: nzbtomedia')
 
     if cfg.remove_cloud and not failed:
+        r = None
+        r_count = 0
         payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'hash': task.hash}
-        r = prem_session.post("https://www.premiumize.me/torrent/delete", payload)
+        while r is None:
+            try:
+                r_count += 1
+                r = prem_session.post("https://www.premiumize.me/torrent/delete", payload, timeout=5)
+            except:
+                logger.warning('Connection to premiumize.me timed out')
+                pass
+            if r_count == 10:
+                logger.ERROR('Connection to premiumize.me timed out 10 times')
         responsedict = json.loads(r.content)
         if responsedict['status'] == "success":
             logger.info('Automatically Deleted: %s from cloud', task.name)
@@ -775,10 +795,20 @@ def download_task(task):
 
 def update():
     logger.debug('def updating started')
+    r = None
+    r_count = 0
     idle = True
     update_interval = idle_interval
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
-    r = prem_session.post("https://www.premiumize.me/torrent/list", payload)
+    while r is None:
+        try:
+            r_count += 1
+            r = prem_session.post("https://www.premiumize.me/torrent/list", payload, timeout=5)
+        except:
+            logger.warning('Connection to premiumize.me timed out')
+            pass
+        if r_count == 10:
+            logger.ERROR('Connection to premiumize.me timed out 10 times')
     response_content = json.loads(r.content)
     if response_content['status'] == "success":
         if not response_content['torrents']:
@@ -891,10 +921,20 @@ def add_task(hash, size, name, category):
 
 def upload_torrent(filename):
     logger.debug('def upload_torrent started')
+    r = None
+    r_count = 0
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
     files = {'file': open(filename, 'rb')}
     logger.debug('Uploading torrent to the cloud: %s', filename)
-    r = prem_session.post("https://www.premiumize.me/torrent/add", payload, files=files)
+    while r is None:
+        try:
+            r_count += 1
+            r = prem_session.post("https://www.premiumize.me/torrent/add", payload, files=files, timeout=5)
+        except:
+            logger.warning('Connection to premiumize.me timed out')
+            pass
+        if r_count == 10:
+            logger.ERROR('Connection to premiumize.me timed out 10 times')
     response_content = json.loads(r.content)
     if response_content['status'] == "success":
         logger.debug('Upload successful: %s', filename)
@@ -905,8 +945,18 @@ def upload_torrent(filename):
 
 def upload_magnet(magnet):
     logger.debug('def upload_magnet started')
+    r = None
+    r_count = 0
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'url': magnet}
-    r = prem_session.post("https://www.premiumize.me/torrent/add", payload)
+    while r is None:
+        try:
+            r_count += 1
+            r = prem_session.post("https://www.premiumize.me/torrent/add", payload, timeout=5)
+        except:
+            logger.warning('Connection to premiumize.me timed out')
+            pass
+        if r_count == 10:
+            logger.ERROR('Connection to premiumize.me timed out 10 times')
     response_content = json.loads(r.content)
     if response_content['status'] == "success":
         logger.debug('Upload magnet successful')
@@ -1188,8 +1238,18 @@ def about():
 @app.route('/list')
 @login_required
 def list():
+    r = None
+    r_count = 0
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
-    r = prem_session.get("https://www.premiumize.me/torrent/list", params=payload)
+    while r is None:
+        try:
+            r_count += 1
+            r = prem_session.get("https://www.premiumize.me/torrent/list", params=payload, timeout=5)
+        except:
+            logger.warning('Connection to premiumize.me timed out')
+            pass
+        if r_count == 10:
+            logger.ERROR('Connection to premiumize.me timed out 10 times')
     return r.text
 
 
@@ -1210,9 +1270,19 @@ def load_user(userid):
 
 @socketio.on('delete_task')
 def delete_task(message):
+    r = None
+    r_count = 0
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
                'hash': message['data']}
-    r = prem_session.post("https://www.premiumize.me/torrent/delete", payload)
+    while r is None:
+        try:
+            r_count += 1
+            r = prem_session.post("https://www.premiumize.me/torrent/delete", payload, timeout=5)
+        except:
+            logger.warning('Connection to premiumize.me timed out')
+            pass
+        if r_count == 10:
+            logger.ERROR('Connection to premiumize.me timed out 10 times')
     responsedict = json.loads(r.content)
     task = get_task(message['data'])
     if responsedict['status'] == "success":
