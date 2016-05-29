@@ -31,9 +31,9 @@ def update():
             prem_config.write(configfile)
     if prem_config.getfloat('update', 'config_version') < default_config.getfloat('update', 'config_version'):
         import shutil
-        shutil.copy(runningdir + 'settings.cfg', runningdir + 'settings.cfg.old')
+        shutil.copy(runningdir + 'settings.cfg', runningdir + 'settings.cfg.old2')
         shutil.copy(runningdir + 'settings.cfg.tpl', runningdir + 'settings.cfg')
-        prem_config.read(runningdir + 'settings.cfg.old')
+        prem_config.read(runningdir + 'settings.cfg.old2')
         default_config.read(runningdir + 'settings.cfg')
         for section in prem_config.sections():
             if section in default_config.sections():

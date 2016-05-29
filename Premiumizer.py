@@ -136,8 +136,12 @@ if prem_config.getboolean('update', 'updated'):
     logger.info('*************************************************************************************')
     if os.path.isfile(runningdir + 'settings.cfg.old'):
         logger.info('*************************************************************************************')
-        logger.info('-------Settings file has been updated/wiped, old settings file renamed to .old-------')
+        logger.info('-------Settings file has been updated, old settings file renamed to .old-------')
         logger.info('*************************************************************************************')
+    try:
+        os.rename(runningdir + 'settings.cfg.old2', runningdir + 'settings.cfg.old')
+    except:
+        logger.error('Could not rename old settings file')
     prem_config.set('update', 'updated', '0')
     with open(runningdir + 'settings.cfg', 'w') as configfile:
         prem_config.write(configfile)
@@ -467,7 +471,11 @@ def email(failed):
         text += '\nStatus: FAILED\nError: %s' % greenlet.task.local_status
         text += '\n\nLog:\n'
         try:
-            with open(runningdir + 'premiumizer.log', 'r') as f:
+            if debug_enabled:
+                log = 'premiumizerDEBUG.log'
+            else:
+                log = 'premiumizer.log'
+            with open(runningdir + log, 'r') as f:
                 for line in f:
                     if greenlet.task.name in line:
                         text += line
@@ -541,6 +549,10 @@ def get_download_stats_jd(jd, package_name):
                     eta = ''
                 else:
                     eta = " " + utils.time_human(package['eta'], fmt_short=True)
+                try:
+                    bytesTotal = package["bytesTotal"]
+                except:
+                    return 1
                 progress = round(float(package['bytesLoaded']) * 100 / package["bytesTotal"], 1)
                 greenlet.task.update(speed=(utils.sizeof_human(speed) + '/s --- ' + utils.sizeof_human(
                     package['bytesLoaded']) + ' / ' + utils.sizeof_human(package['bytesTotal'])), progress=progress, eta=eta)
