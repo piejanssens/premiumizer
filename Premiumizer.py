@@ -541,6 +541,10 @@ def get_download_stats_jd(jd, package_name):
                     eta = ''
                 else:
                     eta = " " + utils.time_human(package['eta'], fmt_short=True)
+                try:
+                    bytesTotal = package["bytesTotal"]
+                except:
+                    return 1
                 progress = round(float(package['bytesLoaded']) * 100 / package["bytesTotal"], 1)
                 greenlet.task.update(speed=(utils.sizeof_human(speed) + '/s --- ' + utils.sizeof_human(
                     package['bytesLoaded']) + ' / ' + utils.sizeof_human(package['bytesTotal'])), progress=progress, eta=eta)
