@@ -467,7 +467,11 @@ def email(failed):
         text += '\nStatus: FAILED\nError: %s' % greenlet.task.local_status
         text += '\n\nLog:\n'
         try:
-            with open(runningdir + 'premiumizer.log', 'r') as f:
+            if debug_enabled:
+                log = 'premiumizerDEBUG.log'
+            else:
+                log = 'premiumizer.log'
+            with open(runningdir + log, 'r') as f:
                 for line in f:
                     if greenlet.task.name in line:
                         text += line
