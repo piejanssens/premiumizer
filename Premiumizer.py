@@ -19,6 +19,7 @@ from string import ascii_letters, digits
 
 import bencode
 import gevent
+import myjdapi
 import requests
 import six
 from apscheduler.schedulers.gevent import GeventScheduler
@@ -35,17 +36,12 @@ from werkzeug.utils import secure_filename
 
 from DownloadTask import DownloadTask
 
-try:
-    import myjdapi
-except:
-    pass
-
 # "https://www.premiumize.me/static/api/torrent.html"
-print '------------------------------------------------------------------------------------------------------------'
-print '|                                                                                                           |'
-print '-------------------------------------------WELCOME TO PREMIUMIZER-------------------------------------------'
-print '|                                                                                                           |'
-print '------------------------------------------------------------------------------------------------------------'
+print ('------------------------------------------------------------------------------------------------------------')
+print ('|                                                                                                           |')
+print ('-------------------------------------------WELCOME TO PREMIUMIZER-------------------------------------------')
+print ('|                                                                                                           |')
+print ('------------------------------------------------------------------------------------------------------------')
 # Initialize config values
 prem_config = ConfigParser.RawConfigParser()
 runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0] + '/'
@@ -70,11 +66,11 @@ if debug_enabled:
                                        datefmt='%m-%d %H:%M:%S')
     syslog.setFormatter(formatterdebug)
     logger.addHandler(syslog)
-    print '-----------------------------------------------------------------------------------------------------------'
-    print '|                                                                                                          |'
-    print '------------------------PREMIUMIZER IS RUNNING IN DEBUG MODE, THIS IS NOT RECOMMENDED----------------------'
-    print '|                                                                                                          |'
-    print '-----------------------------------------------------------------------------------------------------------'
+    print ('---------------------------------------------------------------------------------------------------------')
+    print ('|                                                                                                        |')
+    print ('------------------------PREMIUMIZER IS RUNNING IN DEBUG MODE, THIS IS NOT RECOMMENDED--------------------')
+    print ('|                                                                                                        |')
+    print ('---------------------------------------------------------------------------------------------------------')
     logger.info('----------------------------------')
     logger.info('----------------------------------')
     logger.info('----------------------------------')
@@ -293,7 +289,8 @@ def check_update(auto_update=cfg.auto_update):
                             scheduler.scheduler.reschedule_job('check_update', trigger='interval', minutes=30)
                             logger.info(
                                 'Tried to update but downloads are not done or failed, trying again in 30 minutes')
-                            cfg.update_status = 'Update available, but not yet updated because downloads are not done or failed'
+                            cfg.update_status = \
+                                'Update available, but not yet updated because downloads are not done or failed'
                             return
                     update_self()
             else:
@@ -302,6 +299,7 @@ def check_update(auto_update=cfg.auto_update):
         scheduler.scheduler.reschedule_job('check_update', trigger='interval', hours=6)
 
 
+# noinspection PyProtectedMember,PyProtectedMember,PyProtectedMember
 def update_self():
     logger.debug('def update_self started')
     logger.info('Update - will restart')
@@ -529,10 +527,10 @@ def get_download_stats_jd(jd, package_name):
     for package in query_packages:
         if package['name'] in package_name:
             x = str(package['uuid'])
-            while not 'status' in package:
+            while 'status' not in package:
                 gevent.sleep(5)
                 package = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
-                                                     "speed": True, "eta": True, "packageUUIDs": [x]}])
+                                                        "speed": True, "eta": True, "packageUUIDs": [x]}])
                 try:
                     package = package[0]
                 except:
@@ -550,20 +548,21 @@ def get_download_stats_jd(jd, package_name):
                 else:
                     eta = " " + utils.time_human(package['eta'], fmt_short=True)
                 try:
-                    bytesTotal = package["bytesTotal"]
+                    bytestotal = package["bytesTotal"]
                 except:
                     return 1
                 progress = round(float(package['bytesLoaded']) * 100 / package["bytesTotal"], 1)
                 greenlet.task.update(speed=(utils.sizeof_human(speed) + '/s --- ' + utils.sizeof_human(
-                    package['bytesLoaded']) + ' / ' + utils.sizeof_human(package['bytesTotal'])), progress=progress, eta=eta)
+                    package['bytesLoaded']) + ' / ' + utils.sizeof_human(package['bytesTotal'])), progress=progress,
+                                     eta=eta)
                 gevent_sleep_time()
 
                 package = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
-                                                     "speed": True, "eta": True, "packageUUIDs": [x]}])
-                while not 'status' in package:
+                                                        "speed": True, "eta": True, "packageUUIDs": [x]}])
+                while 'status' not in package:
                     gevent.sleep(5)
                     package = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
-                                                                "speed": True, "eta": True, "packageUUIDs": [x]}])
+                                                            "speed": True, "eta": True, "packageUUIDs": [x]}])
                     try:
                         package = package[0]
                     except:
@@ -626,7 +625,7 @@ def download_file():
                 cfg.jd_connected = 1
             except:
                 logger.error(
-                    'Could not connect to My Jdownloader check username/password & device name, task failt: %s',
+                    'Could not connect to My Jdownloader check username/password & device name, task failed: %s',
                     greenlet.task.name)
                 cfg.jd_connected = 0
                 return 1
@@ -651,7 +650,7 @@ def download_file():
                     #   downloader.unpause()
                     if greenlet.task.local_status == "stopped":
                         while not downloader.isFinished():  # Have to use while loop
-                            downloader.stop()  # does not stop when calt once ..
+                            downloader.stop()  # does not stop when called once ..
                             gevent.sleep(0.5)  # let's hammer the stop call..
                         return 1
                 if downloader.isSuccessful():
