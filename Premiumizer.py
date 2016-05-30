@@ -557,12 +557,20 @@ def get_download_stats_jd(jd, package_name):
                 greenlet.task.update(speed=(utils.sizeof_human(speed) + '/s --- ' + utils.sizeof_human(
                     package['bytesLoaded']) + ' / ' + utils.sizeof_human(package['bytesTotal'])), progress=progress, eta=eta)
                 gevent_sleep_time()
+
                 package = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
                                                      "speed": True, "eta": True, "packageUUIDs": [x]}])
-                try:
-                    package = package[0]
-                except:
-                    pass
+                while not 'status' in package:
+                    gevent.sleep(5)
+                    package = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
+                                                                "speed": True, "eta": True, "packageUUIDs": [x]}])
+                    try:
+                        package = package[0]
+                    except:
+                        pass
+                    count += 1
+                    if count == 50:
+                        return 1
             # cfg.jd.disconnect()
             if package['status'] == 'Failed':
                 return 1
