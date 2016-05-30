@@ -299,7 +299,7 @@ def check_update(auto_update=cfg.auto_update):
         scheduler.scheduler.reschedule_job('check_update', trigger='interval', hours=6)
 
 
-# noinspection PyProtectedMember,PyProtectedMember,PyProtectedMember
+# noinspection PyProtectedMember
 def update_self():
     logger.debug('def update_self started')
     logger.info('Update - will restart')
@@ -316,7 +316,7 @@ def update_self():
         subprocess.Popen(['python', runningdir + 'utils.py', '--update'], shell=False, close_fds=True)
         os._exit(1)
 
-
+# noinspection PyProtectedMember
 def restart():
     logger.info('Restarting')
     scheduler.shutdown(wait=False)
@@ -328,7 +328,7 @@ def restart():
         subprocess.Popen(['python', runningdir + 'utils.py', '--restart'], shell=False, close_fds=True)
         os._exit(1)
 
-
+# noinspection PyProtectedMember
 def shutdown():
     logger.info('Shutdown recieved')
     scheduler.shutdown(wait=False)
