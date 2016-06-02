@@ -8,7 +8,7 @@ futures==3.0.5
 python-engineio==0.9.1
 flask==0.11
 flask_apscheduler==1.3.7
-flask_socketio==2.3
+flask_socketio==2.4
 flask-login==0.3.2
 gevent-websocket==0.9.5
 jinja2==2.8
