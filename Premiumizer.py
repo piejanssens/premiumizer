@@ -818,7 +818,10 @@ def download_task(task):
             email(1)
     if task.local_status == 'stopped':
         logger.warning('Download stopped for: %s', greenlet.task.name)
-        shutil.rmtree(task.dldir)
+        try:
+            shutil.rmtree(task.dldir)
+        except:
+            logger.warning('Could not delete folder for: %s', greenlet.task.name)
         task.update(progress=100, category='', local_status='waiting')
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
 
