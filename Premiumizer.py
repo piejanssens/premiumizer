@@ -1303,7 +1303,9 @@ def load_user(userid):
 
 @socketio.on('delete_task')
 def delete_task(message):
-    stop_task(message)
+    task = get_task(message['data'])
+    if task.local_status != 'stopped':
+        task.update(local_status='stopped')
     r = None
     r_count = 0
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
