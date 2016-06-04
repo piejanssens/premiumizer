@@ -559,17 +559,20 @@ def get_download_stats_jd(jd, package_name):
 
                 package = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
                                                         "speed": True, "eta": True, "packageUUIDs": [x]}])
+
                 while 'status' not in package:
+                    try:
+                        package = package[0]
+                        break
+                    except:
+                        pass
                     gevent.sleep(5)
                     package = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
                                                             "speed": True, "eta": True, "packageUUIDs": [x]}])
-                    try:
-                        package = package[0]
-                    except:
-                        pass
                     count += 1
                     if count == 50:
                         return 1
+
             # cfg.jd.disconnect()
             if package['status'] == 'Failed':
                 return 1
