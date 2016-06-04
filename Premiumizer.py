@@ -25,8 +25,8 @@ import six
 from apscheduler.schedulers.gevent import GeventScheduler
 from chardet import detect
 from flask import Flask, flash, request, redirect, url_for, render_template, send_from_directory
-from flask.ext.login import LoginManager, login_required, login_user, logout_user, UserMixin
-from flask.ext.socketio import SocketIO, emit
+from flask_login import LoginManager, login_required, login_user, logout_user, UserMixin
+from flask_socketio import SocketIO, emit
 from flask_apscheduler import APScheduler
 from gevent import local
 from pySmartDL import SmartDL, utils
