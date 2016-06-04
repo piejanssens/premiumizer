@@ -506,6 +506,27 @@ def email(failed):
         logger.error('Email error for: %s error: %s', greenlet.task.name, err)
 
 
+def jd_query_package(jd, package_id):
+    count = 0
+    package = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
+                                                        "speed": True, "eta": True, "packageUUIDs": [package_id]}])
+    while 'status' not in package:
+        try:
+            package = package[0]
+            if 'status' in package:
+                break
+        except:
+            pass
+        gevent.sleep(5)
+        package = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
+                                                "speed": True, "eta": True, "packageUUIDs": [package_id]}])
+        count += 1
+        if count == 50:
+            logger.error('JD did not return package status for: %s', greenlet.task.name)
+            return 1
+    return package
+
+
 def get_download_stats_jd(jd, package_name):
     start_time = time.time()
     count = 0
@@ -516,29 +537,21 @@ def get_download_stats_jd(jd, package_name):
         query_packages = jd.downloads.query_packages()
         count += 1
         if count == 10:
+            logger.error('Could not find package in JD for: %s', greenlet.task.name)
             return 1
     while not any(package['name'] in package_name for package in query_packages):
         gevent.sleep(5)
         query_packages = jd.downloads.query_packages()
         count += 1
         if count == 10:
+            logger.error('Could not find package in JD for: %s', greenlet.task.name)
             return 1
 
     for package in query_packages:
         if package['name'] in package_name:
-            x = str(package['uuid'])
-            while 'status' not in package:
-                gevent.sleep(5)
-                package = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
-                                                        "speed": True, "eta": True, "packageUUIDs": [x]}])
-                try:
-                    package = package[0]
-                except:
-                    pass
-                count += 1
-                if count == 10:
-                    return 1
-            while package['status'] != 'Finished':
+            package_id = str(package['uuid'])
+            package = jd_query_package(jd, package_id)
+            while package['status'] != 'Finished' and package['status'] != 'Failed':
                 try:
                     speed = package['speed']
                 except:
@@ -550,39 +563,27 @@ def get_download_stats_jd(jd, package_name):
                 try:
                     bytestotal = package["bytesTotal"]
                 except:
+                    logger.error('JD did not return package bytesTotal for: %s', greenlet.task.name)
                     return 1
                 progress = round(float(package['bytesLoaded']) * 100 / package["bytesTotal"], 1)
                 greenlet.task.update(speed=(utils.sizeof_human(speed) + '/s --- ' + utils.sizeof_human(
                     package['bytesLoaded']) + ' / ' + utils.sizeof_human(package['bytesTotal'])), progress=progress,
                                      eta=eta)
                 gevent_sleep_time()
-
-                package = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
-                                                        "speed": True, "eta": True, "packageUUIDs": [x]}])
-
-                while 'status' not in package:
-                    try:
-                        package = package[0]
-                        break
-                    except:
-                        pass
-                    gevent.sleep(5)
-                    package = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
-                                                            "speed": True, "eta": True, "packageUUIDs": [x]}])
-                    count += 1
-                    if count == 50:
-                        return 1
-
+                package = jd_query_package(jd, package_id)
             # cfg.jd.disconnect()
+
             if package['status'] == 'Failed':
+                logger.error('JD returned failed for: %s', greenlet.task.name)
                 return 1
             stop_time = time.time()
             dltime = int(stop_time - start_time)
             greenlet.task.update(dltime=dltime)
 
             try:
-                jd.downloads.cleanup("DELETE_FINISHED", "REMOVE_LINKS_ONLY", "ALL", packages_ids=[x])
+                jd.downloads.cleanup("DELETE_FINISHED", "REMOVE_LINKS_ONLY", "ALL", packages_ids=[package_id])
             except:
+                logger.error('Could not delete links in JD for package: %s', greenlet.task.name)
                 pass
             return 0
 
