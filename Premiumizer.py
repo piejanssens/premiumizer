@@ -554,7 +554,7 @@ def get_download_stats_jd(jd, package_name):
             while package['status'] != 'Finished' and package['status'] != 'Failed':
                 if greenlet.task.local_status == 'stopped':
                     try:
-                        jd.downloads.cleanup("DELETE_ALL", "REMOVE_LINKS_AND_DELETE_FILES", "ALL", packages_ids=[package_id])
+                        jd.downloads.cleanup("DELETE_ALL", "REMOVE_LINKS_ONLY", "ALL", packages_ids=[package_id])
                     except:
                         logger.error('Could not delete package in JD for : %s', greenlet.task.name)
                         pass
