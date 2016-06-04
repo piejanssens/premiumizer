@@ -451,9 +451,9 @@ def notify_nzbtomedia():
     return returncode
 
 
-def email(failed):
+def email(status):
     logger.debug('def email started')
-    if not failed:
+    if status == 'download success':
         subject = 'Success for "%s"' % greenlet.task.name
         text = 'Download of "%s" has successfully completed.' % greenlet.task.name
         text += '\nStatus: SUCCESS'
@@ -465,7 +465,7 @@ def email(failed):
         for download in greenlet.download_list:
             text += '\n' + os.path.basename(download['path'])
 
-    else:
+    elif status == 'download failed':
         subject = 'Failure for "%s"' % greenlet.task.name
         text = 'Download of "%s" has failed.' % greenlet.task.name
         text += '\nStatus: FAILED\nError: %s' % greenlet.task.local_status
@@ -481,6 +481,10 @@ def email(failed):
                         text += line
         except:
             text += 'could not add log'
+
+    else:
+        subject = status
+        text = status
 
     # Create message
     msg = MIMEText(text)
@@ -781,11 +785,14 @@ def download_task(task):
                 logger.info('Automatically Deleted: %s from cloud', task.name)
                 socketio.emit('delete_success', {'data': task.hash})
             else:
-                logger.info('Torrent could not be removed from cloud: %s', task.name)
+                msg = 'Torrent could not be removed from cloud: %s', task.name
+                logger.error(msg)
                 logger.info(responsedict['message'])
+                if cfg.email_enabled:
+                    email(msg)
                 socketio.emit('delete_failed', {'data': task.hash})
         else:
-            logger.info('Torrent could not be removed from cloud: %s', task.name)
+            logger.error('Torrent could not be removed from cloud: %s', task.name)
             socketio.emit('delete_failed', {'data': task.hash})
 
     if not failed:
@@ -801,9 +808,9 @@ def download_task(task):
     if cfg.email_enabled and task.local_status != 'stopped':
         if not failed:
             if not cfg.email_on_failure:
-                email(0)
+                email('download success')
         else:
-            email(1)
+            email('download failed')
     if task.local_status == 'stopped':
         logger.warning('Download stopped for: %s', greenlet.task.name)
         try:
@@ -819,8 +826,8 @@ def prem_connection(method, url, payload, files=None):
     r = None
     r_count = 0
     while r is None:
+        r_count += 1
         try:
-            r_count += 1
             if method == 'post':
                 r = prem_session.post(url, payload, timeout=5)
             elif method == 'postfile':
@@ -829,10 +836,13 @@ def prem_connection(method, url, payload, files=None):
                 r = prem_session.get(url, params=payload, timeout=5)
         except:
             logger.warning('Connection to premiumize.me timed out')
+            if r_count == 10:
+                logger.error('Connection to premiumize.me timed out 10 times')
+                if cfg.email_enabled:
+                    email('premiumize.me connection error')
+                return 'failed'
             pass
-        if r_count == 10:
-            logger.ERROR('Connection to premiumize.me timed out 10 times')
-            return 'failed'
+            gevent.sleep(3)
     return r
 
 
@@ -852,6 +862,7 @@ def update():
         else:
             socketio.emit('premiumize_connect_error', {})
     else:
+        logger.error('premiumize.me connection error')
         socketio.emit('premiumize_connect_error', {})
     if not idle:
         update_interval = active_interval
@@ -967,6 +978,10 @@ def upload_torrent(filename):
             logger.debug('Upload successful: %s', filename)
             return True
         else:
+            msg = 'Upload of torrent: %s failed', filename
+            logger.error(msg)
+            if cfg.email_enabled:
+                email(msg)
             return False
     else:
         return False
@@ -982,6 +997,10 @@ def upload_magnet(magnet):
             logger.debug('Upload magnet successful')
             return True
         else:
+            msg = 'Upload of torrent: %s failed', magnet
+            logger.error(msg)
+            if cfg.email_enabled:
+                email(msg)
             return False
     else:
         return False
@@ -1008,9 +1027,10 @@ class MyHandler(PatternMatchingEventHandler):
             else:
                 category = ''
             add_task(hash, 0, name, category)
-            upload_torrent(event.src_path)
-            logger.debug('Deleting torrent from watchdir: %s', torrent_file)
-            os.remove(torrent_file)
+            failed = upload_torrent(event.src_path)
+            if not failed:
+                logger.debug('Deleting torrent from watchdir: %s', torrent_file)
+                os.remove(torrent_file)
 
     def on_created(self, event):
         self.process(event)
@@ -1068,10 +1088,11 @@ def upload():
             os.makedirs(runningdir + 'tmp')
         torrent_file.save(os.path.join(runningdir + 'tmp', filename))
         torrent = runningdir + 'tmp' + '/' + filename
-        upload_torrent(torrent)
-        hash, name = torrent_metainfo(torrent)
-        add_task(hash, 0, name, '')
-        os.remove(torrent)
+        failed = upload_torrent(torrent)
+        if not failed:
+            hash, name = torrent_metainfo(torrent)
+            add_task(hash, 0, name, '')
+            os.remove(torrent)
     elif request.data:
         upload_magnet(request.data)
         scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
@@ -1296,6 +1317,10 @@ def delete_task(message):
             emit('delete_success', {'data': message['data']})
             scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
         else:
+            msg = 'Unable to delete torrent from cloud for: %s', task.name
+            logger.error(msg)
+            if cfg.email_enabled:
+                email(msg)
             emit('delete_failed', {'data': message['data']})
     else:
         emit('delete_failed')
