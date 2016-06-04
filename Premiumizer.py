@@ -1293,6 +1293,7 @@ def load_user(userid):
 
 @socketio.on('delete_task')
 def delete_task(message):
+    stop_task(message)
     r = None
     r_count = 0
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
@@ -1328,11 +1329,8 @@ def delete_task(message):
 @socketio.on('stop_task')
 def stop_task(message):
     task = get_task(message['data'])
-    if not cfg.download_builtin:
-        logger.warning('Cannot stop download when using external downloader for: %s', task.name)
-    else:
-        if task.local_status != 'stopped':
-            task.update(local_status='stopped')
+    if task.local_status != 'stopped':
+        task.update(local_status='stopped')
 
 
 @socketio.on('connect')
