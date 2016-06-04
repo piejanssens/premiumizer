@@ -25,9 +25,9 @@ import six
 from apscheduler.schedulers.gevent import GeventScheduler
 from chardet import detect
 from flask import Flask, flash, request, redirect, url_for, render_template, send_from_directory
+from flask_apscheduler import APScheduler
 from flask_login import LoginManager, login_required, login_user, logout_user, UserMixin
 from flask_socketio import SocketIO, emit
-from flask_apscheduler import APScheduler
 from gevent import local
 from pySmartDL import SmartDL, utils
 from watchdog.events import PatternMatchingEventHandler
@@ -316,6 +316,7 @@ def update_self():
         subprocess.Popen(['python', runningdir + 'utils.py', '--update'], shell=False, close_fds=True)
         os._exit(1)
 
+
 # noinspection PyProtectedMember
 def restart():
     logger.info('Restarting')
@@ -327,6 +328,7 @@ def restart():
     else:
         subprocess.Popen(['python', runningdir + 'utils.py', '--restart'], shell=False, close_fds=True)
         os._exit(1)
+
 
 # noinspection PyProtectedMember
 def shutdown():
@@ -509,7 +511,7 @@ def email(failed):
 def jd_query_package(jd, package_id):
     count = 0
     package = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
-                                                        "speed": True, "eta": True, "packageUUIDs": [package_id]}])
+                                            "speed": True, "eta": True, "packageUUIDs": [package_id]}])
     while 'status' not in package:
         try:
             package = package[0]
@@ -732,22 +734,14 @@ def process_dir(dir_content, path, change_dldir=1):
 
 def download_process():
     logger.debug('def download_process started')
-    r = None
-    r_count = 0
     returncode = 0
     greenlet.download_list = []
     greenlet.size_remove = 0
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
                'hash': greenlet.task.hash}
-    while r is None:
-        try:
-            r_count += 1
-            r = prem_session.post("https://www.premiumize.me/torrent/browse", payload, timeout=5)
-        except:
-            logger.warning('Connection to premiumize.me timed out')
-            pass
-        if r_count == 10:
-            logger.ERROR('Connection to premiumize.me timed out 10 times')
+    r = prem_connection("post", "https://www.premiumize.me/torrent/browse", payload)
+    if r == 'failed':
+        return 1
     greenlet.task.update(local_status='downloading', progress=0, speed='', eta='')
     process_dir(json.loads(r.content)['data']['content'], greenlet.task.dldir)
     if greenlet.size_remove is not 0:
@@ -779,25 +773,19 @@ def download_task(task):
             task.update(local_status='failed: nzbtomedia')
 
     if cfg.remove_cloud and not failed:
-        r = None
-        r_count = 0
         payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'hash': task.hash}
-        while r is None:
-            try:
-                r_count += 1
-                r = prem_session.post("https://www.premiumize.me/torrent/delete", payload, timeout=5)
-            except:
-                logger.warning('Connection to premiumize.me timed out')
-                pass
-            if r_count == 10:
-                logger.ERROR('Connection to premiumize.me timed out 10 times')
-        responsedict = json.loads(r.content)
-        if responsedict['status'] == "success":
-            logger.info('Automatically Deleted: %s from cloud', task.name)
-            socketio.emit('delete_success', {'data': task.hash})
+        r = prem_connection("post", "https://www.premiumize.me/torrent/delete", payload)
+        if r != 'failed':
+            responsedict = json.loads(r.content)
+            if responsedict['status'] == "success":
+                logger.info('Automatically Deleted: %s from cloud', task.name)
+                socketio.emit('delete_success', {'data': task.hash})
+            else:
+                logger.info('Torrent could not be removed from cloud: %s', task.name)
+                logger.info(responsedict['message'])
+                socketio.emit('delete_failed', {'data': task.hash})
         else:
             logger.info('Torrent could not be removed from cloud: %s', task.name)
-            logger.info(responsedict['message'])
             socketio.emit('delete_failed', {'data': task.hash})
 
     if not failed:
@@ -826,28 +814,43 @@ def download_task(task):
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
 
 
-def update():
-    logger.debug('def updating started')
+def prem_connection(method, url, payload, files=None):
+    logger.debug('def prem_connection started')
     r = None
     r_count = 0
-    idle = True
-    update_interval = idle_interval
-    payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
     while r is None:
         try:
             r_count += 1
-            r = prem_session.post("https://www.premiumize.me/torrent/list", payload, timeout=5)
+            if method == 'post':
+                r = prem_session.post(url, payload, timeout=5)
+            elif method == 'postfile':
+                r = prem_session.post(url, payload, files=files, timeout=5)
+            elif method == 'get':
+                r = prem_session.get(url, params=payload, timeout=5)
         except:
             logger.warning('Connection to premiumize.me timed out')
             pass
         if r_count == 10:
             logger.ERROR('Connection to premiumize.me timed out 10 times')
-    response_content = json.loads(r.content)
-    if response_content['status'] == "success":
-        if not response_content['torrents']:
-            update_interval *= 3
-        torrents = response_content['torrents']
-        idle = parse_tasks(torrents)
+            return 'failed'
+    return r
+
+
+def update():
+    logger.debug('def updating started')
+    idle = True
+    update_interval = idle_interval
+    payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
+    r = prem_connection("post", "https://www.premiumize.me/torrent/list", payload)
+    if r != 'failed':
+        response_content = json.loads(r.content)
+        if response_content['status'] == "success":
+            if not response_content['torrents']:
+                update_interval *= 3
+            torrents = response_content['torrents']
+            idle = parse_tasks(torrents)
+        else:
+            socketio.emit('premiumize_connect_error', {})
     else:
         socketio.emit('premiumize_connect_error', {})
     if not idle:
@@ -954,46 +957,32 @@ def add_task(hash, size, name, category):
 
 def upload_torrent(filename):
     logger.debug('def upload_torrent started')
-    r = None
-    r_count = 0
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
     files = {'file': open(filename, 'rb')}
     logger.debug('Uploading torrent to the cloud: %s', filename)
-    while r is None:
-        try:
-            r_count += 1
-            r = prem_session.post("https://www.premiumize.me/torrent/add", payload, files=files, timeout=5)
-        except:
-            logger.warning('Connection to premiumize.me timed out')
-            pass
-        if r_count == 10:
-            logger.ERROR('Connection to premiumize.me timed out 10 times')
-    response_content = json.loads(r.content)
-    if response_content['status'] == "success":
-        logger.debug('Upload successful: %s', filename)
-        return True
+    r = prem_connection("postfile", "https://www.premiumize.me/torrent/add", payload, files)
+    if r != 'failed':
+        response_content = json.loads(r.content)
+        if response_content['status'] == "success":
+            logger.debug('Upload successful: %s', filename)
+            return True
+        else:
+            return False
     else:
         return False
 
 
 def upload_magnet(magnet):
     logger.debug('def upload_magnet started')
-    r = None
-    r_count = 0
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'url': magnet}
-    while r is None:
-        try:
-            r_count += 1
-            r = prem_session.post("https://www.premiumize.me/torrent/add", payload, timeout=5)
-        except:
-            logger.warning('Connection to premiumize.me timed out')
-            pass
-        if r_count == 10:
-            logger.ERROR('Connection to premiumize.me timed out 10 times')
-    response_content = json.loads(r.content)
-    if response_content['status'] == "success":
-        logger.debug('Upload magnet successful')
-        return True
+    r = prem_connection("post", "https://www.premiumize.me/torrent/add", payload)
+    if r != 'failed':
+        response_content = json.loads(r.content)
+        if response_content['status'] == "success":
+            logger.debug('Upload magnet successful')
+            return True
+        else:
+            return False
     else:
         return False
 
@@ -1271,18 +1260,8 @@ def about():
 @app.route('/list')
 @login_required
 def list():
-    r = None
-    r_count = 0
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
-    while r is None:
-        try:
-            r_count += 1
-            r = prem_session.get("https://www.premiumize.me/torrent/list", params=payload, timeout=5)
-        except:
-            logger.warning('Connection to premiumize.me timed out')
-            pass
-        if r_count == 10:
-            logger.ERROR('Connection to premiumize.me timed out 10 times')
+    r = prem_connection("get", "https://www.premiumize.me/torrent/list", payload)
     return r.text
 
 
@@ -1306,27 +1285,20 @@ def delete_task(message):
     task = get_task(message['data'])
     if task.local_status != 'stopped':
         task.update(local_status='stopped')
-    r = None
-    r_count = 0
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
                'hash': message['data']}
-    while r is None:
-        try:
-            r_count += 1
-            r = prem_session.post("https://www.premiumize.me/torrent/delete", payload, timeout=5)
-        except:
-            logger.warning('Connection to premiumize.me timed out')
-            pass
-        if r_count == 10:
-            logger.ERROR('Connection to premiumize.me timed out 10 times')
-    responsedict = json.loads(r.content)
-    task = get_task(message['data'])
-    if responsedict['status'] == "success":
-        logger.info('Deleted: %s from the cloud', task.name)
-        emit('delete_success', {'data': message['data']})
-        scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
+    r = prem_connection("post", "https://www.premiumize.me/torrent/delete", payload)
+    if r != 'failed':
+        responsedict = json.loads(r.content)
+        task = get_task(message['data'])
+        if responsedict['status'] == "success":
+            logger.info('Deleted: %s from the cloud', task.name)
+            emit('delete_success', {'data': message['data']})
+            scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
+        else:
+            emit('delete_failed', {'data': message['data']})
     else:
-        emit('delete_failed', {'data': message['data']})
+        emit('delete_failed')
 
 
 # @socketio.on('pause_task')
