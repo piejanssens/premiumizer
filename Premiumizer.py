@@ -507,9 +507,15 @@ def email(status):
         smtp.sendmail(cfg.email_from, cfg.email_to, msg.as_string())
 
         smtp.quit()
-        logger.info('Email send for: %s', greenlet.task.name)
+        if subject != status:
+            logger.info('Email send for: %s', greenlet.task.name)
+        else:
+            logger.info('Email send for: %s', status)
     except Exception as err:
-        logger.error('Email error for: %s error: %s', greenlet.task.name, err)
+        if subject != status:
+            logger.error('Email error for: %s error: %s', greenlet.task.name, err)
+        else:
+            logger.info('Email send for: %s', status)
 
 
 def jd_query_package(jd, package_id):
@@ -785,7 +791,7 @@ def download_task(task):
                 logger.info('Automatically Deleted: %s from cloud', task.name)
                 socketio.emit('delete_success', {'data': task.hash})
             else:
-                msg = 'Torrent could not be removed from cloud: %s', task.name
+                msg = 'Torrent could not be removed from cloud: %s, message: %s' % (task.name, responsedict['message'])
                 logger.error(msg)
                 logger.info(responsedict['message'])
                 if cfg.email_enabled:
@@ -978,7 +984,7 @@ def upload_torrent(filename):
             logger.debug('Upload successful: %s', filename)
             return True
         else:
-            msg = 'Upload of torrent: %s failed', filename
+            msg = 'Upload of torrent: %s failed, message: %s' % (filename, response_content['message'])
             logger.error(msg)
             if cfg.email_enabled:
                 email(msg)
@@ -997,7 +1003,7 @@ def upload_magnet(magnet):
             logger.debug('Upload magnet successful')
             return True
         else:
-            msg = 'Upload of torrent: %s failed', magnet
+            msg = 'Upload of torrent: %s failed, message: %s' % (magnet, response_content['message'])
             logger.error(msg)
             if cfg.email_enabled:
                 email(msg)
@@ -1027,8 +1033,8 @@ class MyHandler(PatternMatchingEventHandler):
             else:
                 category = ''
             add_task(hash, 0, name, category)
-            failed = upload_torrent(event.src_path)
-            if not failed:
+            uploaded = upload_torrent(event.src_path)
+            if uploaded:
                 logger.debug('Deleting torrent from watchdir: %s', torrent_file)
                 os.remove(torrent_file)
 
@@ -1317,7 +1323,7 @@ def delete_task(message):
             emit('delete_success', {'data': message['data']})
             scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
         else:
-            msg = 'Unable to delete torrent from cloud for: %s', task.name
+            msg = 'Unable to delete torrent from cloud for: %s, message: %s' % (task.name, responsedict['message'])
             logger.error(msg)
             if cfg.email_enabled:
                 email(msg)
