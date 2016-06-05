@@ -982,15 +982,15 @@ def upload_torrent(filename):
         response_content = json.loads(r.content)
         if response_content['status'] == "success":
             logger.debug('Upload successful: %s', filename)
-            return True
+            return 0
         else:
             msg = 'Upload of torrent: %s failed, message: %s' % (filename, response_content['message'])
             logger.error(msg)
             if cfg.email_enabled:
                 email(msg)
-            return False
+            return 1
     else:
-        return False
+        return 1
 
 
 def upload_magnet(magnet):
@@ -1033,8 +1033,8 @@ class MyHandler(PatternMatchingEventHandler):
             else:
                 category = ''
             add_task(hash, 0, name, category)
-            uploaded = upload_torrent(event.src_path)
-            if uploaded:
+            failed = upload_torrent(event.src_path)
+            if not failed:
                 logger.debug('Deleting torrent from watchdir: %s', torrent_file)
                 os.remove(torrent_file)
 
