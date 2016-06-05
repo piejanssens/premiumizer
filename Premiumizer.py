@@ -534,9 +534,9 @@ def jd_query_package(jd, package_id):
 
 
 def get_download_stats_jd(jd, package_name):
-    start_time = time.time()
     count = 0
     gevent.sleep(10)
+    start_time = time.time()
     query_packages = jd.downloads.query_packages()
     while not len(query_packages):
         gevent.sleep(5)
