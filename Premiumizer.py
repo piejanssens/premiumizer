@@ -130,7 +130,7 @@ if prem_config.getboolean('update', 'updated'):
     logger.info('*************************************************************************************')
     logger.info('---------------------------Premiumizer has been updated!!----------------------------')
     logger.info('*************************************************************************************')
-    if os.path.isfile(runningdir + 'settings.cfg.old'):
+    if os.path.isfile(runningdir + 'settings.cfg.old2'):
         logger.info('*************************************************************************************')
         logger.info('-------Settings file has been updated, old settings file renamed to .old-------')
         logger.info('*************************************************************************************')
