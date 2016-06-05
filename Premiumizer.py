@@ -771,7 +771,9 @@ def download_task(task):
     greenlet.failed = 0
     failed = download_process()
     if failed and task.local_status != 'stopped':
-        task.update(local_status='failed: download retrying')
+        dldir = get_cat_var(task.category)
+        dldir = dldir[0]
+        task.update(local_status='failed: download retrying',dldir=dldir)
         logger.warning('Retrying failed download in 10 minutes for: %s', task.name)
         gevent.sleep(600)
         failed = download_process()
