@@ -1,6 +1,6 @@
 watchdog==0.8.3
-APScheduler==3.1.0
-greenlet==0.4.9
+APScheduler==3.2.0
+greenlet==0.4.10
 bencode==1.0
 chardet==2.3.0
 click==6.6
