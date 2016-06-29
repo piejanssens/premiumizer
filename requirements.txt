@@ -8,7 +8,7 @@ futures==3.0.5
 python-engineio==0.9.2
 flask==0.11.1
 flask_apscheduler==1.4.0
-flask_socketio==2.4
+flask_socketio==2.5
 flask-login==0.3.2
 gevent-websocket==0.9.5
 jinja2==2.8
@@ -16,7 +16,7 @@ MarkupSafe==0.23
 pathtools==0.1.2
 https://github.com/neox387/pySmartDL/archive/1.2.5.zip#egg=PySmartDL
 requests==2.10.0
-python-socketio==1.4
+python-socketio==1.4.1
 tzlocal==1.2.2
 werkzeug==0.11.10
 itsdangerous==0.24
