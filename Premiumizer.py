@@ -522,20 +522,25 @@ def jd_query_package(jd, package_id):
     count = 0
     package = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
                                             "speed": True, "eta": True, "packageUUIDs": [package_id]}])
-    while 'status' not in package:
-        try:
-            package = package[0]
-            if 'status' in package:
-                break
-        except:
-            pass
-        gevent.sleep(5)
-        package = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
+
+    if not isinstance(package, bool):
+        while 'status' not in package:
+            try:
+                package = package[0]
+                if 'status' in package:
+                    break
+            except:
+                pass
+            gevent.sleep(5)
+            package = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
                                                 "speed": True, "eta": True, "packageUUIDs": [package_id]}])
-        count += 1
-        if count == 50:
-            logger.error('JD did not return package status for: %s', greenlet.task.name)
-            return 1
+            count += 1
+            if count == 50:
+                package['status'] != 'Failed'
+                logger.error('JD did not return package status for: %s', greenlet.task.name)
+    else:
+        package['status'] != 'Failed'
+        logger.error('JD did not return package status for: %s', greenlet.task.name)
     return package
 
 
