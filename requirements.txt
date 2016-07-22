@@ -21,7 +21,7 @@ tzlocal==1.2.2
 werkzeug==0.11.10
 itsdangerous==0.24
 six==1.10.0
-gevent==1.1.1
+gevent==1.1.2
 python-dateutil==2.5.3
 pycrypto==2.6.1
 myjdapi==1.0.1
