@@ -1025,7 +1025,7 @@ def send_categories():
 
 
 class MyHandler(PatternMatchingEventHandler):
-    patterns = ["*.torrent"]
+    patterns = ["*.torrent", "*.magnet"]
 
     # noinspection PyMethodMayBeStatic
     def process(self, event):
@@ -1033,14 +1033,31 @@ class MyHandler(PatternMatchingEventHandler):
             gevent.sleep(1)
             torrent_file = event.src_path
             logger.debug('New torrent file detected at: %s', torrent_file)
-            hash, name = torrent_metainfo(torrent_file)
             dirname = os.path.basename(os.path.normpath(os.path.dirname(torrent_file)))
             if dirname in cfg.download_categories:
                 category = dirname
             else:
                 category = ''
-            add_task(hash, 0, name, category)
-            failed = upload_torrent(event.src_path)
+
+            if torrent_file.endswith('.torrent'):
+                hash, name = torrent_metainfo(torrent_file)
+                add_task(hash, 0, name, category)
+                failed = upload_torrent(event.src_path)
+            elif torrent_file.endswith('.magnet'):
+                with open(torrent_file) as f:
+                    magnet = f.read()
+                    if not magnet:
+                        logger.error('Magnet file empty? for: %s', torrent_file)
+                    else:
+                        try:
+                            hash = re.search('btih:(.+?)&dn=', magnet).group(1)
+                            name = re.search('&dn=(.+?)&tr', magnet).group(1)
+                        except AttributeError:
+                            logger.error('Extracting hash / name from .magnet failed for: %s', torrent_file)
+                            return
+                        add_task(hash, 0, name, category)
+                        failed = upload_magnet(magnet)
+
             if not failed:
                 logger.debug('Deleting torrent from watchdir: %s', torrent_file)
                 os.remove(torrent_file)
