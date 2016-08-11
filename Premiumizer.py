@@ -648,6 +648,7 @@ def download_file():
             cfg.jd_connected = 1
         except:
             try:
+                cfg.jd = myjdapi.Myjdapi()
                 cfg.jd.connect(cfg.jd_username, cfg.jd_password)
                 jd = cfg.jd.get_device(cfg.jd_device)
                 cfg.jd_connected = 1
