@@ -533,13 +533,13 @@ def jd_query_package(jd, package_id):
                 pass
             gevent.sleep(5)
             package = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
-                                                "speed": True, "eta": True, "packageUUIDs": [package_id]}])
+                                                    "speed": True, "eta": True, "packageUUIDs": [package_id]}])
             count += 1
             if count == 50:
-                package['status'] != 'Failed'
+                package['status'] = 'Failed'
                 logger.error('JD did not return package status for: %s', greenlet.task.name)
     else:
-        package['status'] != 'Failed'
+        package['status'] = 'Failed'
         logger.error('JD did not return package status for: %s', greenlet.task.name)
     return package
 
@@ -648,6 +648,7 @@ def download_file():
             cfg.jd_connected = 1
         except:
             try:
+                cfg.jd = myjdapi.Myjdapi()
                 cfg.jd.connect(cfg.jd_username, cfg.jd_password)
                 jd = cfg.jd.get_device(cfg.jd_device)
                 cfg.jd_connected = 1
@@ -778,7 +779,7 @@ def download_task(task):
     if failed and task.local_status != 'stopped':
         dldir = get_cat_var(task.category)
         dldir = dldir[0]
-        task.update(local_status='failed: download retrying',dldir=dldir)
+        task.update(local_status='failed: download retrying', dldir=dldir)
         logger.warning('Retrying failed download in 10 minutes for: %s', task.name)
         gevent.sleep(600)
         failed = download_process()
@@ -1025,7 +1026,7 @@ def send_categories():
 
 
 class MyHandler(PatternMatchingEventHandler):
-    patterns = ["*.torrent"]
+    patterns = ["*.torrent", "*.magnet"]
 
     # noinspection PyMethodMayBeStatic
     def process(self, event):
@@ -1033,14 +1034,32 @@ class MyHandler(PatternMatchingEventHandler):
             gevent.sleep(1)
             torrent_file = event.src_path
             logger.debug('New torrent file detected at: %s', torrent_file)
-            hash, name = torrent_metainfo(torrent_file)
             dirname = os.path.basename(os.path.normpath(os.path.dirname(torrent_file)))
             if dirname in cfg.download_categories:
                 category = dirname
             else:
                 category = ''
-            add_task(hash, 0, name, category)
-            failed = upload_torrent(event.src_path)
+
+            if torrent_file.endswith('.torrent'):
+                hash, name = torrent_metainfo(torrent_file)
+                add_task(hash, 0, name, category)
+                failed = upload_torrent(event.src_path)
+            elif torrent_file.endswith('.magnet'):
+                with open(torrent_file) as f:
+                    magnet = f.read()
+                    if not magnet:
+                        logger.error('Magnet file empty? for: %s', torrent_file)
+                        return
+                    else:
+                        try:
+                            hash = re.search('btih:(.+?)&', magnet).group(1)
+                            name = re.search('&dn=(.+?)&', magnet).group(1)
+                        except AttributeError:
+                            logger.error('Extracting hash / name from .magnet failed for: %s', torrent_file)
+                            return
+                        add_task(hash, 0, name, category)
+                        failed = upload_magnet(magnet)
+
             if not failed:
                 logger.debug('Deleting torrent from watchdir: %s', torrent_file)
                 os.remove(torrent_file)
@@ -1078,6 +1097,10 @@ def watchdir():
                 fname = os.path.join(dirpath, filename)
                 if fname.endswith('.torrent'):
                     fname2 = fname.replace('.torrent', '2.torrent')
+                    shutil.copy(fname, fname2)
+                    os.remove(fname)
+                elif fname.endswith('.magnet'):
+                    fname2 = fname.replace('.magnet', '2.magnet')
                     shutil.copy(fname, fname2)
                     os.remove(fname)
     except:
