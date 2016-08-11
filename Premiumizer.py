@@ -1048,6 +1048,7 @@ class MyHandler(PatternMatchingEventHandler):
                     magnet = f.read()
                     if not magnet:
                         logger.error('Magnet file empty? for: %s', torrent_file)
+                        return
                     else:
                         try:
                             hash = re.search('btih:(.+?)&', magnet).group(1)
