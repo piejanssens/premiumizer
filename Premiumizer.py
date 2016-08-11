@@ -533,13 +533,13 @@ def jd_query_package(jd, package_id):
                 pass
             gevent.sleep(5)
             package = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
-                                                "speed": True, "eta": True, "packageUUIDs": [package_id]}])
+                                                    "speed": True, "eta": True, "packageUUIDs": [package_id]}])
             count += 1
             if count == 50:
-                package['status'] != 'Failed'
+                package['status'] = 'Failed'
                 logger.error('JD did not return package status for: %s', greenlet.task.name)
     else:
-        package['status'] != 'Failed'
+        package['status'] = 'Failed'
         logger.error('JD did not return package status for: %s', greenlet.task.name)
     return package
 
@@ -779,7 +779,7 @@ def download_task(task):
     if failed and task.local_status != 'stopped':
         dldir = get_cat_var(task.category)
         dldir = dldir[0]
-        task.update(local_status='failed: download retrying',dldir=dldir)
+        task.update(local_status='failed: download retrying', dldir=dldir)
         logger.warning('Retrying failed download in 10 minutes for: %s', task.name)
         gevent.sleep(600)
         failed = download_process()
