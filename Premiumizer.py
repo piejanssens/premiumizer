@@ -1099,6 +1099,10 @@ def watchdir():
                     fname2 = fname.replace('.torrent', '2.torrent')
                     shutil.copy(fname, fname2)
                     os.remove(fname)
+                elif fname.endswith('.magnet'):
+                    fname2 = fname.replace('.magnet', '2.magnet')
+                    shutil.copy(fname, fname2)
+                    os.remove(fname)
     except:
         raise
 
