@@ -1050,8 +1050,8 @@ class MyHandler(PatternMatchingEventHandler):
                         logger.error('Magnet file empty? for: %s', torrent_file)
                     else:
                         try:
-                            hash = re.search('btih:(.+?)&dn=', magnet).group(1)
-                            name = re.search('&dn=(.+?)&tr', magnet).group(1)
+                            hash = re.search('btih:(.+?)&', magnet).group(1)
+                            name = re.search('&dn=(.+?)&', magnet).group(1)
                         except AttributeError:
                             logger.error('Extracting hash / name from .magnet failed for: %s', torrent_file)
                             return
