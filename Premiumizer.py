@@ -1009,15 +1009,15 @@ def upload_magnet(magnet):
         response_content = json.loads(r.content)
         if response_content['status'] == "success":
             logger.debug('Upload magnet successful')
-            return True
+            return 0
         else:
             msg = 'Upload of torrent: %s failed, message: %s' % (magnet, response_content['message'])
             logger.error(msg)
             if cfg.email_enabled:
                 email(msg)
-            return False
+            return 1
     else:
-        return False
+        return 1
 
 
 def send_categories():
