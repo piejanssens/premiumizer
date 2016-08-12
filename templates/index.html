@@ -12,8 +12,16 @@
     {% if debug_enabled == 1 %}
         <div id="debug_enabled" class="alert alert-warning" role="alert" style="display:inline;">
             <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
-            <span class="sr-only">Error:</span>
+            <span class="sr-only">Warning:</span>
             Debug mode is enabled, this is not recommended, disable it in the settings page & restart.
+        </div>
+    {% endif %}
+        <p>&nbsp;</p>
+    {% if update_available == 1 %}
+        <div id="update_available" class="alert alert-info" role="alert" style="display:inline;">
+            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+            <span class="sr-only">Info:</span>
+            Update available !! Go to the bottom of the settings page.
         </div>
     {% endif %}
     <div id="main_container" class="container">
