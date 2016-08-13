@@ -1009,15 +1009,15 @@ def upload_magnet(magnet):
         response_content = json.loads(r.content)
         if response_content['status'] == "success":
             logger.debug('Upload magnet successful')
-            return True
+            return 0
         else:
             msg = 'Upload of torrent: %s failed, message: %s' % (magnet, response_content['message'])
             logger.error(msg)
             if cfg.email_enabled:
                 email(msg)
-            return False
+            return 1
     else:
-        return False
+        return 1
 
 
 def send_categories():
@@ -1111,7 +1111,7 @@ def watchdir():
 @app.route('/')
 @login_required
 def home():
-    return render_template('index.html', debug_enabled=debug_enabled)
+    return render_template('index.html', debug_enabled=debug_enabled, update_available=cfg.update_available)
 
 
 @app.route('/upload', methods=["POST"])
@@ -1438,7 +1438,7 @@ if __name__ == '__main__':
         scheduler.scheduler.add_job(update, 'interval', id='update',
                                     seconds=active_interval, replace_existing=True, max_instances=1, coalesce=True)
         scheduler.scheduler.add_job(check_update, 'interval', id='check_update',
-                                    hours=6, replace_existing=True, max_instances=1, coalesce=True)
+                                    seconds=1, replace_existing=True, max_instances=1, coalesce=True)
 
         socketio.run(app, host=prem_config.get('global', 'bind_ip'), port=prem_config.getint('global', 'server_port'),
                      use_reloader=False)
