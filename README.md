@@ -65,7 +65,7 @@ https://github.com/piejanssens/premiumizer.git [to a folder]```
 6. ```python premiumizer.py```
 
 Optional:
-Install NzbToMedia & pywin32:
+Install NzbToMedia & pywin32 & Microsoft Visual c++ python compiler:
 
 4. ```git clone https://github.com/clinton-hall/nzbToMedia.git [your folder]\nzbtomedia```
 5. ```easy_install pywin32```
