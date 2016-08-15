@@ -36,7 +36,7 @@ from werkzeug.utils import secure_filename
 
 from DownloadTask import DownloadTask
 
-# "https://www.premiumize.me/static/api/torrent.html"
+# "https://www.premiumize.me/api"
 print ('------------------------------------------------------------------------------------------------------------')
 print ('|                                                                                                           |')
 print ('-------------------------------------------WELCOME TO PREMIUMIZER-------------------------------------------')
@@ -763,11 +763,11 @@ def download_process():
     greenlet.size_remove = 0
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
                'hash': greenlet.task.hash}
-    r = prem_connection("post", "https://www.premiumize.me/torrent/browse", payload)
+    r = prem_connection("post", "https://www.premiumize.me/api/torrent/browse", payload)
     if r == 'failed':
         return 1
     greenlet.task.update(local_status='downloading', progress=0, speed='', eta='')
-    process_dir(json.loads(r.content)['data']['content'], greenlet.task.dldir)
+    process_dir(json.loads(r.content)['content'], greenlet.task.dldir)
     if greenlet.size_remove is not 0:
         greenlet.task.update(size=(greenlet.task.size - greenlet.size_remove))
     logger.info('Downloading: %s', greenlet.task.name)
@@ -799,8 +799,8 @@ def download_task(task):
             task.update(local_status='failed: nzbtomedia')
 
     if cfg.remove_cloud and not failed:
-        payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'hash': task.hash}
-        r = prem_connection("post", "https://www.premiumize.me/torrent/delete", payload)
+        payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'type': 'torrent', 'id': task.hash}
+        r = prem_connection("post", "https://www.premiumize.me/api/transfer/delete", payload)
         if r != 'failed':
             responsedict = json.loads(r.content)
             if responsedict['status'] == "success":
@@ -873,14 +873,14 @@ def update():
     idle = True
     update_interval = idle_interval
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
-    r = prem_connection("post", "https://www.premiumize.me/torrent/list", payload)
+    r = prem_connection("post", "https://www.premiumize.me/api/transfer/list", payload)
     if r != 'failed':
         response_content = json.loads(r.content)
         if response_content['status'] == "success":
-            if not response_content['torrents']:
+            if not response_content['transfers']:
                 update_interval *= 3
-            torrents = response_content['torrents']
-            idle = parse_tasks(torrents)
+            transfers = response_content['transfers']
+            idle = parse_tasks(transfers)
         else:
             socketio.emit('premiumize_connect_error', {})
     else:
@@ -891,32 +891,32 @@ def update():
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=update_interval)
 
 
-def parse_tasks(torrents):
+def parse_tasks(transfers):
     logger.debug('def parse_task started')
     hashes_online = []
     hashes_local = []
     idle = True
     for task in tasks:
         hashes_local.append(task.hash)
-    for torrent in torrents:
-        task = get_task(torrent['hash'].encode("utf-8"))
+    for transfer in transfers:
+        task = get_task(transfer['hash'].encode("utf-8"))
         if not task:
-            add_task(torrent['hash'].encode("utf-8"), torrent['size'], torrent['name'], '')
-            task = get_task(torrent['hash'].encode("utf-8"))
+            add_task(transfer['hash'].encode("utf-8"), transfer['size'], transfer['name'], '')
+            task = get_task(transfer['hash'].encode("utf-8"))
             hashes_local.append(task.hash)
-            task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], speed=torrent['speed_down'])
+            task.update(progress=(int(transfer['progress']*100)), cloud_status=transfer['status'], speed=transfer['speed_down'])
         if task.local_status is None:
             if task.cloud_status != 'finished':
-                if torrent['eta'] is None or 0:
+                if transfer['eta'] is None or 0:
                     eta = ''
                 else:
-                    eta = utils.time_human(torrent['eta'], fmt_short=True)
-                if torrent['speed_down'] is None or 0:
+                    eta = utils.time_human(transfer['eta'], fmt_short=True)
+                if transfer['speed_down'] is None or 0:
                     speed = ''
                 else:
-                    speed = utils.sizeof_human(torrent['speed_down']) + '/s '
-                task.update(progress=torrent['percent_done'], cloud_status=torrent['status'], name=torrent['name'],
-                            size=torrent['size'], speed=speed, eta=eta)
+                    speed = utils.sizeof_human(transfer['speed_down']) + '/s '
+                task.update(progress=(int(transfer['progress']*100)), cloud_status=transfer['status'], name=transfer['name'],
+                            size=transfer['size'], speed=speed, eta=eta)
                 idle = False
             if task.cloud_status == 'finished':
                 if cfg.download_enabled:
@@ -933,7 +933,7 @@ def parse_tasks(torrents):
                 else:
                     task.update(local_status='finished', speed=None)
         else:
-            task.update(cloud_status=torrent['status'])
+            task.update(cloud_status=transfer['status'])
 
         hashes_online.append(task.hash)
         task.callback = None
@@ -990,10 +990,10 @@ def add_task(hash, size, name, category):
 
 def upload_torrent(filename):
     logger.debug('def upload_torrent started')
-    payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
-    files = {'file': open(filename, 'rb')}
+    payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'type': 'torrent'}
+    files = {'src': open(filename, 'rb')}
     logger.debug('Uploading torrent to the cloud: %s', filename)
-    r = prem_connection("postfile", "https://www.premiumize.me/torrent/add", payload, files)
+    r = prem_connection("postfile", "https://www.premiumize.me/api/transfer/create", payload, files)
     if r != 'failed':
         response_content = json.loads(r.content)
         if response_content['status'] == "success":
@@ -1011,8 +1011,8 @@ def upload_torrent(filename):
 
 def upload_magnet(magnet):
     logger.debug('def upload_magnet started')
-    payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'url': magnet}
-    r = prem_connection("post", "https://www.premiumize.me/torrent/add", payload)
+    payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'type': 'torrent', 'src': magnet}
+    r = prem_connection("post", "https://www.premiumize.me/api/transfer/create", payload)
     if r != 'failed':
         response_content = json.loads(r.content)
         if response_content['status'] == "success":
@@ -1027,6 +1027,25 @@ def upload_magnet(magnet):
     else:
         return 1
 
+def upload_nzb(filename):
+    logger.debug('def upload_nzb started')
+    payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'type': 'nzb'}
+    files = {'src': open(filename, 'rb')}
+    logger.debug('Uploading nzb to the cloud: %s', filename)
+    r = prem_connection("postfile", "https://www.premiumize.me/api/transfer/create", payload, files)
+    if r != 'failed':
+        response_content = json.loads(r.content)
+        if response_content['status'] == "success":
+            logger.debug('Upload successful: %s', filename)
+            return 0
+        else:
+            msg = 'Upload of nzb: %s failed, message: %s' % (filename, response_content['message'])
+            logger.error(msg)
+            if cfg.email_enabled:
+                email(msg)
+            return 1
+    else:
+        return 1
 
 def send_categories():
     logger.debug('def send_categories started')
@@ -1034,47 +1053,71 @@ def send_categories():
 
 
 class MyHandler(PatternMatchingEventHandler):
-    patterns = ["*.torrent", "*.magnet"]
+    patterns = ["*.torrent", "*.magnet", "*.nzb"]
 
     # noinspection PyMethodMayBeStatic
     def process(self, event):
         if event.event_type == 'created' and event.is_directory is False:
             gevent.sleep(1)
-            torrent_file = event.src_path
-            logger.debug('New torrent file detected at: %s', torrent_file)
-            dirname = os.path.basename(os.path.normpath(os.path.dirname(torrent_file)))
+            watchdir_file = event.src_path
+            logger.debug('New torrent file detected at: %s', watchdir_file)
+            dirname = os.path.basename(os.path.normpath(os.path.dirname(watchdir_file)))
             if dirname in cfg.download_categories:
                 category = dirname
             else:
                 category = ''
 
-            if torrent_file.endswith('.torrent'):
-                hash, name = torrent_metainfo(torrent_file)
+            if watchdir_file.endswith('.torrent'):
+                hash, name = torrent_metainfo(watchdir_file)
                 add_task(hash, 0, name, category)
-                failed = upload_torrent(event.src_path)
-            elif torrent_file.endswith('.magnet'):
-                with open(torrent_file) as f:
+                failed = upload_torrent(watchdir_file)
+            elif watchdir_file.endswith('.magnet'):
+                with open(watchdir_file) as f:
                     magnet = f.read()
                     if not magnet:
-                        logger.error('Magnet file empty? for: %s', torrent_file)
+                        logger.error('Magnet file empty? for: %s', watchdir_file)
                         return
                     else:
                         try:
                             hash = re.search('btih:(.+?)&', magnet).group(1)
                             name = re.search('&dn=(.+?)&', magnet).group(1)
                         except AttributeError:
-                            logger.error('Extracting hash / name from .magnet failed for: %s', torrent_file)
+                            logger.error('Extracting hash / name from .magnet failed for: %s', watchdir_file)
                             return
                         add_task(hash, 0, name, category)
                         failed = upload_magnet(magnet)
+            elif watchdir_file.endswith('.nzb'):
+                hash = hash_file(watchdir_file)
+                name = os.path.basename(watchdir_file)
+                add_task(hash, 0, name, category)
+                failed = upload_nzb(watchdir_file)
 
             if not failed:
-                logger.debug('Deleting torrent from watchdir: %s', torrent_file)
-                os.remove(torrent_file)
+                logger.debug('Deleting torrent from watchdir: %s', watchdir_file)
+                os.remove(watchdir_file)
 
     def on_created(self, event):
         self.process(event)
 
+def hash_file(filename):
+   """"This function returns the SHA-1 hash
+   of the file passed into it"""
+
+   # make a hash object
+   h = hashlib.sha1()
+
+   # open file for reading in binary mode
+   with open(filename,'rb') as file:
+
+       # loop till the end of the file
+       chunk = 0
+       while chunk != b'':
+           # read only 1024 bytes at a time
+           chunk = file.read(1024)
+           h.update(chunk)
+
+   # return the hex representation of digest
+   return h.hexdigest()
 
 def torrent_metainfo(torrent):
     logger.debug('def torrent_metainfo started')
@@ -1109,6 +1152,10 @@ def watchdir():
                     os.remove(fname)
                 elif fname.endswith('.magnet'):
                     fname2 = fname.replace('.magnet', '2.magnet')
+                    shutil.copy(fname, fname2)
+                    os.remove(fname)
+                elif fname.endswith('.nzb'):
+                    fname2 = fname.replace('.nzb', '2.nzb')
                     shutil.copy(fname, fname2)
                     os.remove(fname)
     except:
@@ -1326,7 +1373,7 @@ def about():
 @login_required
 def list():
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
-    r = prem_connection("get", "https://www.premiumize.me/torrent/list", payload)
+    r = prem_connection("get", "https://www.premiumize.me/api/transfer/list", payload)
     return r.text
 
 
@@ -1350,9 +1397,8 @@ def delete_task(message):
     task = get_task(message['data'])
     if task.local_status != 'stopped':
         task.update(local_status='stopped')
-    payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
-               'hash': message['data']}
-    r = prem_connection("post", "https://www.premiumize.me/torrent/delete", payload)
+    payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'type': 'torrent', 'id': message['data']}
+    r = prem_connection("post", "https://www.premiumize.me/api/transfer/delete", payload)
     if r != 'failed':
         responsedict = json.loads(r.content)
         task = get_task(message['data'])
