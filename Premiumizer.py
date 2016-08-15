@@ -523,21 +523,29 @@ def jd_query_package(jd, package_id):
     package = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
                                             "speed": True, "eta": True, "packageUUIDs": [package_id]}])
 
-    if not isinstance(package, bool):
-        while 'status' not in package:
-            try:
-                package = package[0]
-                if 'status' in package:
-                    break
-            except:
-                pass
-            gevent.sleep(5)
-            package = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
-                                                    "speed": True, "eta": True, "packageUUIDs": [package_id]}])
-            count += 1
-            if count == 50:
-                package['status'] = 'Failed'
-                logger.error('JD did not return package status for: %s', greenlet.task.name)
+    while isinstance(package, bool):
+        gevent.sleep(5)
+        package = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
+                                                "speed": True, "eta": True, "packageUUIDs": [package_id]}])
+        count += 1
+        if count == 12:
+            package = {'status': 'Failed'}
+            logger.error('JD did not return package status for: %s', greenlet.task.name)
+
+    while 'status' not in package:
+        try:
+            package = package[0]
+            if 'status' in package:
+                break
+        except:
+            pass
+        gevent.sleep(5)
+        package = jd.downloads.query_packages([{"status": True, "bytesTotal": True, "bytesLoaded": True,
+                                                "speed": True, "eta": True, "packageUUIDs": [package_id]}])
+        count += 1
+        if count == 24:
+            package = {'status': 'Failed'}
+            logger.error('JD did not return package status for: %s', greenlet.task.name)
     else:
         package['status'] = 'Failed'
         logger.error('JD did not return package status for: %s', greenlet.task.name)
