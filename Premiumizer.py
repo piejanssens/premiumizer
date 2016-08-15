@@ -904,7 +904,8 @@ def parse_tasks(transfers):
             add_task(transfer['hash'].encode("utf-8"), transfer['size'], transfer['name'], '')
             task = get_task(transfer['hash'].encode("utf-8"))
             hashes_local.append(task.hash)
-            task.update(progress=(int(transfer['progress']*100)), cloud_status=transfer['status'], speed=transfer['speed_down'])
+            task.update(progress=(int(transfer['progress'] * 100)), cloud_status=transfer['status'],
+                        speed=transfer['speed_down'])
         if task.local_status is None:
             if task.cloud_status != 'finished':
                 if transfer['eta'] is None or 0:
@@ -915,7 +916,8 @@ def parse_tasks(transfers):
                     speed = ''
                 else:
                     speed = utils.sizeof_human(transfer['speed_down']) + '/s '
-                task.update(progress=(int(transfer['progress']*100)), cloud_status=transfer['status'], name=transfer['name'],
+                task.update(progress=(int(transfer['progress'] * 100)), cloud_status=transfer['status'],
+                            name=transfer['name'],
                             size=transfer['size'], speed=speed, eta=eta)
                 idle = False
             if task.cloud_status == 'finished':
@@ -1027,6 +1029,7 @@ def upload_magnet(magnet):
     else:
         return 1
 
+
 def upload_nzb(filename):
     logger.debug('def upload_nzb started')
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'type': 'nzb'}
@@ -1046,6 +1049,7 @@ def upload_nzb(filename):
             return 1
     else:
         return 1
+
 
 def send_categories():
     logger.debug('def send_categories started')
@@ -1099,25 +1103,26 @@ class MyHandler(PatternMatchingEventHandler):
     def on_created(self, event):
         self.process(event)
 
+
 def hash_file(filename):
-   """"This function returns the SHA-1 hash
-   of the file passed into it"""
+    """"This function returns the SHA-1 hash
+    of the file passed into it"""
 
-   # make a hash object
-   h = hashlib.sha1()
+    # make a hash object
+    h = hashlib.sha1()
 
-   # open file for reading in binary mode
-   with open(filename,'rb') as file:
+    # open file for reading in binary mode
+    with open(filename, 'rb') as file:
+        # loop till the end of the file
+        chunk = 0
+        while chunk != b'':
+            # read only 1024 bytes at a time
+            chunk = file.read(1024)
+            h.update(chunk)
 
-       # loop till the end of the file
-       chunk = 0
-       while chunk != b'':
-           # read only 1024 bytes at a time
-           chunk = file.read(1024)
-           h.update(chunk)
+    # return the hex representation of digest
+    return h.hexdigest()
 
-   # return the hex representation of digest
-   return h.hexdigest()
 
 def torrent_metainfo(torrent):
     logger.debug('def torrent_metainfo started')
