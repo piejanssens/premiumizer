@@ -210,10 +210,10 @@ function update_task(task) {
             var file = files[0];
             var fileName = file.name;
             var fileExt = '.' + fileName.split('.').pop();
-            if (fileExt == '.torrent') {
+            if (fileExt == '.torrent' || fileExt == '.nzb') {
                 uploadTorrent(file);
             } else {
-                alert('Nope, not a torrent file...');
+                alert('Nope, not a torrent or nzb file...');
             }
         }
         $('#torrent-file-upload[type="file"]').val(null);
@@ -236,10 +236,10 @@ function update_task(task) {
         var file = e.originalEvent.dataTransfer.files[0];
         var fileName = file.name;
         var fileExt = '.' + fileName.split('.').pop();
-        if (fileExt == '.torrent') {
+        if (fileExt == '.torrent' || fileExt == '.nzb') {
             uploadTorrent(file);
         } else {
-            alert('Nope, not a torrent file...');
+            alert('Nope, not a torrent or nzb file...');
         }
         this.placeholder = originalTorrentPlaceHolder;
         this.nextElementSibling.className = originalTorrentLabelClass;

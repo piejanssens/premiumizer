@@ -1178,17 +1178,19 @@ def home():
 @login_required
 def upload():
     if request.files:
-        torrent_file = request.files['file']
-        filename = secure_filename(torrent_file.filename)
+        upload_file = request.files['file']
+        filename = secure_filename(upload_file.filename)
         if not os.path.isdir(runningdir + 'tmp'):
             os.makedirs(runningdir + 'tmp')
-        torrent_file.save(os.path.join(runningdir + 'tmp', filename))
-        torrent = runningdir + 'tmp' + '/' + filename
-        failed = upload_torrent(torrent)
+        upload_file.save(os.path.join(runningdir + 'tmp', filename))
+        upload_file = runningdir + 'tmp' + '/' + filename
+        if upload_file.endswith('.torrent'):
+            failed = upload_torrent(upload_file)
+        if upload_file.endswith('.nzb'):
+            failed = upload_nzb(upload_file)
         if not failed:
-            hash, name = torrent_metainfo(torrent)
-            add_task(hash, 0, name, '')
-            os.remove(torrent)
+            os.remove(upload_file)
+            scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
     elif request.data:
         upload_magnet(request.data)
         scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
