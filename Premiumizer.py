@@ -729,7 +729,7 @@ def is_sample(dir_content):
     return False
 
 
-def process_dir(dir_content, path, change_dldir=1):
+def process_dir(dir_content, path, change_dldir=1, task_update_size=0):
     logger.debug('def processing_dir started')
     if not dir_content:
         return None
@@ -739,7 +739,7 @@ def process_dir(dir_content, path, change_dldir=1):
             new_path = os.path.join(path, clean_name(x))
             if change_dldir:
                 greenlet.task.update(dldir=new_path)
-            process_dir(dir_content[x]['children'], new_path, 0)
+            process_dir(dir_content[x]['children'], new_path, 0, task_update_size)
         elif type == 'file':
             if dir_content[x]['url'].lower().endswith(tuple(greenlet.task.dlext)):
                 if greenlet.task.delsample:
@@ -752,6 +752,7 @@ def process_dir(dir_content, path, change_dldir=1):
                         os.makedirs(path)
                     download = {'path': path + '/' + clean_name(x), 'url': dir_content[x]['url']}
                     greenlet.download_list.append(download)
+                    greenlet.task.size += dir_content[x]['size']
             else:
                 greenlet.size_remove += dir_content[x]['size']
 
@@ -759,6 +760,7 @@ def process_dir(dir_content, path, change_dldir=1):
 def download_process():
     logger.debug('def download_process started')
     returncode = 0
+    task_update_size = 0        # workaround for bug nzb transfer does not give a size
     greenlet.download_list = []
     greenlet.size_remove = 0
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
@@ -767,7 +769,9 @@ def download_process():
     if r == 'failed':
         return 1
     greenlet.task.update(local_status='downloading', progress=0, speed='', eta='')
-    process_dir(json.loads(r.content)['content'], greenlet.task.dldir)
+    if greenlet.task.size == 0:
+        task_update_size = 1
+    process_dir(json.loads(r.content)['content'], greenlet.task.dldir, task_update_size)
     if greenlet.size_remove is not 0:
         greenlet.task.update(size=(greenlet.task.size - greenlet.size_remove))
     logger.info('Downloading: %s', greenlet.task.name)
