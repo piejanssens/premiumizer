@@ -358,6 +358,11 @@ logger.debug('Initializing Flask complete')
 # Initialise Database
 logger.debug('Initializing Database')
 db = shelve.open(runningdir + 'premiumizer.db')
+if not db.keys():
+    db.close()
+    os.remove(runningdir + 'premiumizer.db')
+    db = shelve.open(runningdir + 'premiumizer.db')
+    logger.debug('Database cleared')
 logger.debug('Initializing Database complete')
 
 # Initialise Globals
@@ -760,7 +765,7 @@ def process_dir(dir_content, path, change_dldir=1, task_update_size=0):
 def download_process():
     logger.debug('def download_process started')
     returncode = 0
-    task_update_size = 0        # workaround for bug nzb transfer does not give a size
+    task_update_size = 0  # workaround for bug nzb transfer does not give a size
     greenlet.download_list = []
     greenlet.size_remove = 0
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
