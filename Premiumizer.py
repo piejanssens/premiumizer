@@ -30,7 +30,7 @@ from flask_login import LoginManager, login_required, login_user, logout_user, U
 from flask_socketio import SocketIO, emit
 from gevent import local
 from pySmartDL import SmartDL, utils
-from watchdog.events import PatternMatchingEventHandler
+from watchdog import events
 from watchdog.observers import Observer
 from werkzeug.utils import secure_filename
 
@@ -1065,7 +1065,7 @@ def send_categories():
     emit('download_categories', {'data': cfg.download_categories})
 
 
-class MyHandler(PatternMatchingEventHandler):
+class MyHandler(events.PatternMatchingEventHandler):
     patterns = ["*.torrent", "*.magnet", "*.nzb"]
 
     # noinspection PyMethodMayBeStatic
@@ -1154,24 +1154,14 @@ def watchdir():
     try:
         logger.debug('Initializing watchdog')
         observer = Observer()
-        observer.schedule(MyHandler(), path=cfg.watchdir_location, recursive=True)
+        watchdog_handler = MyHandler()
+        observer.schedule(watchdog_handler, path=cfg.watchdir_location, recursive=True)
         observer.start()
         logger.info('Initializing watchdog complete')
         for dirpath, dirs, files in os.walk(cfg.watchdir_location):
-            for filename in files:
-                fname = os.path.join(dirpath, filename)
-                if fname.endswith('.torrent'):
-                    fname2 = fname.replace('.torrent', '2.torrent')
-                    shutil.copy(fname, fname2)
-                    os.remove(fname)
-                elif fname.endswith('.magnet'):
-                    fname2 = fname.replace('.magnet', '2.magnet')
-                    shutil.copy(fname, fname2)
-                    os.remove(fname)
-                elif fname.endswith('.nzb'):
-                    fname2 = fname.replace('.nzb', '2.nzb')
-                    shutil.copy(fname, fname2)
-                    os.remove(fname)
+            for file in files:
+                filepath = os.path.join(dirpath, file)
+                watchdog_handler.on_created(events.FileCreatedEvent(filepath))
     except:
         raise
 
@@ -1490,10 +1480,6 @@ def change_category(message):
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
 
 
-# Start watchdog if watchdir is enabled
-if cfg.watchdir_enabled:
-    watchdir()
-
 # start the server with the 'run()' method
 logger.info('Starting server on %s:%s ', prem_config.get('global', 'bind_ip'),
             prem_config.getint('global', 'server_port'))
@@ -1509,7 +1495,8 @@ if __name__ == '__main__':
                                     seconds=active_interval, replace_existing=True, max_instances=1, coalesce=True)
         scheduler.scheduler.add_job(check_update, 'interval', id='check_update',
                                     seconds=1, replace_existing=True, max_instances=1, coalesce=True)
-
+        if cfg.watchdir_enabled:
+            gevent.spawn_later(2, watchdir)
         socketio.run(app, host=prem_config.get('global', 'bind_ip'), port=prem_config.getint('global', 'server_port'),
                      use_reloader=False)
     except:
