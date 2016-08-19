@@ -676,7 +676,8 @@ def download_file():
 
     for download in greenlet.download_list:
         logger.debug('Downloading file: %s', download['path'])
-        if not os.path.isfile(download['path']):
+        filename = os.path.basename(download['path'])
+        if not os.path.isfile(download['path']) or not os.path.isfile(greenlet.task.dldir + '/' + filename):
             files_downloaded = 1
             if cfg.download_builtin:
                 downloader = SmartDL(download['url'], download['path'], progress_bar=False, logger=logger,
@@ -707,7 +708,6 @@ def download_file():
                     returncode = 1
             elif cfg.jd_connected:
                 url = str(download['url'])
-                filename = os.path.basename(download['path'])
                 if len(query_links):
                     if any(link['name'] == filename for link in query_links):
                         continue
