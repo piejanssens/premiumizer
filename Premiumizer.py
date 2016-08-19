@@ -1030,7 +1030,7 @@ def upload_magnet(magnet):
             logger.debug('Upload magnet successful')
             return 0
         else:
-            msg = 'Upload of torrent: %s failed, message: %s' % (magnet, response_content['message'])
+            msg = 'Upload of magnet: %s failed, message: %s' % (magnet, response_content['message'])
             logger.error(msg)
             if cfg.email_enabled:
                 email(msg)
@@ -1048,7 +1048,7 @@ def upload_nzb(filename):
     if r != 'failed':
         response_content = json.loads(r.content)
         if response_content['status'] == "success":
-            logger.debug('Upload successful: %s', filename)
+            logger.debug('Upload nzb successful: %s', filename)
             return 0
         else:
             msg = 'Upload of nzb: %s failed, message: %s' % (filename, response_content['message'])
@@ -1106,7 +1106,7 @@ class MyHandler(PatternMatchingEventHandler):
                 failed = upload_nzb(watchdir_file)
 
             if not failed:
-                logger.debug('Deleting torrent from watchdir: %s', watchdir_file)
+                logger.debug('Deleting file from watchdir: %s', watchdir_file)
                 os.remove(watchdir_file)
 
     def on_created(self, event):
