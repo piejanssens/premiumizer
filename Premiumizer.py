@@ -783,7 +783,7 @@ def download_process():
     if greenlet.download_list:
         returncode = download_file()
     else:
-        logger.error('Error for %s: Nothing to download .. Filtered out or bad torrent ?')
+        logger.error('Error for %s: Nothing to download .. Filtered out or bad torrent/nzb ?')
         returncode = 1
     return returncode
 
@@ -816,14 +816,14 @@ def download_task(task):
                 logger.info('Automatically Deleted: %s from cloud', task.name)
                 socketio.emit('delete_success', {'data': task.hash})
             else:
-                msg = 'Torrent could not be removed from cloud: %s, message: %s' % (task.name, responsedict['message'])
+                msg = 'Download could not be removed from cloud: %s, message: %s' % (task.name, responsedict['message'])
                 logger.error(msg)
                 logger.info(responsedict['message'])
                 if cfg.email_enabled:
                     email(msg)
                 socketio.emit('delete_failed', {'data': task.hash})
         else:
-            logger.error('Torrent could not be removed from cloud: %s', task.name)
+            logger.error('Download could not be removed from cloud: %s', task.name)
             socketio.emit('delete_failed', {'data': task.hash})
 
     if not failed:
@@ -1073,7 +1073,7 @@ class MyHandler(PatternMatchingEventHandler):
         if event.event_type == 'created' and event.is_directory is False:
             gevent.sleep(1)
             watchdir_file = event.src_path
-            logger.debug('New torrent file detected at: %s', watchdir_file)
+            logger.debug('New file detected at: %s', watchdir_file)
             dirname = os.path.basename(os.path.normpath(os.path.dirname(watchdir_file)))
             if dirname in cfg.download_categories:
                 category = dirname
@@ -1423,7 +1423,7 @@ def delete_task(message):
             emit('delete_success', {'data': message['data']})
             scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
         else:
-            msg = 'Unable to delete torrent from cloud for: %s, message: %s' % (task.name, responsedict['message'])
+            msg = 'Unable to delete task from cloud for: %s, message: %s' % (task.name, responsedict['message'])
             logger.error(msg)
             if cfg.email_enabled:
                 email(msg)
