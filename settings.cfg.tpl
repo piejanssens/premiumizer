@@ -58,8 +58,8 @@ cat_nzbtomedia[5] = 0
 
 
 [upload]
-watchdir_enabled = 1
-watchdir_location = c:\watchdir
+watchdir_enabled = 0
+watchdir_location =
 
 
 [notifications]
