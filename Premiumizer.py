@@ -30,7 +30,7 @@ from flask_login import LoginManager, login_required, login_user, logout_user, U
 from flask_socketio import SocketIO, emit
 from gevent import local
 from pySmartDL import SmartDL, utils
-from watchdog.events import PatternMatchingEventHandler
+from watchdog import events
 from watchdog.observers import Observer
 from werkzeug.utils import secure_filename
 
@@ -676,7 +676,8 @@ def download_file():
 
     for download in greenlet.download_list:
         logger.debug('Downloading file: %s', download['path'])
-        if not os.path.isfile(download['path']):
+        filename = os.path.basename(download['path'])
+        if not os.path.isfile(download['path']) or not os.path.isfile(greenlet.task.dldir + '/' + filename):
             files_downloaded = 1
             if cfg.download_builtin:
                 downloader = SmartDL(download['url'], download['path'], progress_bar=False, logger=logger,
@@ -707,7 +708,6 @@ def download_file():
                     returncode = 1
             elif cfg.jd_connected:
                 url = str(download['url'])
-                filename = os.path.basename(download['path'])
                 if len(query_links):
                     if any(link['name'] == filename for link in query_links):
                         continue
@@ -783,7 +783,7 @@ def download_process():
     if greenlet.download_list:
         returncode = download_file()
     else:
-        logger.error('Error for %s: Nothing to download .. Filtered out or bad torrent ?')
+        logger.error('Error for %s: Nothing to download .. Filtered out or bad torrent/nzb ?')
         returncode = 1
     return returncode
 
@@ -816,14 +816,14 @@ def download_task(task):
                 logger.info('Automatically Deleted: %s from cloud', task.name)
                 socketio.emit('delete_success', {'data': task.hash})
             else:
-                msg = 'Torrent could not be removed from cloud: %s, message: %s' % (task.name, responsedict['message'])
+                msg = 'Download could not be removed from cloud: %s, message: %s' % (task.name, responsedict['message'])
                 logger.error(msg)
                 logger.info(responsedict['message'])
                 if cfg.email_enabled:
                     email(msg)
                 socketio.emit('delete_failed', {'data': task.hash})
         else:
-            logger.error('Torrent could not be removed from cloud: %s', task.name)
+            logger.error('Download could not be removed from cloud: %s', task.name)
             socketio.emit('delete_failed', {'data': task.hash})
 
     if not failed:
@@ -1030,7 +1030,7 @@ def upload_magnet(magnet):
             logger.debug('Upload magnet successful')
             return 0
         else:
-            msg = 'Upload of torrent: %s failed, message: %s' % (magnet, response_content['message'])
+            msg = 'Upload of magnet: %s failed, message: %s' % (magnet, response_content['message'])
             logger.error(msg)
             if cfg.email_enabled:
                 email(msg)
@@ -1048,7 +1048,7 @@ def upload_nzb(filename):
     if r != 'failed':
         response_content = json.loads(r.content)
         if response_content['status'] == "success":
-            logger.debug('Upload successful: %s', filename)
+            logger.debug('Upload nzb successful: %s', filename)
             return 0
         else:
             msg = 'Upload of nzb: %s failed, message: %s' % (filename, response_content['message'])
@@ -1065,7 +1065,7 @@ def send_categories():
     emit('download_categories', {'data': cfg.download_categories})
 
 
-class MyHandler(PatternMatchingEventHandler):
+class MyHandler(events.PatternMatchingEventHandler):
     patterns = ["*.torrent", "*.magnet", "*.nzb"]
 
     # noinspection PyMethodMayBeStatic
@@ -1073,7 +1073,7 @@ class MyHandler(PatternMatchingEventHandler):
         if event.event_type == 'created' and event.is_directory is False:
             gevent.sleep(1)
             watchdir_file = event.src_path
-            logger.debug('New torrent file detected at: %s', watchdir_file)
+            logger.debug('New file detected at: %s', watchdir_file)
             dirname = os.path.basename(os.path.normpath(os.path.dirname(watchdir_file)))
             if dirname in cfg.download_categories:
                 category = dirname
@@ -1106,7 +1106,7 @@ class MyHandler(PatternMatchingEventHandler):
                 failed = upload_nzb(watchdir_file)
 
             if not failed:
-                logger.debug('Deleting torrent from watchdir: %s', watchdir_file)
+                logger.debug('Deleting file from watchdir: %s', watchdir_file)
                 os.remove(watchdir_file)
 
     def on_created(self, event):
@@ -1154,24 +1154,14 @@ def watchdir():
     try:
         logger.debug('Initializing watchdog')
         observer = Observer()
-        observer.schedule(MyHandler(), path=cfg.watchdir_location, recursive=True)
+        watchdog_handler = MyHandler()
+        observer.schedule(watchdog_handler, path=cfg.watchdir_location, recursive=True)
         observer.start()
         logger.info('Initializing watchdog complete')
         for dirpath, dirs, files in os.walk(cfg.watchdir_location):
-            for filename in files:
-                fname = os.path.join(dirpath, filename)
-                if fname.endswith('.torrent'):
-                    fname2 = fname.replace('.torrent', '2.torrent')
-                    shutil.copy(fname, fname2)
-                    os.remove(fname)
-                elif fname.endswith('.magnet'):
-                    fname2 = fname.replace('.magnet', '2.magnet')
-                    shutil.copy(fname, fname2)
-                    os.remove(fname)
-                elif fname.endswith('.nzb'):
-                    fname2 = fname.replace('.nzb', '2.nzb')
-                    shutil.copy(fname, fname2)
-                    os.remove(fname)
+            for file in files:
+                filepath = os.path.join(dirpath, file)
+                watchdog_handler.on_created(events.FileCreatedEvent(filepath))
     except:
         raise
 
@@ -1423,7 +1413,7 @@ def delete_task(message):
             emit('delete_success', {'data': message['data']})
             scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
         else:
-            msg = 'Unable to delete torrent from cloud for: %s, message: %s' % (task.name, responsedict['message'])
+            msg = 'Unable to delete task from cloud for: %s, message: %s' % (task.name, responsedict['message'])
             logger.error(msg)
             if cfg.email_enabled:
                 email(msg)
@@ -1490,10 +1480,6 @@ def change_category(message):
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
 
 
-# Start watchdog if watchdir is enabled
-if cfg.watchdir_enabled:
-    watchdir()
-
 # start the server with the 'run()' method
 logger.info('Starting server on %s:%s ', prem_config.get('global', 'bind_ip'),
             prem_config.getint('global', 'server_port'))
@@ -1509,7 +1495,8 @@ if __name__ == '__main__':
                                     seconds=active_interval, replace_existing=True, max_instances=1, coalesce=True)
         scheduler.scheduler.add_job(check_update, 'interval', id='check_update',
                                     seconds=1, replace_existing=True, max_instances=1, coalesce=True)
-
+        if cfg.watchdir_enabled:
+            gevent.spawn_later(2, watchdir)
         socketio.run(app, host=prem_config.get('global', 'bind_ip'), port=prem_config.getint('global', 'server_port'),
                      use_reloader=False)
     except:
