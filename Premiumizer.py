@@ -25,6 +25,7 @@ import six
 from apscheduler.schedulers.gevent import GeventScheduler
 from chardet import detect
 from flask import Flask, flash, request, redirect, url_for, render_template, send_from_directory
+from flask.ext.compress import Compress
 from flask_apscheduler import APScheduler
 from flask_login import LoginManager, login_required, login_user, logout_user, UserMixin
 from flask_socketio import SocketIO, emit
@@ -344,6 +345,7 @@ def shutdown():
 #
 logger.debug('Initializing Flask')
 app = Flask(__name__)
+Compress(app)
 app.config['SECRET_KEY'] = os.urandom(24)
 app.config.update(DEBUG=debug_enabled)
 app.logger.addHandler(handler)
