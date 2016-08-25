@@ -736,7 +736,7 @@ def is_sample(dir_content):
     return False
 
 
-def process_dir(dir_content, path, change_dldir=1, task_update_size=0):
+def process_dir(dir_content, path, change_dldir, task_update_size):
     logger.debug('def processing_dir started')
     if not dir_content:
         return None
@@ -778,7 +778,7 @@ def download_process():
     greenlet.task.update(local_status='downloading', progress=0, speed='', eta='')
     if greenlet.task.size == 0:
         task_update_size = 1
-    process_dir(json.loads(r.content)['content'], greenlet.task.dldir, task_update_size)
+    process_dir(json.loads(r.content)['content'], greenlet.task.dldir, 1, task_update_size)
     if greenlet.size_remove is not 0:
         greenlet.task.update(size=(greenlet.task.size - greenlet.size_remove))
     logger.info('Downloading: %s', greenlet.task.name)
