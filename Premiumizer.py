@@ -909,7 +909,7 @@ def parse_tasks(transfers):
     idle = True
     for task in tasks:
         hashes_local.append(task.hash)
-    for transfer in transfers:
+    for transfer in reversed(transfers):
         task = get_task(transfer['hash'].encode("utf-8"))
         if not task:
             add_task(transfer['hash'].encode("utf-8"), transfer['size'], transfer['name'], '')
