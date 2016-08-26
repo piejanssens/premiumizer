@@ -349,7 +349,7 @@ Compress(app)
 app.config['SECRET_KEY'] = os.urandom(24)
 app.config.update(DEBUG=debug_enabled)
 app.logger.addHandler(handler)
-socketio = SocketIO(app)
+socketio = SocketIO(app, async_mode='gevent')
 
 app.config['LOGIN_DISABLED'] = not cfg.web_login_enabled
 login_manager = LoginManager()
