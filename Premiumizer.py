@@ -28,6 +28,7 @@ from flask import Flask, flash, request, redirect, url_for, render_template, sen
 from flask_apscheduler import APScheduler
 from flask_compress import Compress
 from flask_login import LoginManager, login_required, login_user, logout_user, UserMixin
+from flask_reverse_proxy import FlaskReverseProxied
 from flask_socketio import SocketIO, emit
 from gevent import local
 from pySmartDL import SmartDL, utils
@@ -344,7 +345,9 @@ def shutdown():
 
 #
 logger.debug('Initializing Flask')
+proxied = FlaskReverseProxied()
 app = Flask(__name__)
+proxied.init_app(app)
 Compress(app)
 app.config['SECRET_KEY'] = os.urandom(24)
 app.config.update(DEBUG=debug_enabled)

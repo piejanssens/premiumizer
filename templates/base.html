@@ -35,20 +35,20 @@
                 {% block barbuttons %}
                     <ul class="nav navbar-nav">
                         {% set navigation_bar = [
-                ('/', 'home', 'Home'),
-                ('/history', 'history', 'History'),
-                ('/settings', 'settings', 'Settings'),
-                ('/log', 'log', 'Log'),
-                ('/about', 'about', 'About')
+                ('home', 'home', 'Home'),
+                ('history', 'history', 'History'),
+                ('settings', 'settings', 'Settings'),
+                ('log', 'log', 'Log'),
+                ('about', 'about', 'About')
                 ] %}
                         {% for href, id, caption in navigation_bar %}
                             <li
                                     {% if id == active_page %} class="active"{% endif %}><a
-                                    href="{{ href|e }}">{{ caption|e }}</a></li>
+                                    href="{{ url_for(href|e) }}">{{ caption|e }}</a></li>
                         {% endfor %}
                     </ul>
                     <ul class="nav navbar-nav navbar-right">
-                        <li class=""><a href="/logout">Log Out</a></li>
+                        <li class=""><a href="{{ url_for('logout') }}">Log Out</a></li>
                     </ul>
                 {% endblock %}
             </div>

@@ -2,7 +2,7 @@
 {% set active_page = "settings" %}
 {% block title %} - Home{% endblock %}
 {% block content %}
-    <form data-toggle="validator" role="form" method="post" action="/settings" enctype="multipart/form-data">
+    <form data-toggle="validator" role="form" method="post" action="{{ url_for('settings') }}" enctype="multipart/form-data">
         <div class="well well-sm">
             <h2>Global (requires restart)</h2>
         </div>
