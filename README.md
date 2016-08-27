@@ -25,6 +25,34 @@ By default, premiumizer's web interface listens on port 5000.
 When premiumizer is running you can access it at http://127.0.0.1:5000/ 
 If premiumizer is running on a different PC replace Bind ip in settings with that computer's IP.
 
+Support for reverse proxy (http only):
+nginx example:
+```
+...
+##PREMIUMIZER
+    location /premiumizer {
+        proxy_pass http://'host/ip'/premiumizer;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Scheme $scheme;
+        proxy_set_header X-Script-Name /premiumizer;
+
+    }
+
+    location /socket.io {
+        proxy_pass http://'host/ip'/socket.io;
+        proxy_redirect off;
+        proxy_buffering off;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+    }
+...
+```
+
 ## Installation
 
 ### Requirements
