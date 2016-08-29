@@ -18,6 +18,13 @@
                             <input id="password" name="password" value='' placeholder="Password" type="password"
                                    class="form-control"/>
                         </div>
+                        {% with errors = get_flashed_messages(category_filter=["error"]) %}
+                            {% if errors %}
+                                {%- for msg in errors %}
+                                    <p class=error><strong>Error:</strong> {{ msg }}
+                                {% endfor -%}
+                            {% endif %}
+                        {% endwith %}
                         <div class="form-group text-center">
                             <input type="submit" class="btn btn-success btn-login-submit" value="Login"/>
                         </div>

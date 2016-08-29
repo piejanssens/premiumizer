@@ -1329,8 +1329,8 @@ def login():
         login_user(User(username, password))
         return redirect(url_for('home'))
     else:
-        flash('Username or password incorrect')
-        return 'nope'
+        flash('Username or password incorrect', 'error')
+        return render_template('login.html')
 
 
 @app.route('/logout')
