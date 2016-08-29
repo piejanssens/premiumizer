@@ -599,7 +599,7 @@ def get_download_stats_jd(jd, package_name):
                 except:
                     speed = 0
                 if speed == 0:
-                    eta = ''
+                    eta = ' '
                 else:
                     eta = " " + utils.time_human(package['eta'], fmt_short=True)
                 try:
@@ -608,8 +608,9 @@ def get_download_stats_jd(jd, package_name):
                     logger.error('JD did not return package bytesTotal for: %s', greenlet.task.name)
                     return 1
                 progress = round(float(package['bytesLoaded']) * 100 / package["bytesTotal"], 1)
-                greenlet.task.update(speed=(utils.sizeof_human(speed) + '/s --- ' + utils.sizeof_human(
-                    package['bytesLoaded']) + ' / ' + utils.sizeof_human(package['bytesTotal'])), progress=progress,
+                greenlet.task.update(speed=(utils.sizeof_human(speed) + '/s --- '), size=utils.sizeof_human(
+                    package['bytesLoaded']) + ' / ' + utils.sizeof_human(package['bytesTotal']) + ' --- ',
+                                     progress=progress,
                                      eta=eta)
                 gevent_sleep_time()
                 package = jd_query_package(jd, package_id)
@@ -630,25 +631,26 @@ def get_download_stats_jd(jd, package_name):
             return 0
 
 
-def get_download_stats(downloader, total_size_downloaded):
+def get_download_stats(downloader, total_size_downloaded, task_size):
     logger.debug('def get_download_stats started')
+    greenlet.task_size = greenlet
     if downloader.get_status() == 'downloading':
         size_downloaded = total_size_downloaded + downloader.get_dl_size()
-        progress = round(float(size_downloaded) * 100 / greenlet.task.size, 1)
+        progress = round(float(size_downloaded) * 100 / task_size, 1)
         speed = downloader.get_speed(human=False)
         if speed == 0:
-            eta = ''
+            eta = ' '
         else:
-            tmp = (greenlet.task.size - size_downloaded) / speed
+            tmp = (task_size - size_downloaded) / speed
             eta = ' ' + utils.time_human(tmp, fmt_short=True)
-        greenlet.task.update(speed=(
-            utils.sizeof_human(speed) + '/s --- ' + utils.sizeof_human(size_downloaded) + ' / ' + utils.sizeof_human(
-                greenlet.task.size)), progress=progress, eta=eta)
+        greenlet.task.update(speed=utils.sizeof_human(speed) + '/s --- ',
+                             size=utils.sizeof_human(size_downloaded) + ' / ' + utils.sizeof_human(task_size) + ' --- ',
+                             progress=progress, eta=eta)
 
     elif downloader.get_status() == 'combining':
-        greenlet.task.update(speed='', eta=' Combining files')
+        greenlet.task.update(speed=' ', eta=' Combining files')
     elif downloader.get_status() == 'paused':
-        greenlet.task.update(speed='', eta=' Download paused')
+        greenlet.task.update(speed=' ', eta=' Download paused')
     else:
         logger.debug('Want to update stats, but downloader status is invalid.')
 
@@ -685,11 +687,12 @@ def download_file():
         if not os.path.isfile(download['path']) or not os.path.isfile(os.path.join(greenlet.task.dldir, filename)):
             files_downloaded = 1
             if cfg.download_builtin:
+                task_size = greenlet.task.size
                 downloader = SmartDL(download['url'], download['path'], progress_bar=False, logger=logger,
                                      threads_count=1)
                 downloader.start(blocking=False)
                 while not downloader.isFinished():
-                    get_download_stats(downloader, total_size_downloaded)
+                    get_download_stats(downloader, total_size_downloaded, task_size)
                     gevent_sleep_time()
                     # if greenlet.task.local_status == "paused":            #   When paused to long
                     #   downloader.pause()                                  #   PysmartDl fails with WARNING :
@@ -774,7 +777,7 @@ def download_process():
     r = prem_connection("post", "https://www.premiumize.me/api/torrent/browse", payload)
     if r == 'failed':
         return 1
-    greenlet.task.update(local_status='downloading', progress=0, speed='', eta='')
+    greenlet.task.update(local_status='downloading', progress=0, speed=' ', eta=' ')
     greenlet.task.dldir = os.path.join(greenlet.task.dldir, clean_name(greenlet.task.name))
     greenlet.task.size = 0
     process_dir(json.loads(r.content)['content'], greenlet.task.dldir)
@@ -916,17 +919,27 @@ def parse_tasks(transfers):
                         speed=transfer['speed_down'])
         if task.local_status is None:
             if task.cloud_status != 'finished':
-                if transfer['eta'] is None or 0:
-                    eta = ''
+                progress = int(transfer['progress'] * 100)
+                if transfer['name'] is None or transfer['name'] == 0:
+                    name = 'Loading name'
+                else:
+                    name = transfer['name']
+                if transfer['eta'] is None or transfer['eta'] == 0:
+                    eta = ' '
                 else:
                     eta = utils.time_human(transfer['eta'], fmt_short=True)
-                if transfer['speed_down'] is None or 0:
-                    speed = ''
+                if transfer['speed_down'] is None or transfer['speed_down'] == 0:
+                    speed = ' '
                 else:
                     speed = utils.sizeof_human(transfer['speed_down']) + '/s '
+                if transfer['size'] is None or transfer['size'] == 0:
+                    size = ' '
+                else:
+                    size = utils.sizeof_human(transfer['size'] / 100 * progress) + ' / ' + utils.sizeof_human(
+                        transfer['size'])
                 task.update(progress=(int(transfer['progress'] * 100)), cloud_status=transfer['status'],
-                            name=transfer['name'],
-                            size=transfer['size'], speed=speed, eta=eta)
+                            name=name,
+                            size=size + ' --- ', speed=speed + ' --- ', eta=eta)
                 idle = False
             if task.cloud_status == 'finished':
                 if cfg.download_enabled:
