@@ -292,11 +292,11 @@ def check_update(auto_update=cfg.auto_update):
                             logger.info(
                                 'Tried to update but downloads are not done or failed, trying again in 30 minutes')
                             cfg.update_status = \
-                                'Update available, but not yet updated because downloads are not done or failed'
+                                'Update available, but not yet installed because downloads are not done or failed'
                             return
                     update_self()
             else:
-                cfg.update_status = 'No update available, last time checked: ' + datetime.datetime.now().strftime(
+                cfg.update_status = 'No update available --- last time checked: ' + datetime.datetime.now().strftime(
                     "%d-%m %H:%M:%S") + ' --- last time updated: ' + cfg.update_date
         scheduler.scheduler.reschedule_job('check_update', trigger='interval', hours=6)
 
@@ -1309,12 +1309,13 @@ def settings():
                 else:
                     prem_config.set('categories', ('cat_nzbtomedia' + str([x])), '0')
 
-            with open(os.path.join(runningdir, 'settings.cfg'), 'w') as configfile:  # save
+            with open(os.path.join(runningdir, 'settings.cfg'), 'w') as configfile:
                 prem_config.write(configfile)
             logger.info('Settings saved, reloading configuration')
             cfg.check_config()
             if enable_watchdir:
                 watchdir()
+            flash('settings saved', 'info')
     check_update(0)
     return render_template('settings.html', settings=prem_config, cfg=cfg)
 
