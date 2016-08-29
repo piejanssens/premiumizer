@@ -46,9 +46,10 @@
         <p>&nbsp;</p>
 
         <div class="well well-sm">
-            <h2>Global (requires restart)</h2>
+            <h2>Global</h2>
         </div>
         <div class="form-group">
+            <p>Changing settings requires restart</p>
             <label for="debug_enabled">Debug mode:</label>
             {% if settings.get('global', 'debug_enabled') == '1' %}
                 <input type="checkbox" class="form-control bootstrap_switch" name="debug_enabled" data-size="small"
@@ -73,6 +74,7 @@
             <h2>Premiumizer Login</h2>
         </div>
         <div class="form-group">
+            <p>Changing settings requires restart</p>
             <label for="login_enabled">Login enabled:</label>
             {% if settings.get('security', 'login_enabled') == '1' %}
                 <input type="checkbox" class="form-control bootstrap_switch" name="login_enabled"
@@ -126,7 +128,7 @@
         </div>
 
         <div class="form-group">
-            <label for="download_max">Max Simultaneous downloads: (requires restart)</label>
+            <label for="download_max">Max Simultaneous downloads: (Restart required)</label>
             <input type="number" class="form-control" name="download_max"
                    aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_max') }}">
             <label for="download_location">Download Location:</label>
