@@ -46,15 +46,15 @@ print ('|                                                                       
 print ('------------------------------------------------------------------------------------------------------------')
 # Initialize config values
 prem_config = ConfigParser.RawConfigParser()
-runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0] + '/'
-rootdir = runningdir[:-12]
+runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0]
+rootdir = os.path.split(runningdir)
 try:
     os_arg = sys.argv[1]
 except:
     os_arg = ''
-if not os.path.isfile(runningdir + 'settings.cfg'):
-    shutil.copy(runningdir + 'settings.cfg.tpl', runningdir + 'settings.cfg')
-prem_config.read(runningdir + 'settings.cfg')
+if not os.path.isfile(os.path.join(runningdir, 'settings.cfg')):
+    shutil.copy(os.path.join(runningdir, 'settings.cfg.tpl'), os.path.join(runningdir, 'settings.cfg'))
+prem_config.read(os.path.join(runningdir, 'settings.cfg'))
 active_interval = prem_config.getint('global', 'active_interval')
 idle_interval = prem_config.getint('global', 'idle_interval')
 debug_enabled = prem_config.getboolean('global', 'debug_enabled')
@@ -77,7 +77,8 @@ if debug_enabled:
     logger.info('----------------------------------')
     logger.info('----------------------------------')
     logger.info('DEBUG Logger Initialized')
-    handler = logging.handlers.RotatingFileHandler(runningdir + 'premiumizerDEBUG.log', maxBytes=(500 * 1024))
+    handler = logging.handlers.RotatingFileHandler(os.path.join(runningdir, 'premiumizerDEBUG.log'),
+                                                   maxBytes=(500 * 1024))
     handler.setFormatter(formatterdebug)
     logger.addHandler(handler)
     logger.info('DEBUG Logfile Initialized')
@@ -92,7 +93,7 @@ else:
     logger.info('-------------------------------------------------------------------------------------')
     logger.info('-------------------------------------------------------------------------------------')
     logger.info('Logger Initialized')
-    handler = logging.handlers.RotatingFileHandler(runningdir + 'premiumizer.log', maxBytes=(500 * 1024))
+    handler = logging.handlers.RotatingFileHandler(os.path.join(runningdir, 'premiumizer.log'), maxBytes=(500 * 1024))
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.info('Logfile Initialized')
@@ -132,16 +133,16 @@ if prem_config.getboolean('update', 'updated'):
     logger.info('*************************************************************************************')
     logger.info('---------------------------Premiumizer has been updated!!----------------------------')
     logger.info('*************************************************************************************')
-    if os.path.isfile(runningdir + 'settings.cfg.old2'):
+    if os.path.isfile(os.path.join(runningdir, 'settings.cfg.old2')):
         logger.info('*************************************************************************************')
         logger.info('-------Settings file has been updated, old settings file renamed to .old-------')
         logger.info('*************************************************************************************')
     try:
-        os.rename(runningdir + 'settings.cfg.old2', runningdir + 'settings.cfg.old')
+        os.rename(os.path.join(runningdir, 'settings.cfg.old2'), os.path.join(runningdir, 'settings.cfg.old'))
     except:
         logger.error('Could not rename old settings file')
     prem_config.set('update', 'updated', '0')
-    with open(runningdir + 'settings.cfg', 'w') as configfile:
+    with open(os.path.join(runningdir, 'settings.cfg'), 'w') as configfile:
         prem_config.write(configfile)
 
 #
@@ -177,8 +178,8 @@ class PremConfig:
             self.download_builtin = 1
         self.download_max = prem_config.getint('downloads', 'download_max')
         self.download_location = prem_config.get('downloads', 'download_location')
-        if os.path.isfile(runningdir + 'nzbtomedia/NzbToMedia.py'):
-            self.nzbtomedia_location = (runningdir + 'nzbtomedia/NzbToMedia.py')
+        if os.path.isfile(os.path.join(runningdir, 'nzbtomedia', 'NzbToMedia.py')):
+            self.nzbtomedia_location = (os.path.join(runningdir, 'nzbtomedia', 'NzbToMedia.py'))
             self.nzbtomedia_builtin = 1
         else:
             self.nzbtomedia_location = prem_config.get('downloads', 'nzbtomedia_location')
@@ -217,7 +218,7 @@ class PremConfig:
             if y != '':
                 cat_name = y
                 if z == '':
-                    cat_dir = self.download_location + '/' + y
+                    cat_dir = os.path.join(self.download_location, y)
                 else:
                     cat_dir = z
                 cat_ext = prem_config.get('categories', ('cat_ext' + str([x]))).split(',')
@@ -232,7 +233,7 @@ class PremConfig:
                         logger.info('Creating Download Path at: %s', cat_dir)
                         os.makedirs(cat_dir)
                 if self.watchdir_enabled:
-                    sub = self.watchdir_location + '/' + cat_name
+                    sub = os.path.join(self.watchdir_location, cat_name)
                     if not os.path.exists(sub):
                         logger.info('Creating watchdir Path at %s', sub)
                         os.makedirs(sub)
@@ -259,7 +260,6 @@ cfg = PremConfig()
 # Automatic update checker
 def check_update(auto_update=cfg.auto_update):
     logger.debug('def check_update started')
-
     time_job = scheduler.scheduler.get_job('check_update').next_run_time.replace(tzinfo=None)
     time_now = datetime.datetime.now()
     diff = time_job - time_now
@@ -307,15 +307,15 @@ def update_self():
     logger.info('Update - will restart')
     cfg.update_date = datetime.datetime.now().strftime("%d-%m %H:%M:%S")
     prem_config.set('update', 'update_date', cfg.update_date)
-    with open(runningdir + 'settings.cfg', 'w') as configfile:  # save
+    with open(os.path.join(runningdir, 'settings.cfg'), 'w') as configfile:  # save
         prem_config.write(configfile)
     scheduler.shutdown(wait=False)
     socketio.stop()
     if os_arg == '--windows':
-        subprocess.call(['python', runningdir + 'utils.py', '--update', '--windows'])
+        subprocess.call(['python', os.path.join(runningdir, 'utils.py'), '--update', '--windows'])
         os._exit(1)
     else:
-        subprocess.Popen(['python', runningdir + 'utils.py', '--update'], shell=False, close_fds=True)
+        subprocess.Popen(['python', os.path.join(runningdir, 'utils.py'), '--update'], shell=False, close_fds=True)
         os._exit(1)
 
 
@@ -328,7 +328,7 @@ def restart():
         # windows service will automatically restart on 'failure'
         os._exit(1)
     else:
-        subprocess.Popen(['python', runningdir + 'utils.py', '--restart'], shell=False, close_fds=True)
+        subprocess.Popen(['python', os.path.join(runningdir, 'utils.py'), '--restart'], shell=False, close_fds=True)
         os._exit(1)
 
 
@@ -338,7 +338,7 @@ def shutdown():
     scheduler.shutdown(wait=False)
     socketio.stop()
     if os_arg == '--windows':
-        subprocess.call([rootdir + 'Installer/nssm.exe', 'stop', 'Premiumizer'])
+        subprocess.call([os.path.join(rootdir, 'Installer', 'nssm.exe'), 'stop', 'Premiumizer'])
     else:
         os._exit(1)
 
@@ -362,11 +362,11 @@ logger.debug('Initializing Flask complete')
 
 # Initialise Database
 logger.debug('Initializing Database')
-db = shelve.open(runningdir + 'premiumizer.db')
+db = shelve.open(os.path.join(runningdir, 'premiumizer.db'))
 if not db.keys():
     db.close()
-    os.remove(runningdir + 'premiumizer.db')
-    db = shelve.open(runningdir + 'premiumizer.db')
+    os.remove(os.path.join(runningdir, 'premiumizer.db'))
+    db = shelve.open(os.path.join(runningdir, 'premiumizer.db'))
     logger.debug('Database cleared')
 logger.debug('Initializing Database complete')
 
@@ -485,7 +485,7 @@ def email(status):
                 log = 'premiumizerDEBUG.log'
             else:
                 log = 'premiumizer.log'
-            with open(runningdir + log, 'r') as f:
+            with open(os.path.join(runningdir, log), 'r') as f:
                 for line in f:
                     if greenlet.task.name in line:
                         text += line
@@ -682,7 +682,7 @@ def download_file():
     for download in greenlet.download_list:
         logger.debug('Downloading file: %s', download['path'])
         filename = os.path.basename(download['path'])
-        if not os.path.isfile(download['path']) or not os.path.isfile(greenlet.task.dldir + '/' + filename):
+        if not os.path.isfile(download['path']) or not os.path.isfile(os.path.join(greenlet.task.dldir, filename)):
             files_downloaded = 1
             if cfg.download_builtin:
                 downloader = SmartDL(download['url'], download['path'], progress_bar=False, logger=logger,
@@ -739,7 +739,7 @@ def is_sample(dir_content):
     return False
 
 
-def process_dir(dir_content, path, change_dldir, task_update_size):
+def process_dir(dir_content, path):
     logger.debug('def processing_dir started')
     if not dir_content:
         return None
@@ -747,43 +747,37 @@ def process_dir(dir_content, path, change_dldir, task_update_size):
         type = dir_content[x]['type']
         if type == 'dir':
             new_path = os.path.join(path, clean_name(x))
-            if change_dldir:
-                greenlet.task.update(dldir=new_path)
-            process_dir(dir_content[x]['children'], new_path, 0, task_update_size)
+            if os.path.basename(os.path.normpath(path)) == os.path.basename(os.path.normpath(new_path)):
+                process_dir(dir_content[x]['children'], path)
+            else:
+                process_dir(dir_content[x]['children'], new_path)
         elif type == 'file':
             if dir_content[x]['url'].lower().endswith(tuple(greenlet.task.dlext)):
                 if greenlet.task.delsample:
                     sample = is_sample(dir_content[x])
                     if sample:
-                        greenlet.size_remove += dir_content[x]['size']
                         continue
                 if cfg.download_enabled:
                     if not os.path.exists(path):
                         os.makedirs(path)
-                    download = {'path': path + '/' + clean_name(x), 'url': dir_content[x]['url']}
+                    download = {'path': os.path.join(path, clean_name(x)), 'url': dir_content[x]['url']}
                     greenlet.download_list.append(download)
                     greenlet.task.size += dir_content[x]['size']
-            else:
-                greenlet.size_remove += dir_content[x]['size']
 
 
 def download_process():
     logger.debug('def download_process started')
     returncode = 0
-    task_update_size = 0  # workaround for bug nzb transfer does not give a size
     greenlet.download_list = []
-    greenlet.size_remove = 0
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
                'hash': greenlet.task.hash}
     r = prem_connection("post", "https://www.premiumize.me/api/torrent/browse", payload)
     if r == 'failed':
         return 1
     greenlet.task.update(local_status='downloading', progress=0, speed='', eta='')
-    if greenlet.task.size == 0:
-        task_update_size = 1
-    process_dir(json.loads(r.content)['content'], greenlet.task.dldir, 1, task_update_size)
-    if greenlet.size_remove is not 0:
-        greenlet.task.update(size=(greenlet.task.size - greenlet.size_remove))
+    greenlet.task.dldir = os.path.join(greenlet.task.dldir, clean_name(greenlet.task.name))
+    greenlet.task.size = 0
+    process_dir(json.loads(r.content)['content'], greenlet.task.dldir)
     logger.info('Downloading: %s', greenlet.task.name)
     if greenlet.download_list:
         returncode = download_file()
@@ -1184,10 +1178,11 @@ def upload():
     if request.files:
         upload_file = request.files['file']
         filename = secure_filename(upload_file.filename)
-        if not os.path.isdir(runningdir + 'tmp'):
-            os.makedirs(runningdir + 'tmp')
-        upload_file.save(os.path.join(runningdir + 'tmp', filename))
-        upload_file = runningdir + 'tmp' + '/' + filename
+        tmp = os.path.join(runningdir, 'tmp')
+        if not os.path.isdir(tmp):
+            os.makedirs(tmp)
+        upload_file.save(os.path.join(tmp, filename))
+        upload_file = os.path.join(tmp, filename)
         if upload_file.endswith('.torrent'):
             failed = upload_torrent(upload_file)
         if upload_file.endswith('.nzb'):
@@ -1208,7 +1203,7 @@ def history():
     taskdel = ""
     taskdl = ""
     try:
-        with open(runningdir + 'premiumizer.log', 'r') as f:
+        with open(os.path.join(runningdir, 'premiumizer.log'), 'r') as f:
             for line in f:
                 if 'Added:' in line:
                     taskad += line
@@ -1314,7 +1309,7 @@ def settings():
                 else:
                     prem_config.set('categories', ('cat_nzbtomedia' + str([x])), '0')
 
-            with open(runningdir + 'settings.cfg', 'w') as configfile:  # save
+            with open(os.path.join(runningdir, 'settings.cfg'), 'w') as configfile:  # save
                 prem_config.write(configfile)
             logger.info('Settings saved, reloading configuration')
             cfg.check_config()
@@ -1350,24 +1345,24 @@ def log():
     if request.method == 'POST':
         if 'Clear' in request.form.values():
             try:
-                with open(runningdir + 'premiumizer.log', 'w'):
+                with open(os.path.join(runningdir, 'premiumizer.log'), 'w'):
                     pass
             except:
                 pass
             try:
-                with open(runningdir + 'premiumizerDEBUG.log', 'w'):
+                with open(os.path.join(runningdir, 'premiumizerDEBUG.log'), 'w'):
                     pass
             except:
                 pass
             logger.info('Logfile Cleared')
     try:
-        with open(runningdir + 'premiumizer.log', "r") as f:
+        with open(os.path.join(runningdir, 'premiumizer.log'), "r") as f:
             log = f.read()
     except:
         log = 'Error opening logfile'
 
     try:
-        with open(runningdir + 'premiumizerDEBUG.log', "r") as f:
+        with open(os.path.join(runningdir, 'premiumizerDEBUG.log'), "r") as f:
             debuglog = f.read()
     except:
         debuglog = 'no debug log file'
@@ -1390,7 +1385,7 @@ def list():
 
 @app.route('/favicon.ico')
 def favicon():
-    return send_from_directory(os.path.join(app.root_path, 'static'), 'img/favicon.ico')
+    return send_from_directory(os.path.join(app.root_path, 'static', 'img', 'favicon.ico'))
 
 
 @app.errorhandler(404)
