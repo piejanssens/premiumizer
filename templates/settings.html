@@ -2,11 +2,54 @@
 {% set active_page = "settings" %}
 {% block title %} - Home{% endblock %}
 {% block content %}
-    <form data-toggle="validator" role="form" method="post" action="/settings" enctype="multipart/form-data">
+    <form data-toggle="validator" role="form" method="post" action="{{ url_for('settings') }}"
+          enctype="multipart/form-data">
+        <div class="form-group pull-right">
+            {% with info = get_flashed_messages(category_filter=["info"]) %}
+                {% if info %}
+                    {%- for msg in info %}
+                        <p class=info><strong>{{ msg }}</strong>
+                    {% endfor -%}
+                {% endif %}
+            {% endwith %}
+            <button type="submit" class="btn btn-primary">Save</button>
+            <input type="submit" class="btn-danger" name="submit" value="Restart">
+            <input type="submit" class="btn-danger" name="submit" value="Shutdown">
+        </div>
+        <p>&nbsp;</p>
+        <p>&nbsp;</p>
         <div class="well well-sm">
-            <h2>Global (requires restart)</h2>
+            <h2>Update</h2>
+        </div>
+        <div>
+            <label for="auto_update">Enable automatic updates (checks every 6 hours):</label>
+            {% if settings.get('update', 'auto_update') == '1' %}
+                <input type="checkbox" class="form-control bootstrap_switch" name="auto_update"
+                       data-size="small" checked>
+            {% else %}
+                <input type="checkbox" class="form-control bootstrap_switch" name="auto_update"
+                       data-size="small">
+            {% endif %}
+            <p>&nbsp;</p>
+            <p class="text-primary">{{ cfg.update_status }}</p>
+            <p class="text-primary">You are on commit: <a
+                    href="https://github.com/piejanssens/premiumizer/commits/master"
+                    target="_blank">{{ cfg.update_localcommit }}</a></p>
+            {% if cfg.update_available %}
+                <p>Pressing Update will restart Premiumizer.</p>
+                <input type="submit" class="btn-danger" name="submit" value="Update">
+
+                <p class="text-primary">Changes:</p>
+                <pre>{{ cfg.update_diffcommit }}</pre>
+            {% endif %}
+        </div>
+        <p>&nbsp;</p>
+
+        <div class="well well-sm">
+            <h2>Global</h2>
         </div>
         <div class="form-group">
+            <p>Changing settings requires restart</p>
             <label for="debug_enabled">Debug mode:</label>
             {% if settings.get('global', 'debug_enabled') == '1' %}
                 <input type="checkbox" class="form-control bootstrap_switch" name="debug_enabled" data-size="small"
@@ -31,6 +74,7 @@
             <h2>Premiumizer Login</h2>
         </div>
         <div class="form-group">
+            <p>Changing settings requires restart</p>
             <label for="login_enabled">Login enabled:</label>
             {% if settings.get('security', 'login_enabled') == '1' %}
                 <input type="checkbox" class="form-control bootstrap_switch" name="login_enabled"
@@ -84,7 +128,7 @@
         </div>
 
         <div class="form-group">
-            <label for="download_max">Max Simultaneous downloads: (requires restart)</label>
+            <label for="download_max">Max Simultaneous downloads: (Restart required)</label>
             <input type="number" class="form-control" name="download_max"
                    aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_max') }}">
             <label for="download_location">Download Location:</label>
@@ -110,7 +154,7 @@
                 <input type="checkbox" class="form-control bootstrap_switch" name="jd_enabled"
                        data-size="small">
             {% endif %}
-            <p>WARNING: directories will be flattend</p>
+            <p>WARNING: directories will be flattened</p>
             <label for="jd_username">JD Username:</label>
             <input type="email" class="form-control" name="jd_username"
                    aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'jd_username') }}">
@@ -232,43 +276,6 @@
             <input type="password" class="form-control" name="email_password"
                    aria-describedby="basic-addon1" value="{{ settings.get('notifications', 'email_password') }}">
 
-        </div>
-        <p>&nbsp;</p>
-        <div class="well well-sm">
-            <h2>Update</h2>
-        </div>
-        <div>
-            <label for="auto_update">Enable automatic updates (checks every 6 hours):</label>
-            {% if settings.get('update', 'auto_update') == '1' %}
-                <input type="checkbox" class="form-control bootstrap_switch" name="auto_update"
-                       data-size="small" checked>
-            {% else %}
-                <input type="checkbox" class="form-control bootstrap_switch" name="auto_update"
-                       data-size="small">
-            {% endif %}
-            <p>On update Premiumizer will restart</p>
-            <p>WARNING: When the settings change Premiumizer will try to import your old settings, current settings.cfg
-                is saved as settings.cfg.old</p>
-            <p>&nbsp;</p>
-            <p class="text-primary">{{ cfg.update_status }}</p>
-            <p class="text-primary">You are on commit: <a
-                    href="https://github.com/piejanssens/premiumizer/commits/master"
-                    target="_blank">{{ cfg.update_localcommit }}</a></p>
-            {% if cfg.update_available %}
-                <input type="submit" class="btn-danger" name="submit" value="Update">
-
-                <p class="text-primary">Changes:</p>
-                <pre>{{ cfg.update_diffcommit }}</pre>
-            {% else %}
-                <p>Update check is done every 6 hours or when opening the settings page with a 2 minute gap.</p>
-            {% endif %}
-        </div>
-        <p>&nbsp;</p>
-
-        <div class="form-group pull-right">
-            <button type="submit" class="btn btn-primary">Save</button>
-            <input type="submit" class="btn-danger" name="submit" value="Restart">
-            <input type="submit" class="btn-danger" name="submit" value="Shutdown">
         </div>
 
     </form>
