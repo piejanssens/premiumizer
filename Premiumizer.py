@@ -643,8 +643,8 @@ def get_download_stats(downloader, total_size_downloaded):
             tmp = (greenlet.task.size - size_downloaded) / speed
             eta = ' ' + utils.time_human(tmp, fmt_short=True)
         greenlet.task.update(speed=utils.sizeof_human(speed) + '/s --- ',
-                             dlsize=utils.sizeof_human(size_downloaded) + ' / ' + utils.sizeof_human(greenlet.task.size) + ' --- ',
-                             progress=progress, eta=eta)
+                             dlsize=utils.sizeof_human(size_downloaded) + ' / ' + utils.sizeof_human(
+                                 greenlet.task.size) + ' --- ', progress=progress, eta=eta)
 
     elif downloader.get_status() == 'combining':
         greenlet.task.update(speed=' ', eta=' Combining files')
@@ -1209,6 +1209,7 @@ def upload():
 
 @app.route('/history')
 @login_required
+#TODO: make list: name - downloaded - deleted - nzbtomedia - email
 def history():
     taskad = ""
     taskdel = ""
