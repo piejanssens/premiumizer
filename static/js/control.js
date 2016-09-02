@@ -140,7 +140,7 @@ function update_task(task) {
         '<span class="col-md-7">' +
         '<div class="row"><h4>' + task.name + '</h4></div>' +
         '<div class="row"><div class="progress"><div class="progress-bar progress-bar-' + stateColor + (task.cloud_status == "downloading" || task.local_status == "downloading" ? " progress-bar-striped active" : "") + '" style="width: ' + task.progress + '%">' + task.progress + '% ' + '</div></div></div>' +
-        '<div class="row"><h6>' + (task.progress != 100 ? "Speed: " + task.speed + "Progress: " + task.size + " ETA: " + task.eta : '') + '</h6></div>' +
+        '<div class="row"><h6>' + (task.progress != 100 ? "Speed: " + task.speed + "Progress: " + task.dlsize + " ETA: " + task.eta : '') + '</h6></div>' +
         '</span>' +
         '<span class="col-md-3">' +
         '<div class="btn-toolbar text-center"><a class="btn btn-danger delete_btn" href="#" onclick="delete_task(event)"><i class="fa fa-trash-o fa-lg"></i> Delete</a>' + (task.cloud_status == "finished" ? '<a class="btn btn-success" href="https://www.premiumize.me/browsetorrent?hash=' + task.hash + '" target="_blank"><i class="fa fa-folder-open-o fa-lg"></i> Browse</a>' : "") + (task.local_status == "downloading" ? '<a class="btn btn-warning"href="#" onclick="stop_task(event)"><i class="fa fa-trash-o fa-lg"></i> Stop DL</a>' : "") + '</div>' +

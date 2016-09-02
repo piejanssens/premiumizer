@@ -608,7 +608,7 @@ def get_download_stats_jd(jd, package_name):
                     logger.error('JD did not return package bytesTotal for: %s', greenlet.task.name)
                     return 1
                 progress = round(float(package['bytesLoaded']) * 100 / package["bytesTotal"], 1)
-                greenlet.task.update(speed=(utils.sizeof_human(speed) + '/s --- '), size=utils.sizeof_human(
+                greenlet.task.update(speed=(utils.sizeof_human(speed) + '/s --- '), dlsize=utils.sizeof_human(
                     package['bytesLoaded']) + ' / ' + utils.sizeof_human(package['bytesTotal']) + ' --- ',
                                      progress=progress,
                                      eta=eta)
@@ -631,20 +631,19 @@ def get_download_stats_jd(jd, package_name):
             return 0
 
 
-def get_download_stats(downloader, total_size_downloaded, task_size):
+def get_download_stats(downloader, total_size_downloaded):
     logger.debug('def get_download_stats started')
-    greenlet.task_size = greenlet
     if downloader.get_status() == 'downloading':
         size_downloaded = total_size_downloaded + downloader.get_dl_size()
-        progress = round(float(size_downloaded) * 100 / task_size, 1)
+        progress = round(float(size_downloaded) * 100 / greenlet.task.size, 1)
         speed = downloader.get_speed(human=False)
         if speed == 0:
             eta = ' '
         else:
-            tmp = (task_size - size_downloaded) / speed
+            tmp = (greenlet.task.size - size_downloaded) / speed
             eta = ' ' + utils.time_human(tmp, fmt_short=True)
         greenlet.task.update(speed=utils.sizeof_human(speed) + '/s --- ',
-                             size=utils.sizeof_human(size_downloaded) + ' / ' + utils.sizeof_human(task_size) + ' --- ',
+                             dlsize=utils.sizeof_human(size_downloaded) + ' / ' + utils.sizeof_human(greenlet.task.size) + ' --- ',
                              progress=progress, eta=eta)
 
     elif downloader.get_status() == 'combining':
@@ -687,12 +686,11 @@ def download_file():
         if not os.path.isfile(download['path']) or not os.path.isfile(os.path.join(greenlet.task.dldir, filename)):
             files_downloaded = 1
             if cfg.download_builtin:
-                task_size = greenlet.task.size
                 downloader = SmartDL(download['url'], download['path'], progress_bar=False, logger=logger,
                                      threads_count=1)
                 downloader.start(blocking=False)
                 while not downloader.isFinished():
-                    get_download_stats(downloader, total_size_downloaded, task_size)
+                    get_download_stats(downloader, total_size_downloaded)
                     gevent_sleep_time()
                     # if greenlet.task.local_status == "paused":            #   When paused to long
                     #   downloader.pause()                                  #   PysmartDl fails with WARNING :

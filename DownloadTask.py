@@ -24,6 +24,7 @@ class DownloadTask:
         self.delsample = delsample
         self.dlnzbtomedia = dlnzbtomedia
         self.dltime = 0
+        self.dlsize = None
 
     def update(self, **kwargs):
         self.previous_timestamp = self.timestamp
@@ -56,6 +57,8 @@ class DownloadTask:
             self.dlnzbtomedia = kwargs.get('dlnzbtomedia')
         if 'dltime' in kwargs:
             self.dltime = kwargs.get('dltime')
+        if 'dlsize' in kwargs:
+            self.dlsize = kwargs.get('dlsize')
         self.callback('update_task', {'task': self.get_json()})
 
     def delete(self):
@@ -75,6 +78,6 @@ class DownloadTask:
             return False
 
     def get_json(self):
-        return {'progress': self.progress, 'speed': self.speed, 'size': self.size, 'eta': self.eta, 'hash': self.hash,
+        return {'progress': self.progress, 'speed': self.speed, 'dlsize': self.dlsize, 'eta': self.eta, 'hash': self.hash,
                 'name': self.name,
                 'cloud_status': self.cloud_status, 'local_status': self.local_status, 'category': self.category}
