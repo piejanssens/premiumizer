@@ -90,7 +90,7 @@ https://github.com/piejanssens/premiumizer.git [to a folder]```
 3. ```virtualenv [your folder]\env```
 4. ```env\Scripts\activate.bat```
 5. ```pip install -r requirements.txt```
-6. ```python premiumizer.py```
+6. ```python Premiumizer.py```
 
 Optional:
 Install NzbToMedia & pywin32 & Microsoft Visual c++ python compiler:
@@ -108,7 +108,7 @@ https://github.com/piejanssens/premiumizer.git```
 3. ```virtualenv virtualenv```
 4. ```source virtualenv/bin/activate```
 5. ```pip install -r requirements.txt```
-6. ```./premiumizer.py```
+6. ```./Premiumizer.py```
 
 Now use your browser to access [http://127.0.0.1:5000/](http://127.0.0.1:5000/).
 Extra: Google how you can turn it into a service and run it in background
