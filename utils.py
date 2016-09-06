@@ -4,12 +4,12 @@ import subprocess
 import sys
 import time
 
-runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0] + '/'
+runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0]
 
 
 def restart():
     time.sleep(4)
-    execfile(runningdir + 'premiumizer.py', globals(), globals())
+    execfile(os.path.join(runningdir, 'premiumizer.py'), globals(), globals())
 
 
 def update():
@@ -48,7 +48,7 @@ def update():
         pass
     else:
         time.sleep(3)
-        execfile(runningdir + 'premiumizer.py', globals(), globals())
+        execfile(os.path.join(runningdir, 'premiumizer.py'), globals(), globals())
 
 
 try:
