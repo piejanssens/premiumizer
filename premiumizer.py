@@ -937,7 +937,7 @@ def parse_tasks(transfers):
                         transfer['size'])
                 task.update(progress=(int(transfer['progress'] * 100)), cloud_status=transfer['status'],
                             name=name,
-                            size=size + ' --- ', speed=speed + ' --- ', eta=eta)
+                            dlsize=size + ' --- ', speed=speed + ' --- ', eta=eta)
                 idle = False
             if task.cloud_status == 'finished':
                 if cfg.download_enabled:
