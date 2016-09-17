@@ -1218,11 +1218,11 @@ def history():
         with open(os.path.join(runningdir, 'premiumizer.log'), 'r') as f:
             for line in f:
                 if 'Added:' in line:
-                    taskad += line
+                    taskad += unicode(line, "utf-8")
                 if 'Deleted:' in line:
-                    taskdel += line
+                    taskdel += unicode(line, "utf-8")
                 if 'Download finished:' in line:
-                    taskdl += line
+                    taskdl += unicode(line, "utf-8")
     except:
         taskad = 'History is based on premiumizer.log file, error opening or it does not exist.'
     return render_template("history.html", taskad=taskad, taskdel=taskdel, taskdl=taskdl)
@@ -1370,13 +1370,13 @@ def log():
             logger.info('Logfile Cleared')
     try:
         with open(os.path.join(runningdir, 'premiumizer.log'), "r") as f:
-            log = f.read()
+            log = unicode(f.read(), "utf-8")
     except:
         log = 'Error opening logfile'
 
     try:
         with open(os.path.join(runningdir, 'premiumizerDEBUG.log'), "r") as f:
-            debuglog = f.read()
+            debuglog = unicode(f.read(), "utf-8")
     except:
         debuglog = 'no debug log file'
     return render_template("log.html", log=log, debuglog=debuglog)
