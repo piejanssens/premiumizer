@@ -567,6 +567,13 @@ def get_download_stats_jd(jd, package_name):
     gevent.sleep(10)
     start_time = time.time()
     query_packages = jd.downloads.query_packages()
+    while isinstance(query_packages, bool):
+        gevent.sleep(5)
+        query_packages = jd.downloads.query_packages()
+        count += 1
+        if count == 5:
+            logger.error('JD did not return packages status for: %s', greenlet.task.name)
+            return 1
     while not len(query_packages):
         gevent.sleep(5)
         query_packages = jd.downloads.query_packages()
@@ -1209,7 +1216,7 @@ def upload():
 
 @app.route('/history')
 @login_required
-#TODO: make list: name - downloaded - deleted - nzbtomedia - email
+# TODO: make list: name - downloaded - deleted - nzbtomedia - email
 def history():
     taskad = ""
     taskdel = ""
@@ -1378,7 +1385,7 @@ def log():
         with open(os.path.join(runningdir, 'premiumizerDEBUG.log'), "r") as f:
             debuglog = unicode(f.read(), "utf-8")
     except:
-        debuglog = 'no debug log file'
+        debuglog = 'no debug log file or corrupted'
     return render_template("log.html", log=log, debuglog=debuglog)
 
 
