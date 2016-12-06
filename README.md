@@ -25,7 +25,7 @@ By default, premiumizer's web interface listens on port 5000.
 When premiumizer is running you can access it at http://127.0.0.1:5000/ 
 If premiumizer is running on a different PC replace Bind ip in settings with that computer's IP.
 
-Support for reverse proxy (http only):
+Support for reverse proxy:
 nginx example:
 ```
 ...

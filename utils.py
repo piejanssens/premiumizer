@@ -15,7 +15,7 @@ def restart():
 def update():
     del sys.argv[1:]
     time.sleep(2)
-    subprocess.call(['git', '-C', runningdir + 'nzbtomedia', 'pull'])
+    subprocess.call(['git', '-C', os.path.join(runningdir, 'nzbtomedia'), 'pull'])
     subprocess.call(['git', '-C', runningdir, 'pull'])
 
     prem_config = ConfigParser.RawConfigParser()
