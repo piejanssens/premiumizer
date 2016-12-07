@@ -287,7 +287,7 @@ def check_update(auto_update=cfg.auto_update):
                 if auto_update:
                     for task in tasks:
                         if task.local_status == (
-                                            'downloading' or 'queued' or 'failed: download' or 'failed: nzbtomedia'):
+                                            'downloading' or 'queued' or 'failed: download' or 'failed: nzbToMedia'):
                             scheduler.scheduler.reschedule_job('check_update', trigger='interval', minutes=30)
                             logger.info(
                                 'Tried to update but downloads are not done or failed, trying again in 30 minutes')
@@ -445,9 +445,9 @@ def notify_nzbtomedia():
                  greenlet.task.hash, 'generic'],
                 stderr=subprocess.STDOUT, shell=False)
             returncode = 0
-            logger.info('Send to nzbtomedia: %s', greenlet.task.name)
+            logger.info('Send to nzbToMedia: %s', greenlet.task.name)
         except subprocess.CalledProcessError as e:
-            logger.error('nzbtomedia failed for %s', greenlet.task.name)
+            logger.error('nzbToMedia failed for: %s', greenlet.task.name)
             errorstr = ''
             tmp = str.splitlines(e.output)
             for line in tmp:
@@ -809,10 +809,11 @@ def download_task(task):
         failed = download_process()
         if failed:
             task.update(local_status='failed: download')
+            logger.error('Download failed for: %s', task.name)
     if task.dlnzbtomedia and not failed:
         failed = notify_nzbtomedia()
         if failed:
-            task.update(local_status='failed: nzbtomedia')
+            task.update(local_status='failed: nzbToMedia')
 
     if cfg.remove_cloud and not failed:
         payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'type': 'torrent', 'id': task.hash}
@@ -823,7 +824,8 @@ def download_task(task):
                 logger.info('Automatically Deleted: %s from cloud', task.name)
                 socketio.emit('delete_success', {'data': task.hash})
             else:
-                msg = 'Download could not be removed from cloud: %s, message: %s' % (task.name, responsedict['message'])
+                msg = 'Download could not be deleted from the cloud for: %s, message: %s' % (
+                    task.name, responsedict['message'])
                 logger.error(msg)
                 logger.info(responsedict['message'])
                 if cfg.email_enabled:
@@ -840,8 +842,8 @@ def download_task(task):
             greenlet.avgspeed = str(utils.sizeof_human((task.size / task.dltime)) + '/s')
         except:
             greenlet.avgspeed = "0"
-        logger.info('Download finished: %s size: %s time: %s speed: %s location: %s', task.name,
-                    utils.sizeof_human(task.size), utils.time_human(task.dltime, fmt_short=True), greenlet.avgspeed,
+        logger.info('Download finished: %s -- info: %s --  %s --  %s -- location: %s', task.name,
+                    utils.sizeof_human(task.size), greenlet.avgspeed, utils.time_human(task.dltime, fmt_short=True),
                     task.dldir)
     if cfg.email_enabled and task.local_status != 'stopped':
         if not failed:
@@ -917,7 +919,11 @@ def parse_tasks(transfers):
     for transfer in reversed(transfers):
         task = get_task(transfer['hash'].encode("utf-8"))
         if not task:
-            add_task(transfer['hash'].encode("utf-8"), transfer['size'], transfer['name'], '')
+            if transfer['name'] is None or transfer['name'] == 0:
+                name = 'Loading name'
+            else:
+                name = transfer['name']
+            add_task(transfer['hash'].encode("utf-8"), transfer['size'], name, '')
             task = get_task(transfer['hash'].encode("utf-8"))
             hashes_local.append(task.hash)
             task.update(progress=(int(transfer['progress'] * 100)), cloud_status=transfer['status'],
@@ -1012,7 +1018,8 @@ def add_task(hash, size, name, category):
     dldir, dlext, delsample, dlnzbtomedia = get_cat_var(category)
     task = DownloadTask(socketio.emit, hash, size, name, category, dldir, dlext, delsample, dlnzbtomedia)
     tasks.append(task)
-    logger.info('Added: %s', task.name)
+    logger.info('Added: %s -- Category: %s', task.name, task.category)
+
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
 
 
@@ -1214,25 +1221,70 @@ def upload():
     return 'OK'
 
 
+def history_update(history, line, status, success):
+    for item in history:
+        if item['name'] in line:
+            item[status] = success
+            return
+
+    if status == 'downloaded':
+        try:
+            taskname = line.split(" --", 1)[0].splitlines()[0]
+            taskname = taskname.split("Download finished: ", 1)[1]
+            for item in history:
+                if item['name'] == 'Loading name':
+                    item['name'] = taskname
+        except:
+            pass
+
+
 @app.route('/history')
 @login_required
-# TODO: make list: name - downloaded - deleted - nzbtomedia - email
 def history():
-    taskad = ""
-    taskdel = ""
-    taskdl = ""
+    history = []
     try:
-        with open(os.path.join(runningdir, 'premiumizer.log'), 'r') as f:
+        if debug_enabled:
+            log = 'premiumizerDEBUG.log'
+        else:
+            log = 'premiumizer.log'
+        with open(os.path.join(runningdir, log), 'r') as f:
             for line in f:
                 if 'Added:' in line:
-                    taskad += unicode(line, "utf-8")
-                if 'Deleted:' in line:
-                    taskdel += unicode(line, "utf-8")
-                if 'Download finished:' in line:
-                    taskdl += unicode(line, "utf-8")
+                    taskname = line.split("Added: ", 1)[1].splitlines()[0]
+                    taskname = taskname.split(" --", 1)[0]
+                    if debug_enabled:
+                        taskdate = line.split("root", 1)[0].splitlines()[0]
+                    else:
+                        taskdate = line.split(": INFO ", 1)[0].splitlines()[0]
+                    taskcat = line.split("Category: ", 1)[1].splitlines()[0]
+                    history.append({'date': taskdate, 'name': taskname, 'category': taskcat, 'downloaded': '', 'deleted': '',
+                                    'nzbtomedia': '', 'email': '', 'info': '',})
+                elif 'Download finished:' in line:
+                    taskinfo = line.split(" -- info: ", 1)[1]
+                    taskinfo = taskinfo.split(" -- location:",1)[0]
+                    taskinfo = taskinfo.replace(' -- ', '\n')
+                    history_update(history, line, 'downloaded', '1')
+                    history_update(history, line, 'info', taskinfo)
+                elif 'Deleted:' in line:
+                    history_update(history, line, 'deleted', '1')
+                elif 'Send to nzbToMedia:' in line:
+                    history_update(history, line, 'nzbtomedia', '1')
+                elif 'Email send for:' in line:
+                    history_update(history, line, 'email', '1')
+                elif 'Category set to:' in line:
+                    taskcat = line.split("Category set to: ", 1)[1].splitlines()[0]
+                    history_update(history, line, 'category', taskcat)
+                elif 'Download failed for:' in line:
+                    history_update(history, line, 'downloaded', '0')
+                elif 'Download could not be deleted from the cloud for:' in line:
+                    history_update(history, line, 'deleted', '0')
+                elif 'nzbToMedia failed for:' in line or 'Error unable to locate nzbToMedia.py for:' in line:
+                    history_update(history, line, 'nzbtomedia', '0')
+                elif 'Email error for:' in line:
+                    history_update(history, line, 'email', '0')
     except:
-        taskad = 'History is based on premiumizer.log file, error opening or it does not exist.'
-    return render_template("history.html", taskad=taskad, taskdel=taskdel, taskdl=taskdl)
+        history = ['History is based on premiumizer.log file, error opening or it does not exist.']
+    return render_template("history.html", history=history)
 
 
 @app.route('/settings', methods=["POST", "GET"])
@@ -1433,7 +1485,8 @@ def delete_task(message):
             emit('delete_success', {'data': message['data']})
             scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
         else:
-            msg = 'Unable to delete task from cloud for: %s, message: %s' % (task.name, responsedict['message'])
+            msg = 'Download could not be deleted from the cloud for: %s, message: %s' % (
+                task.name, responsedict['message'])
             logger.error(msg)
             if cfg.email_enabled:
                 email(msg)
@@ -1497,6 +1550,7 @@ def change_category(message):
     task.update(local_status=None, process=None, speed=None, category=data['category'], dldir=dldir, dlext=dlext,
                 delsample=delsample,
                 dlnzbtomedia=dlnzbtomedia)
+    logger.info('Task: %s -- Category set to: %s', task.name, task.category)
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
 
 

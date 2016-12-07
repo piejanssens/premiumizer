@@ -84,3 +84,7 @@
 .icon-addon:hover .fa {
     color: #2580db;
 }
+
+.table tbody>tr>td.vert-align{
+    vertical-align: middle;
+}
