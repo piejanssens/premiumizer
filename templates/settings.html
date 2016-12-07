@@ -135,11 +135,11 @@
             <input type="text" class="form-control" name="download_location"
                    aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_location') }}">
             {% if not cfg.nzbtomedia_builtin %}
-                <label for="nzbtomedia_location">path to NzbToMedia.py in the nzbtomedia folder:</label>
+                <label for="nzbtomedia_location">path to nzbToMedia.py in the nzbtomedia folder:</label>
                 <input type="text" class="form-control" name="nzbtomedia_location"
                        aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'nzbtomedia_location') }}">
             {% else %}
-                <p>NzbToMedia is detected at:</p> {{ cfg.nzbtomedia_location }}
+                <p>nzbToMedia is detected at:</p> {{ cfg.nzbtomedia_location }}
             {% endif %}
         </div>
 

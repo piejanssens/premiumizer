@@ -104,9 +104,9 @@ function update_task(task) {
         stateStr = 'Failed: download';
         stateIcon = 'desktop';
         categoryState = '';
-    } else if (task.cloud_status == 'finished' && task.local_status == 'failed: nzbtomedia') {
+    } else if (task.cloud_status == 'finished' && task.local_status == 'failed: nzbToMedia') {
         stateColor = 'danger';
-        stateStr = 'Failed: nzbtomedia';
+        stateStr = 'Failed: nzbToMedia';
         stateIcon = 'desktop';
         categoryState = '';
     } else {

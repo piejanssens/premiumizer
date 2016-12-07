@@ -2,11 +2,60 @@
 {% set active_page = "history" %}
 {% block title %} - Home{% endblock %}
 {% block content %}
-    <h5>History is based on logfile: to clear history, clear the log</h5>
-    <h1>Added:</h1>
-    <pre>{{ taskad }}</pre>
-    <h1>Downloaded:</h1>
-    <pre>{{ taskdl }}</pre>
-    <h1>Deleted:</h1>
-    <pre>{{ taskdel }}</pre>
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th class="text-center">Date</th>
+            <th class="text-center">Name</th>
+            <th>Category</th>
+            <th>Downloaded</th>
+            <th>Deleted</th>
+            <th>nzbToMedia</th>
+            <th>Email</th>
+            <th class="col-md-1 text-center">Info</th>
+        </tr>
+        </thead>
+        {% for item in history|sort(attribute='date', reverse=True) %}
+            <TR>
+                <TD class="c1 vert-align">{{ item.date }}</TD>
+                <TD class="c2 vert-align">{{ item.name }}</TD>
+                <TD class="c3 vert-align">{{ item.category }}</TD>
+                {% if item.downloaded == '1' %}
+                    <TD class="c4 vert-align"><span class="label label-status label-success">SUCCESS</span></TD>
+                {% elif item.downloaded == '0' %}
+                    <TD class="c4 vert-align"><span class="label label-status label-danger">FAILED</span></TD>
+                {% else %}
+                    <TD class="c4 vert-align">{{ item.downloaded }}</TD>
+                {% endif %}
+                {% if item.deleted == '1' %}
+                    <TD class="c5 vert-align"><span class="label label-status label-success">SUCCESS</span></TD>
+                {% elif item.deleted == '0' %}
+                    <TD class="c5 vert-align"><span class="label label-status label-danger">FAILED</span></TD>
+                {% else %}
+                    <TD class="c5 vert-align">{{ item.deleted }}</TD>
+                {% endif %}
+                {% if item.nzbtomedia == '1' %}
+                    <TD class="c6 vert-align text-center"><span class="label label-status label-success">SUCCESS</span>
+                    </TD>
+                {% elif item.nzbtomedia == '0' %}
+                    <TD class="c6 vert-align text-center"><span class="label label-status label-danger">FAILED</span>
+                    </TD>
+                {% else %}
+                    <TD class="c6 vert-align text-center">{{ item.nzbtomedia }}</TD>
+                {% endif %}
+                {% if item.email == '1' %}
+                    <TD class="c7 vert-align"><span class="label label-status label-success">SUCCESS</span></TD>
+                {% elif item.email == '0' %}
+                    <TD class="c7 vert-align"><span class="label label-status label-danger">FAILED</span></TD>
+                {% else %}
+                    <TD class="c7 vert-align">{{ item.email }}</TD>
+                {% endif %}
+                <TD class="c8">
+                    {% for line in item.info.splitlines() %}
+                        {{ line }}<br>
+                    {% endfor %}</TD>
+
+            </TR>
+        {% endfor %}
+    </table>
 {% endblock %}
