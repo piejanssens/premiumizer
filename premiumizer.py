@@ -1016,6 +1016,7 @@ def get_cat_var(category):
 def add_task(hash, size, name, category):
     logger.debug('def add_task started')
     dldir, dlext, delsample, dlnzbtomedia = get_cat_var(category)
+    name = name.replace('%5B', '[').replace('%5D', ']').replace('%20', ' ')
     task = DownloadTask(socketio.emit, hash, size, name, category, dldir, dlext, delsample, dlnzbtomedia)
     tasks.append(task)
     logger.info('Added: %s -- Category: %s', task.name, task.category)
