@@ -177,6 +177,7 @@ class PremConfig:
         if self.download_enabled:
             self.download_builtin = 1
         self.download_max = prem_config.getint('downloads', 'download_max')
+        self.download_speed = prem_config.getint('downloads', 'download_speed')
         self.download_location = prem_config.get('downloads', 'download_location')
         if os.path.isfile(os.path.join(runningdir, 'nzbtomedia', 'NzbToMedia.py')):
             self.nzbtomedia_location = (os.path.join(runningdir, 'nzbtomedia', 'NzbToMedia.py'))
@@ -696,6 +697,8 @@ def download_file():
                 downloader = SmartDL(download['url'], download['path'], progress_bar=False, logger=logger,
                                      threads_count=1)
                 downloader.start(blocking=False)
+                if cfg.download_speed > 0:
+                    downloader.limit_speed(kbytes=cfg.download_speed)
                 while not downloader.isFinished():
                     get_download_stats(downloader, total_size_downloaded)
                     gevent_sleep_time()
@@ -853,7 +856,7 @@ def download_task(task):
                 logger.error('Download could not be removed from cloud: %s', task.name)
                 socketio.emit('delete_failed', {'data': task.hash})
     else:
-            task.update(local_status='finished')
+        task.update(local_status='finished')
 
     if cfg.email_enabled and task.local_status != 'stopped':
         if not failed:
@@ -1198,7 +1201,8 @@ def watchdir():
 @app.route('/')
 @login_required
 def home():
-    return render_template('index.html', debug_enabled=debug_enabled, update_available=cfg.update_available)
+    return render_template('index.html', download_speed=cfg.download_speed, debug_enabled=debug_enabled,
+                           update_available=cfg.update_available)
 
 
 @app.route('/upload', methods=["POST"])
@@ -1374,6 +1378,7 @@ def settings():
             prem_config.set('premiumize', 'pin', request.form.get('pin'))
             prem_config.set('downloads', 'download_location', request.form.get('download_location'))
             prem_config.set('downloads', 'download_max', request.form.get('download_max'))
+            prem_config.set('downloads', 'download_speed', request.form.get('download_speed'))
             prem_config.set('upload', 'watchdir_location', request.form.get('watchdir_location'))
             prem_config.set('downloads', 'nzbtomedia_location', request.form.get('nzbtomedia_location'))
             for x in range(1, 6):
