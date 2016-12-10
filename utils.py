@@ -20,28 +20,28 @@ def update():
 
     prem_config = ConfigParser.RawConfigParser()
     default_config = ConfigParser.RawConfigParser()
-    prem_config.read(runningdir + 'settings.cfg')
-    default_config.read(runningdir + 'settings.cfg.tpl')
+    prem_config.read(os.path.join(runningdir, 'settings.cfg'))
+    default_config.read(os.path.join(runningdir, 'settings.cfg.tpl'))
 
     if prem_config.getfloat('update', 'req_version') < default_config.getfloat('update', 'req_version'):
         import pip
-        pip.main(['install', '-r', runningdir + 'requirements.txt'])
+        pip.main(['install', '-r', os.path.join(runningdir, 'requirements.txt')])
         prem_config.set('update', 'updated', '1')
         prem_config.set('update', 'req_version', (default_config.getfloat('update', 'req_version')))
         with open('settings.cfg', 'w') as configfile:
             prem_config.write(configfile)
     if prem_config.getfloat('update', 'config_version') < default_config.getfloat('update', 'config_version'):
         import shutil
-        shutil.copy(runningdir + 'settings.cfg', runningdir + 'settings.cfg.old2')
-        shutil.copy(runningdir + 'settings.cfg.tpl', runningdir + 'settings.cfg')
-        prem_config.read(runningdir + 'settings.cfg.old2')
-        default_config.read(runningdir + 'settings.cfg')
+        shutil.copy(os.path.join(runningdir, 'settings.cfg'), os.path.join(runningdir, 'settings.cfg.old2'))
+        shutil.copy(os.path.join(runningdir, 'settings.cfg.tpl'), os.path.join(runningdir, 'settings.cfg'))
+        prem_config.read(os.path.join(runningdir, 'settings.cfg.old2'))
+        default_config.read(os.path.join(runningdir, 'settings.cfg'))
         for section in prem_config.sections():
             if section in default_config.sections():
                 for key in prem_config.options(section):
                     if key in default_config.options(section):
                         default_config.set(section, key, (prem_config.get(section, key)))
-        with open(runningdir + 'settings.cfg', 'w') as configfile:
+        with open(os.path.join(runningdir, 'settings.cfg', 'w')) as configfile:
             default_config.write(configfile)
 
     if os_arg == '--windows':
