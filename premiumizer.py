@@ -1276,7 +1276,7 @@ def history():
                     taskinfo = line.split(" -- info: ", 1)[1].split(" -- location:", 1)[0].replace(' -- ', '\n')
                     history_update(history, line, 'downloaded', '1')
                     history_update(history, line, 'info', taskinfo)
-                elif 'Deleted:' in line:
+                elif 'Deleted' in line:
                     if not 'Automatically Deleted:' in line:
                         history_update(history, line, 'check_name', '1')
                     history_update(history, line, 'deleted', '1')
