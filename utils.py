@@ -37,7 +37,7 @@ def update():
         prem_config.read(os.path.join(runningdir, 'settings.cfg.old2'))
         default_config.read(os.path.join(runningdir, 'settings.cfg'))
         for section in prem_config.sections():
-            if section in default_config.sections():
+            if section in default_config.sections() and section != 'update':
                 for key in prem_config.options(section):
                     if key in default_config.options(section):
                         default_config.set(section, key, (prem_config.get(section, key)))
@@ -50,7 +50,7 @@ def update():
         time.sleep(3)
         execfile(os.path.join(runningdir, 'premiumizer.py'), globals(), globals())
 
-
+update()
 try:
     option_arg = sys.argv[1]
 except:
