@@ -792,6 +792,8 @@ def download_process():
     else:
         logger.error('Error for %s: Nothing to download .. Filtered out or bad torrent/nzb ?')
         returncode = 1
+    if returncode == 0:
+        greenlet.task.update(progress=100, speed=' ', eta=' ')
     return returncode
 
 
@@ -810,34 +812,14 @@ def download_task(task):
         if failed:
             task.update(local_status='failed: download')
             logger.error('Download failed for: %s', task.name)
-    if task.dlnzbtomedia and not failed:
-        failed = notify_nzbtomedia()
-        if failed:
-            task.update(local_status='failed: nzbToMedia')
-
-    if cfg.remove_cloud and not failed:
-        payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'type': 'torrent', 'id': task.hash}
-        r = prem_connection("post", "https://www.premiumize.me/api/transfer/delete", payload)
-        if r != 'failed':
-            responsedict = json.loads(r.content)
-            if responsedict['status'] == "success":
-                logger.info('Automatically Deleted: %s from cloud', task.name)
-                socketio.emit('delete_success', {'data': task.hash})
-            else:
-                msg = 'Download could not be deleted from the cloud for: %s, message: %s' % (
-                    task.name, responsedict['message'])
-                logger.error(msg)
-                logger.info(responsedict['message'])
-                if cfg.email_enabled:
-                    email(msg)
-                socketio.emit('delete_failed', {'data': task.hash})
-        else:
-            logger.error('Download could not be removed from cloud: %s', task.name)
-            socketio.emit('delete_failed', {'data': task.hash})
-
+    elif task.local_status == 'stopped':
+        logger.warning('Download stopped for: %s', greenlet.task.name)
+        try:
+            shutil.rmtree(task.dldir)
+        except:
+            logger.warning('Could not delete folder for: %s', greenlet.task.name)
+        task.update(progress=100, category='', local_status='waiting')
     if not failed:
-        if not cfg.remove_cloud:
-            task.update(progress=100, local_status='finished')
         try:
             greenlet.avgspeed = str(utils.sizeof_human((task.size / task.dltime)) + '/s')
         except:
@@ -845,19 +827,40 @@ def download_task(task):
         logger.info('Download finished: %s -- info: %s --  %s --  %s -- location: %s', task.name,
                     utils.sizeof_human(task.size), greenlet.avgspeed, utils.time_human(task.dltime, fmt_short=True),
                     task.dldir)
+        if task.dlnzbtomedia:
+            failed = notify_nzbtomedia()
+            if failed:
+                task.update(local_status='failed: nzbToMedia')
+
+    if cfg.remove_cloud:
+        if not failed:
+            payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'type': 'torrent', 'id': task.hash}
+            r = prem_connection("post", "https://www.premiumize.me/api/transfer/delete", payload)
+            if r != 'failed':
+                responsedict = json.loads(r.content)
+                if responsedict['status'] == "success":
+                    logger.info('Automatically Deleted: %s from cloud', task.name)
+                    socketio.emit('delete_success', {'data': task.hash})
+                else:
+                    msg = 'Download could not be deleted from the cloud for: %s, message: %s' % (
+                        task.name, responsedict['message'])
+                    logger.error(msg)
+                    logger.info(responsedict['message'])
+                    if cfg.email_enabled:
+                        email(msg)
+                    socketio.emit('delete_failed', {'data': task.hash})
+            else:
+                logger.error('Download could not be removed from cloud: %s', task.name)
+                socketio.emit('delete_failed', {'data': task.hash})
+    else:
+            task.update(local_status='finished')
+
     if cfg.email_enabled and task.local_status != 'stopped':
         if not failed:
             if not cfg.email_on_failure:
                 email('download success')
         else:
             email('download failed')
-    if task.local_status == 'stopped':
-        logger.warning('Download stopped for: %s', greenlet.task.name)
-        try:
-            shutil.rmtree(task.dldir)
-        except:
-            logger.warning('Could not delete folder for: %s', greenlet.task.name)
-        task.update(progress=100, category='', local_status='waiting')
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
 
 
@@ -952,7 +955,7 @@ def parse_tasks(transfers):
                             name=name,
                             dlsize=size + ' --- ', speed=speed + ' --- ', eta=eta)
                 idle = False
-            if task.cloud_status == 'finished':
+            elif task.cloud_status == 'finished':
                 if cfg.download_enabled:
                     if task.category in cfg.download_categories:
                         if not task.local_status == ('queued' or 'downloading'):
@@ -1223,20 +1226,23 @@ def upload():
 
 
 def history_update(history, line, status, success):
-    for item in history:
-        if item['name'] in line:
-            item[status] = success
-            return
-
-    if status == 'downloaded':
+    if status == 'check_name':
         try:
-            taskname = line.split(" --", 1)[0].splitlines()[0]
-            taskname = taskname.split("Download finished: ", 1)[1]
-            for item in history:
-                if item['name'] == 'Loading name':
-                    item['name'] = taskname
+            taskname = line.split("Downloading: ", 1)[1].splitlines()[0]
         except:
-            pass
+            try:
+                taskname = line.split("Deleted from the cloud: ", 1)[1].splitlines()[0]
+            except:
+                return
+        for item in history:
+            if item['name'] == 'Loading name' or taskname[:-7] in item['name']:
+                item['name'] = taskname
+                return
+    else:
+        for item in history:
+            if item['name'] in line:
+                item[status] = success
+                return
 
 
 @app.route('/history')
@@ -1251,22 +1257,24 @@ def history():
         with open(os.path.join(runningdir, log), 'r') as f:
             for line in f:
                 if 'Added:' in line:
-                    taskname = line.split("Added: ", 1)[1].splitlines()[0]
-                    taskname = taskname.split(" --", 1)[0]
+                    taskname = line.split("Added: ", 1)[1].splitlines()[0].split(" --", 1)[0]
                     if debug_enabled:
                         taskdate = line.split("root", 1)[0].splitlines()[0]
                     else:
                         taskdate = line.split(": INFO ", 1)[0].splitlines()[0]
                     taskcat = line.split("Category: ", 1)[1].splitlines()[0]
-                    history.append({'date': taskdate, 'name': taskname, 'category': taskcat, 'downloaded': '', 'deleted': '',
-                                    'nzbtomedia': '', 'email': '', 'info': '',})
+                    history.append(
+                        {'date': taskdate, 'name': taskname, 'category': taskcat, 'downloaded': '', 'deleted': '',
+                         'nzbtomedia': '', 'email': '', 'info': '', })
+                elif 'Downloading:' in line:
+                    history_update(history, line, 'check_name', '')
                 elif 'Download finished:' in line:
-                    taskinfo = line.split(" -- info: ", 1)[1]
-                    taskinfo = taskinfo.split(" -- location:",1)[0]
-                    taskinfo = taskinfo.replace(' -- ', '\n')
+                    taskinfo = line.split(" -- info: ", 1)[1].split(" -- location:", 1)[0].replace(' -- ', '\n')
                     history_update(history, line, 'downloaded', '1')
                     history_update(history, line, 'info', taskinfo)
                 elif 'Deleted:' in line:
+                    if not 'Automatically Deleted:' in line:
+                        history_update(history, line, 'check_name', '1')
                     history_update(history, line, 'deleted', '1')
                 elif 'Send to nzbToMedia:' in line:
                     history_update(history, line, 'nzbtomedia', '1')
@@ -1482,7 +1490,7 @@ def delete_task(message):
         responsedict = json.loads(r.content)
         task = get_task(message['data'])
         if responsedict['status'] == "success":
-            logger.info('Deleted: %s from the cloud', task.name)
+            logger.info('Deleted from the cloud: %s', task.name)
             emit('delete_success', {'data': message['data']})
             scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
         else:
