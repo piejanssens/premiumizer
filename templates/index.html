@@ -8,22 +8,31 @@
         <span class="sr-only">Error:</span>
         Cannot connect to premiumize.me. Check your premiumize account details in settings and if premiumize.me is up.
     </div>
-    <p>&nbsp;</p>
     {% if debug_enabled == 1 %}
+        <p>&nbsp;</p>
         <div id="debug_enabled" class="alert alert-warning" role="alert" style="display:inline;">
             <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
             <span class="sr-only">Warning:</span>
             Debug mode is enabled, this is not recommended, disable it in the settings page & restart.
         </div>
     {% endif %}
-        <p>&nbsp;</p>
     {% if update_available == 1 %}
+        <p>&nbsp;</p>
         <div id="update_available" class="alert alert-info" role="alert" style="display:inline;">
             <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
             <span class="sr-only">Info:</span>
             Update available !! Go to the bottom of the settings page.
         </div>
     {% endif %}
+    {% if download_speed != -1 %}
+        <p>&nbsp;</p>
+        <div id="download_speed" class="alert alert-info" role="alert" style="display:inline;">
+            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+            <span class="sr-only">Info:</span>
+            Download speed is limited to {{ download_speed }} kBps.
+        </div>
+    {% endif %}
+    <p>&nbsp;</p>
     <div id="main_container" class="container">
 
         <div class="row">
