@@ -363,12 +363,15 @@ logger.debug('Initializing Flask complete')
 
 # Initialise Database
 logger.debug('Initializing Database')
-db = shelve.open(os.path.join(runningdir, 'premiumizer.db'))
-if not db.keys():
-    db.close()
-    os.remove(os.path.join(runningdir, 'premiumizer.db'))
+if os.path.exists(os.path.join(runningdir, 'premiumizer.db')):
     db = shelve.open(os.path.join(runningdir, 'premiumizer.db'))
-    logger.debug('Database cleared')
+    if not db.keys():
+        db.close()
+        os.remove(os.path.join(runningdir, 'premiumizer.db'))
+        db = shelve.open(os.path.join(runningdir, 'premiumizer.db'))
+        logger.debug('Database cleared')
+else:
+    db = shelve.open(os.path.join(runningdir, 'premiumizer.db'))
 logger.debug('Initializing Database complete')
 
 # Initialise Globals
