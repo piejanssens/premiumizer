@@ -892,6 +892,12 @@ def prem_connection(method, url, payload, files=None):
                 return 'failed'
             pass
             gevent.sleep(3)
+    try:
+        if '"status":"error"' in r.text:
+            logger.error('%s for: %s', r.text, greenlet.task.name)
+            return 'failed'
+    except:
+        pass
     return r
 
 
