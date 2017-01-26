@@ -138,7 +138,7 @@ if prem_config.getboolean('update', 'updated'):
         logger.info('-------Settings file has been updated, old settings file renamed to .old-------')
         logger.info('*************************************************************************************')
     try:
-        os.rename(os.path.join(runningdir, 'settings.cfg.old2'), os.path.join(runningdir, 'settings.cfg.old'))
+        shutil.move(os.path.join(runningdir, 'settings.cfg.old2'), os.path.join(runningdir, 'settings.cfg.old'))
     except:
         logger.error('Could not rename old settings file')
     prem_config.set('update', 'updated', '0')
