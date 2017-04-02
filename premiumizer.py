@@ -951,15 +951,27 @@ def parse_tasks(transfers):
                 else:
                     name = transfer['name']
                 if transfer['eta'] is None or transfer['eta'] == 0:
-                    eta = ' '
+                    try:
+                        if 'ETA is' in transfer['message']:
+                            eta = transfer['message'].split("ETA is", 1)[1]
+                    except:
+                        eta = ' '
                 else:
                     eta = utils.time_human(transfer['eta'], fmt_short=True)
                 if transfer['speed_down'] is None or transfer['speed_down'] == 0:
-                    speed = ' '
+                    try:
+                        if 'Downloading at' in transfer['message']:
+                            speed = transfer['message'].split("Downloading at", 1)[1].split(". ", 1)[0]
+                    except:
+                        speed = ' '
                 else:
                     speed = utils.sizeof_human(transfer['speed_down']) + '/s '
                 if transfer['size'] is None or transfer['size'] == 0:
-                    size = ' '
+                    try:
+                        if '% of' in transfer['message']:
+                            size = transfer['message'].split("s.", 1)[1].split(" finished", 1)[0]
+                    except:
+                        size = ' '
                 else:
                     size = utils.sizeof_human(transfer['size'] / 100 * progress) + ' / ' + utils.sizeof_human(
                         transfer['size'])
