@@ -1129,6 +1129,7 @@ class MyHandler(events.PatternMatchingEventHandler):
             gevent.sleep(10)
             watchdir_file = event.src_path
             if not os.path.isfile(watchdir_file):
+                logger.error('watchdir file %s no longer exists', watchdir_file)
                 return
             logger.debug('New file detected at: %s', watchdir_file)
             dirname = os.path.basename(os.path.normpath(os.path.dirname(watchdir_file)))
