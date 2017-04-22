@@ -1123,8 +1123,10 @@ class MyHandler(events.PatternMatchingEventHandler):
     # noinspection PyMethodMayBeStatic
     def process(self, event):
         if event.event_type == 'created' and event.is_directory is False:
-            gevent.sleep(1)
+            gevent.sleep(10)
             watchdir_file = event.src_path
+            if not os.path.isfile(watchdir_file):
+                return
             logger.debug('New file detected at: %s', watchdir_file)
             dirname = os.path.basename(os.path.normpath(os.path.dirname(watchdir_file)))
             if dirname in cfg.download_categories:
