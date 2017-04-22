@@ -947,7 +947,10 @@ def parse_tasks(transfers):
             if task.cloud_status != 'finished':
                 progress = int(transfer['progress'] * 100)
                 if transfer['name'] is None or transfer['name'] == 0:
-                    name = 'Loading name'
+                    if task.name is None:
+                        name = 'Loading name'
+                    else:
+                        name = task.name
                 else:
                     name = transfer['name']
                 if transfer['eta'] is None or transfer['eta'] == 0:
