@@ -417,7 +417,7 @@ def to_unicode(original, *args):
                 except:
                     raise
     except:
-        logger.error('Unable to decode value "%s..." : %s ', (repr(original)[:20], traceback.format_exc()))
+        logger.error('Unable to decode value "%s..." : %s ', (repr(original)[:20], sys.exc_info()[0]))
         return 'ERROR DECODING STRING'
 
 
@@ -1304,7 +1304,7 @@ def history():
                     history_update(history, line, 'downloaded', '1')
                     history_update(history, line, 'info', taskinfo)
                 elif 'Deleted' in line:
-                    if not 'Automatically Deleted:' in line:
+                    if 'Automatically Deleted:' not in line:
                         history_update(history, line, 'check_name', '1')
                     history_update(history, line, 'deleted', '1')
                 elif 'Send to nzbToMedia:' in line:
