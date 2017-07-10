@@ -5,7 +5,7 @@ bencode==1.0
 chardet==3.0.4
 click==6.7
 futures==3.1.1
-python-engineio==1.6.1
+python-engineio==1.7.0
 flask==0.12.2
 flask_apscheduler==1.7.0
 flask_socketio==2.9.0
@@ -18,7 +18,7 @@ MarkupSafe==1.0
 pathtools==0.1.2
 https://github.com/neox387/pySmartDL/archive/1.2.6.zip#egg=PySmartDL==1.2.6
 requests==2.18.1
-python-socketio==1.7.5
+python-socketio==1.7.6
 tzlocal==1.4
 werkzeug==0.12.2
 itsdangerous==0.24
