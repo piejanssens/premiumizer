@@ -499,8 +499,7 @@ def email(status):
 
     else:
         global last_email
-        diff = last_email - datetime.now()
-        if diff.seconds < 3600:
+        if datetime.now() - timedelta(hours=1) < last_email:
             return
         last_email = datetime.now()
         subject = status
