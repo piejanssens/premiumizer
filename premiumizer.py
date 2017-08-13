@@ -1,6 +1,5 @@
 #! /usr/bin/env python
 import ConfigParser
-import datetime
 import hashlib
 import json
 import logging
@@ -13,6 +12,7 @@ import subprocess
 import sys
 import time
 import unicodedata
+from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from logging.handlers import RotatingFileHandler
 from string import ascii_letters, digits
@@ -262,7 +262,7 @@ cfg = PremConfig()
 def check_update(auto_update=cfg.auto_update):
     logger.debug('def check_update started')
     time_job = scheduler.scheduler.get_job('check_update').next_run_time.replace(tzinfo=None)
-    time_now = datetime.datetime.now()
+    time_now = datetime.now()
     diff = time_job - time_now
     diff = 21600 - diff.total_seconds()
     if (diff > 120) or (cfg.update_status == ''):
@@ -297,7 +297,7 @@ def check_update(auto_update=cfg.auto_update):
                             return
                     update_self()
             else:
-                cfg.update_status = 'No update available --- last time checked: ' + datetime.datetime.now().strftime(
+                cfg.update_status = 'No update available --- last time checked: ' + datetime.now().strftime(
                     "%d-%m %H:%M:%S") + ' --- last time updated: ' + cfg.update_date
         scheduler.scheduler.reschedule_job('check_update', trigger='interval', hours=6)
 
@@ -306,7 +306,7 @@ def check_update(auto_update=cfg.auto_update):
 def update_self():
     logger.debug('def update_self started')
     logger.info('Update - will restart')
-    cfg.update_date = datetime.datetime.now().strftime("%d-%m %H:%M:%S")
+    cfg.update_date = datetime.now().strftime("%d-%m %H:%M:%S")
     prem_config.set('update', 'update_date', cfg.update_date)
     with open(os.path.join(runningdir, 'settings.cfg'), 'w') as configfile:  # save
         prem_config.write(configfile)
@@ -379,6 +379,7 @@ tasks = []
 greenlet = local.local()
 client_connected = 0
 prem_session = requests.Session()
+last_email = datetime.now() - timedelta(days=1)
 
 
 #
@@ -497,6 +498,11 @@ def email(status):
             text += 'could not add log'
 
     else:
+        global last_email
+        diff = last_email - datetime.now()
+        if diff.seconds < 3600:
+            return
+        last_email = datetime.now()
         subject = status
         text = status
 
@@ -505,7 +511,7 @@ def email(status):
     msg['Subject'] = subject
     msg['From'] = cfg.email_from
     msg['To'] = cfg.email_to
-    msg['Date'] = datetime.datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
+    msg['Date'] = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
     msg['X-Application'] = 'Premiumizer'
 
     # Send message
