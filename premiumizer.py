@@ -1125,6 +1125,7 @@ class MyHandler(events.PatternMatchingEventHandler):
 
     # noinspection PyMethodMayBeStatic
     def process(self, event):
+        failed = 1
         if event.event_type == 'created' and event.is_directory is False:
             gevent.sleep(10)
             watchdir_file = event.src_path
@@ -1162,7 +1163,6 @@ class MyHandler(events.PatternMatchingEventHandler):
                 name = os.path.basename(watchdir_file)
                 add_task(hash, 0, name, category)
                 failed = upload_nzb(watchdir_file)
-
             if not failed:
                 logger.debug('Deleting file from watchdir: %s', watchdir_file)
                 os.remove(watchdir_file)
