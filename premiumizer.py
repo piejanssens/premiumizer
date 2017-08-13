@@ -887,17 +887,17 @@ def prem_connection(method, url, payload, files=None):
             logger.warning('Connection to premiumize.me timed out')
             if r_count == 10:
                 logger.error('Connection to premiumize.me timed out 10 times')
-                if cfg.email_enabled:
-                    email('premiumize.me connection error')
-                return 'failed'
+                break
             pass
             gevent.sleep(3)
-    try:
-        if '"status":"error"' in r.text:
-            logger.error('%s for: %s', r.text, greenlet.task.name)
-            return 'failed'
-    except:
-        pass
+    if '"status":"error"' in r.text or r_count == 10:
+        try:
+            logger.error('premiumize.me connection error: %s for: %s', r.text, greenlet.task.name)
+        except:
+            logger.error('premiumize.me connection error: %s', r.text)
+        if cfg.email_enabled:
+            email('premiumize.me connection error')
+        return 'failed'
     return r
 
 
