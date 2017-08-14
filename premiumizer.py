@@ -503,7 +503,7 @@ def email(status):
         subject = status
         text = status
 
-    if datetime.now() - timedelta(hours=1) < last_email['time'] and subject == last_email['subject'] :
+    if datetime.now() - timedelta(hours=1) < last_email['time'] and subject == last_email['subject']:
         return
     last_email['time'] = datetime.now()
     last_email['subject'] = subject
@@ -898,11 +898,15 @@ def prem_connection(method, url, payload, files=None):
                 break
             pass
             gevent.sleep(3)
-    if '"status":"error"' in r.text or r_count == 10:
+    try:
+        message = r.text
+    except:
+        message = '"status":"error"'
+    if '"status":"error"' in message or r_count == 10:
         try:
-            logger.error('premiumize.me connection error: %s for: %s', r.text, greenlet.task.name)
+            logger.error('premiumize.me connection error: %s for: %s', message, greenlet.task.name)
         except:
-            logger.error('premiumize.me connection error: %s', r.text)
+            logger.error('premiumize.me connection error: %s', message)
         if cfg.email_enabled:
             email('premiumize.me connection error')
         return 'failed'
