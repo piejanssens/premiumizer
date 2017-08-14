@@ -379,7 +379,8 @@ tasks = []
 greenlet = local.local()
 client_connected = 0
 prem_session = requests.Session()
-last_email = datetime.now() - timedelta(days=1)
+last_email = {}
+last_email['time'] = datetime.now() - timedelta(days=1)
 
 
 #
@@ -468,6 +469,7 @@ def notify_nzbtomedia():
 
 def email(status):
     logger.debug('def email started')
+    global last_email
     if status == 'download success':
         subject = 'Success for "%s"' % greenlet.task.name
         text = 'Download of "%s" has successfully completed.' % greenlet.task.name
@@ -498,12 +500,13 @@ def email(status):
             text += 'could not add log'
 
     else:
-        global last_email
-        if datetime.now() - timedelta(hours=1) < last_email:
-            return
-        last_email = datetime.now()
         subject = status
         text = status
+
+    if datetime.now() - timedelta(hours=1) < last_email['time'] and subject == last_email['subject'] :
+        return
+    last_email['time'] = datetime.now()
+    last_email['subject'] = subject
 
     # Create message
     msg = MIMEText(text)
