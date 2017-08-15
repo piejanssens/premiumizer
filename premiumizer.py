@@ -467,10 +467,10 @@ def notify_nzbtomedia():
     return returncode
 
 
-def email(status):
+def email(subject, text):
     logger.debug('def email started')
     global last_email
-    if status == 'download success':
+    if subject == 'download success':
         subject = 'Success for "%s"' % greenlet.task.name
         text = 'Download of "%s" has successfully completed.' % greenlet.task.name
         text += '\nStatus: SUCCESS'
@@ -482,7 +482,7 @@ def email(status):
         for download in greenlet.download_list:
             text += '\n' + os.path.basename(download['path'])
 
-    elif status == 'download failed':
+    elif subject == 'download failed':
         subject = 'Failure for "%s"' % greenlet.task.name
         text = 'Download of "%s" has failed.' % greenlet.task.name
         text += '\nStatus: FAILED\nError: %s' % greenlet.task.local_status
@@ -500,8 +500,8 @@ def email(status):
             text += 'could not add log'
 
     else:
-        subject = status
-        text = status
+        if text is None:
+            text = subject
 
     if datetime.now() - timedelta(hours=1) < last_email['time'] and subject == last_email['subject']:
         return
@@ -529,15 +529,18 @@ def email(status):
         smtp.sendmail(cfg.email_from, cfg.email_to, msg.as_string())
 
         smtp.quit()
-        if subject != status:
-            logger.info('Email send for: %s', greenlet.task.name)
-        else:
-            logger.info('Email send for: %s', status)
+        try:
+            log = 'Email send for: %s' % greenlet.task.name
+        except:
+            log = 'Email send for: %s' % subject
+            logger.info(log)
     except Exception as err:
-        if subject != status:
-            logger.error('Email error for: %s error: %s', greenlet.task.name, err)
-        else:
-            logger.info('Email send for: %s', status)
+        try:
+            log = 'Email error for: %s error: %s' % (greenlet.task.name, err)
+        except:
+            log = 'Email error for: %s' % subject
+            logger.info(log)
+        logger.error(log)
 
 
 def jd_query_package(jd, package_id):
@@ -861,7 +864,7 @@ def download_task(task):
                     logger.error(msg)
                     logger.info(responsedict['message'])
                     if cfg.email_enabled:
-                        email(msg)
+                        email('Download could not be deleted', msg)
                     socketio.emit('delete_failed', {'data': task.hash})
             else:
                 logger.error('Download could not be removed from cloud: %s', task.name)
@@ -904,11 +907,12 @@ def prem_connection(method, url, payload, files=None):
         message = '"status":"error"'
     if '"status":"error"' in message or r_count == 10:
         try:
-            logger.error('premiumize.me connection error: %s for: %s', message, greenlet.task.name)
+            msg = 'premiumize.me connection error: %s for: %s' % (message, greenlet.task.name)
         except:
-            logger.error('premiumize.me connection error: %s', message)
+            msg = 'premiumize.me connection error: %s' % message
+        logger.error(msg)
         if cfg.email_enabled:
-            email('premiumize.me connection error')
+            email('Premiumize.me connection error', msg)
         return 'failed'
     return r
 
@@ -1081,7 +1085,7 @@ def upload_torrent(filename):
             msg = 'Upload of torrent: %s failed, message: %s' % (filename, response_content['message'])
             logger.error(msg)
             if cfg.email_enabled:
-                email(msg)
+                email('Upload of torrent failed', msg)
             return 1
     else:
         return 1
@@ -1100,7 +1104,7 @@ def upload_magnet(magnet):
             msg = 'Upload of magnet: %s failed, message: %s' % (magnet, response_content['message'])
             logger.error(msg)
             if cfg.email_enabled:
-                email(msg)
+                email('Upload of magnet failed', msg)
             return 1
     else:
         return 1
@@ -1121,7 +1125,7 @@ def upload_nzb(filename):
             msg = 'Upload of nzb: %s failed, message: %s' % (filename, response_content['message'])
             logger.error(msg)
             if cfg.email_enabled:
-                email(msg)
+                email('Upload of nzb failed', msg)
             return 1
     else:
         return 1
@@ -1542,7 +1546,7 @@ def delete_task(message):
                 task.name, responsedict['message'])
             logger.error(msg)
             if cfg.email_enabled:
-                email(msg)
+                email('Download could not be deleted', msg)
             emit('delete_failed', {'data': message['data']})
     else:
         emit('delete_failed')
