@@ -17,7 +17,7 @@ jinja2==2.9.6
 MarkupSafe==1.0
 pathtools==0.1.2
 https://github.com/neox387/pySmartDL/archive/1.2.6.zip#egg=PySmartDL==1.2.6
-requests==2.18.3
+requests==2.18.4
 python-socketio==1.8.0
 tzlocal==1.4
 werkzeug==0.12.2
