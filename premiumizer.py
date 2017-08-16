@@ -379,8 +379,7 @@ tasks = []
 greenlet = local.local()
 client_connected = 0
 prem_session = requests.Session()
-last_email = {}
-last_email['time'] = datetime.now() - timedelta(days=1)
+last_email = {'time': datetime.now() - timedelta(days=1), 'subject': ""}
 
 
 #
