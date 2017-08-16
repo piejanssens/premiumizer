@@ -1,6 +1,5 @@
 #! /usr/bin/env python
 import ConfigParser
-import datetime
 import hashlib
 import json
 import logging
@@ -13,6 +12,7 @@ import subprocess
 import sys
 import time
 import unicodedata
+from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from logging.handlers import RotatingFileHandler
 from string import ascii_letters, digits
@@ -262,7 +262,7 @@ cfg = PremConfig()
 def check_update(auto_update=cfg.auto_update):
     logger.debug('def check_update started')
     time_job = scheduler.scheduler.get_job('check_update').next_run_time.replace(tzinfo=None)
-    time_now = datetime.datetime.now()
+    time_now = datetime.now()
     diff = time_job - time_now
     diff = 21600 - diff.total_seconds()
     if (diff > 120) or (cfg.update_status == ''):
@@ -297,7 +297,7 @@ def check_update(auto_update=cfg.auto_update):
                             return
                     update_self()
             else:
-                cfg.update_status = 'No update available --- last time checked: ' + datetime.datetime.now().strftime(
+                cfg.update_status = 'No update available --- last time checked: ' + datetime.now().strftime(
                     "%d-%m %H:%M:%S") + ' --- last time updated: ' + cfg.update_date
         scheduler.scheduler.reschedule_job('check_update', trigger='interval', hours=6)
 
@@ -306,7 +306,7 @@ def check_update(auto_update=cfg.auto_update):
 def update_self():
     logger.debug('def update_self started')
     logger.info('Update - will restart')
-    cfg.update_date = datetime.datetime.now().strftime("%d-%m %H:%M:%S")
+    cfg.update_date = datetime.now().strftime("%d-%m %H:%M:%S")
     prem_config.set('update', 'update_date', cfg.update_date)
     with open(os.path.join(runningdir, 'settings.cfg'), 'w') as configfile:  # save
         prem_config.write(configfile)
@@ -379,6 +379,7 @@ tasks = []
 greenlet = local.local()
 client_connected = 0
 prem_session = requests.Session()
+last_email = {'time': datetime.now() - timedelta(days=1), 'subject': ""}
 
 
 #
@@ -434,7 +435,7 @@ def ek(original, *args):
 #
 def clean_name(original):
     logger.debug('def clean_name started')
-    valid_chars = "-_.() %s%s" % (ascii_letters, digits)
+    valid_chars = "-_.,()[]{}&!@ %s%s" % (ascii_letters, digits)
     cleaned_filename = unicodedata.normalize('NFKD', to_unicode(original)).encode('ASCII', 'ignore')
     valid_string = ''.join(c for c in cleaned_filename if c in valid_chars)
     return ' '.join(valid_string.split())
@@ -465,9 +466,10 @@ def notify_nzbtomedia():
     return returncode
 
 
-def email(status):
+def email(subject, text):
     logger.debug('def email started')
-    if status == 'download success':
+    global last_email
+    if subject == 'download success':
         subject = 'Success for "%s"' % greenlet.task.name
         text = 'Download of "%s" has successfully completed.' % greenlet.task.name
         text += '\nStatus: SUCCESS'
@@ -479,7 +481,7 @@ def email(status):
         for download in greenlet.download_list:
             text += '\n' + os.path.basename(download['path'])
 
-    elif status == 'download failed':
+    elif subject == 'download failed':
         subject = 'Failure for "%s"' % greenlet.task.name
         text = 'Download of "%s" has failed.' % greenlet.task.name
         text += '\nStatus: FAILED\nError: %s' % greenlet.task.local_status
@@ -497,15 +499,20 @@ def email(status):
             text += 'could not add log'
 
     else:
-        subject = status
-        text = status
+        if text is None:
+            text = subject
+
+    if datetime.now() - timedelta(hours=1) < last_email['time'] and subject == last_email['subject']:
+        return
+    last_email['time'] = datetime.now()
+    last_email['subject'] = subject
 
     # Create message
     msg = MIMEText(text)
     msg['Subject'] = subject
     msg['From'] = cfg.email_from
     msg['To'] = cfg.email_to
-    msg['Date'] = datetime.datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
+    msg['Date'] = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
     msg['X-Application'] = 'Premiumizer'
 
     # Send message
@@ -521,15 +528,18 @@ def email(status):
         smtp.sendmail(cfg.email_from, cfg.email_to, msg.as_string())
 
         smtp.quit()
-        if subject != status:
-            logger.info('Email send for: %s', greenlet.task.name)
-        else:
-            logger.info('Email send for: %s', status)
+        try:
+            log = 'Email send for: %s' % greenlet.task.name
+        except:
+            log = 'Email send for: %s' % subject
+            logger.info(log)
     except Exception as err:
-        if subject != status:
-            logger.error('Email error for: %s error: %s', greenlet.task.name, err)
-        else:
-            logger.info('Email send for: %s', status)
+        try:
+            log = 'Email error for: %s error: %s' % (greenlet.task.name, err)
+        except:
+            log = 'Email error for: %s' % subject
+            logger.info(log)
+        logger.error(log)
 
 
 def jd_query_package(jd, package_id):
@@ -853,7 +863,7 @@ def download_task(task):
                     logger.error(msg)
                     logger.info(responsedict['message'])
                     if cfg.email_enabled:
-                        email(msg)
+                        email('Download could not be deleted', msg)
                     socketio.emit('delete_failed', {'data': task.hash})
             else:
                 logger.error('Download could not be removed from cloud: %s', task.name)
@@ -887,17 +897,22 @@ def prem_connection(method, url, payload, files=None):
             logger.warning('Connection to premiumize.me timed out')
             if r_count == 10:
                 logger.error('Connection to premiumize.me timed out 10 times')
-                if cfg.email_enabled:
-                    email('premiumize.me connection error')
-                return 'failed'
+                break
             pass
             gevent.sleep(3)
     try:
-        if '"status":"error"' in r.text:
-            logger.error('%s for: %s', r.text, greenlet.task.name)
-            return 'failed'
+        message = r.text
     except:
-        pass
+        message = '"status":"error"'
+    if '"status":"error"' in message or r_count == 10:
+        try:
+            msg = 'premiumize.me connection error: %s for: %s' % (message, greenlet.task.name)
+        except:
+            msg = 'premiumize.me connection error: %s' % message
+        logger.error(msg)
+        if cfg.email_enabled:
+            email('Premiumize.me connection error', msg)
+        return 'failed'
     return r
 
 
@@ -1069,7 +1084,7 @@ def upload_torrent(filename):
             msg = 'Upload of torrent: %s failed, message: %s' % (filename, response_content['message'])
             logger.error(msg)
             if cfg.email_enabled:
-                email(msg)
+                email('Upload of torrent failed', msg)
             return 1
     else:
         return 1
@@ -1088,7 +1103,7 @@ def upload_magnet(magnet):
             msg = 'Upload of magnet: %s failed, message: %s' % (magnet, response_content['message'])
             logger.error(msg)
             if cfg.email_enabled:
-                email(msg)
+                email('Upload of magnet failed', msg)
             return 1
     else:
         return 1
@@ -1109,7 +1124,7 @@ def upload_nzb(filename):
             msg = 'Upload of nzb: %s failed, message: %s' % (filename, response_content['message'])
             logger.error(msg)
             if cfg.email_enabled:
-                email(msg)
+                email('Upload of nzb failed', msg)
             return 1
     else:
         return 1
@@ -1125,6 +1140,7 @@ class MyHandler(events.PatternMatchingEventHandler):
 
     # noinspection PyMethodMayBeStatic
     def process(self, event):
+        failed = 1
         if event.event_type == 'created' and event.is_directory is False:
             gevent.sleep(10)
             watchdir_file = event.src_path
@@ -1162,7 +1178,6 @@ class MyHandler(events.PatternMatchingEventHandler):
                 name = os.path.basename(watchdir_file)
                 add_task(hash, 0, name, category)
                 failed = upload_nzb(watchdir_file)
-
             if not failed:
                 logger.debug('Deleting file from watchdir: %s', watchdir_file)
                 os.remove(watchdir_file)
@@ -1530,7 +1545,7 @@ def delete_task(message):
                 task.name, responsedict['message'])
             logger.error(msg)
             if cfg.email_enabled:
-                email(msg)
+                email('Download could not be deleted', msg)
             emit('delete_failed', {'data': message['data']})
     else:
         emit('delete_failed')
