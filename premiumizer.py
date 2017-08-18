@@ -466,7 +466,7 @@ def notify_nzbtomedia():
     return returncode
 
 
-def email(subject, text):
+def email(subject, text=None):
     logger.debug('def email started')
     global last_email
     if subject == 'download success':
