@@ -972,6 +972,8 @@ def parse_tasks(transfers):
                     try:
                         if 'ETA is' in transfer['message']:
                             eta = transfer['message'].split("ETA is", 1)[1]
+                        else:
+                            eta = ' '
                     except:
                         eta = ' '
                 else:
@@ -980,6 +982,8 @@ def parse_tasks(transfers):
                     try:
                         if 'Downloading at' in transfer['message']:
                             speed = transfer['message'].split("Downloading at", 1)[1].split(". ", 1)[0]
+                        else:
+                            speed = ' '
                     except:
                         speed = ' '
                 else:
@@ -988,6 +992,8 @@ def parse_tasks(transfers):
                     try:
                         if '% of' in transfer['message']:
                             size = transfer['message'].split("s.", 1)[1].split(" finished", 1)[0]
+                        else:
+                            size = ' '
                     except:
                         size = ' '
                 else:
