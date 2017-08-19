@@ -1048,10 +1048,16 @@ def parse_tasks(transfers):
 def check_downloads(dlsize, hash):
     logger.debug('def check_downloads started')
     gevent.sleep(60)
-    task = get_task(hash)
+    try:
+        task = get_task(hash)
+    except:
+        return
     if dlsize == task.dlsize:
         task.update(local_status=None)
-        logger.warning('Download: %s stuck restarting task', task.name, )
+        msg = 'Download: %s stuck restarting task' % task.name
+        logger.warning(msg)
+        if cfg.email_enabled:
+            email('Download stuck', msg)
         scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
 
 
