@@ -1018,8 +1018,15 @@ def parse_tasks(transfers):
                 else:
                     task.update(local_status='finished', speed=None)
         else:
+            if task.local_status == 'downloading':
+                dlsize = task.dlsize
+                hash = task.hash
+                if not task.name in str(scheduler.scheduler.get_jobs('check_downloads')):
+                    scheduler.scheduler.add_job(check_downloads, args=(dlsize, hash),
+                                                name=(task.name + ' check_downloads'), misfire_grace_time=7200,
+                                                jobstore='check_downloads', replace_existing=True, max_instances=1,
+                                                coalesce=True, next_run_time=(datetime.now() + timedelta(minutes=1)))
             task.update(cloud_status=transfer['status'])
-
         hashes_online.append(task.hash)
         task.callback = None
         db[task.hash] = task
@@ -1036,6 +1043,16 @@ def parse_tasks(transfers):
     db.sync()
     socketio.emit('tasks_updated', {})
     return idle
+
+
+def check_downloads(dlsize, hash):
+    logger.debug('def check_downloads started')
+    gevent.sleep(60)
+    task = get_task(hash)
+    if dlsize == task.dlsize:
+        task.update(local_status=None)
+        logger.warning('Download: %s stuck restarting task', task.name, )
+        scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
 
 
 def get_task(hash):
@@ -1625,6 +1642,7 @@ if __name__ == '__main__':
         scheduler = APScheduler(GeventScheduler())
         scheduler.init_app(app)
         scheduler.scheduler.add_jobstore('memory', alias='downloads')
+        scheduler.scheduler.add_jobstore('memory', alias='check_downloads')
         scheduler.scheduler.add_executor('threadpool', alias='downloads', max_workers=cfg.download_max)
         scheduler.start()
         scheduler.scheduler.add_job(update, 'interval', id='update',
