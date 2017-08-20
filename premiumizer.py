@@ -796,7 +796,7 @@ def download_process():
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
                'hash': greenlet.task.hash}
     r = prem_connection("post", "https://www.premiumize.me/api/torrent/browse", payload)
-    if r == 'failed':
+    if 'failed' not in r:
         return 1
     greenlet.task.update(local_status='downloading', progress=0, speed=' ', eta=' ')
     greenlet.task.dldir = os.path.join(greenlet.task.dldir, clean_name(greenlet.task.name))
@@ -852,7 +852,7 @@ def download_task(task):
         if not failed:
             payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'type': 'torrent', 'id': task.hash}
             r = prem_connection("post", "https://www.premiumize.me/api/transfer/delete", payload)
-            if r != 'failed':
+            if 'failed' not in r:
                 responsedict = json.loads(r.content)
                 if responsedict['status'] == "success":
                     logger.info('Automatically Deleted: %s from cloud', task.name)
@@ -903,8 +903,17 @@ def prem_connection(method, url, payload, files=None):
     try:
         message = r.text
     except:
-        message = '"status":"error"'
-    if '"status":"error"' in message or r_count == 10:
+        message = ' '
+    if 'Not logged in. Please log in first' in message:
+        try:
+            msg = 'premiumize.me login error: %s for: %s' % (message, greenlet.task.name)
+        except:
+            msg = 'premiumize.me login error: %s' % message
+        logger.error(msg)
+        if cfg.email_enabled:
+            email('Premiumize.me login', msg)
+        return 'failed: premiumize.me login error'
+    elif r.status_code != 200 or r_count == 10:
         try:
             msg = 'premiumize.me connection error: %s for: %s' % (message, greenlet.task.name)
         except:
@@ -913,6 +922,14 @@ def prem_connection(method, url, payload, files=None):
         if cfg.email_enabled:
             email('Premiumize.me connection error', msg)
         return 'failed'
+    elif '"status":"error"' in message:
+        try:
+            msg = 'premiumize.me status error: %s for: %s' % (message, greenlet.task.name)
+        except:
+            msg = 'premiumize.me status error: %s' % message
+        logger.error(msg)
+        if cfg.email_enabled:
+            email('Premiumize.me status error', msg)
     return r
 
 
@@ -922,7 +939,7 @@ def update():
     update_interval = idle_interval
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
     r = prem_connection("post", "https://www.premiumize.me/api/transfer/list", payload)
-    if r != 'failed':
+    if 'failed' not in r:
         response_content = json.loads(r.content)
         if response_content['status'] == "success":
             if not response_content['transfers']:
@@ -932,7 +949,6 @@ def update():
         else:
             socketio.emit('premiumize_connect_error', {})
     else:
-        logger.error('premiumize.me connection error')
         socketio.emit('premiumize_connect_error', {})
     if not idle:
         update_interval = active_interval
@@ -1104,7 +1120,7 @@ def upload_torrent(filename):
     files = {'src': open(filename, 'rb')}
     logger.debug('Uploading torrent to the cloud: %s', filename)
     r = prem_connection("postfile", "https://www.premiumize.me/api/transfer/create", payload, files)
-    if r != 'failed':
+    if 'failed' not in r:
         response_content = json.loads(r.content)
         if response_content['status'] == "success":
             logger.debug('Upload successful: %s', filename)
@@ -1123,7 +1139,7 @@ def upload_magnet(magnet):
     logger.debug('def upload_magnet started')
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'type': 'torrent', 'src': magnet}
     r = prem_connection("post", "https://www.premiumize.me/api/transfer/create", payload)
-    if r != 'failed':
+    if 'failed' not in r:
         response_content = json.loads(r.content)
         if response_content['status'] == "success":
             logger.debug('Upload magnet successful')
@@ -1144,7 +1160,7 @@ def upload_nzb(filename):
     files = {'src': open(filename, 'rb')}
     logger.debug('Uploading nzb to the cloud: %s', filename)
     r = prem_connection("postfile", "https://www.premiumize.me/api/transfer/create", payload, files)
-    if r != 'failed':
+    if 'failed' not in r:
         response_content = json.loads(r.content)
         if response_content['status'] == "success":
             logger.debug('Upload nzb successful: %s', filename)
@@ -1562,7 +1578,7 @@ def delete_task(message):
         task.update(local_status='stopped')
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'type': 'torrent', 'id': message['data']}
     r = prem_connection("post", "https://www.premiumize.me/api/transfer/delete", payload)
-    if r != 'failed':
+    if 'failed' not in r:
         responsedict = json.loads(r.content)
         task = get_task(message['data'])
         if responsedict['status'] == "success":
