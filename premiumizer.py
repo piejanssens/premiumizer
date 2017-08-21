@@ -911,7 +911,7 @@ def prem_connection(method, url, payload, files=None):
             msg = 'premiumize.me login error: %s' % message
         logger.error(msg)
         if cfg.email_enabled:
-            email('Premiumize.me login', msg)
+            email('Premiumize.me login error', msg)
         return 'failed: premiumize.me login error'
     elif r.status_code != 200 or r_count == 10:
         try:
