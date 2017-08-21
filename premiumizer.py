@@ -796,7 +796,7 @@ def download_process():
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
                'hash': greenlet.task.hash}
     r = prem_connection("post", "https://www.premiumize.me/api/torrent/browse", payload)
-    if 'failed' not in r:
+    if 'failed' in r:
         return 1
     greenlet.task.update(local_status='downloading', progress=0, speed=' ', eta=' ')
     greenlet.task.dldir = os.path.join(greenlet.task.dldir, clean_name(greenlet.task.name))
@@ -911,7 +911,7 @@ def prem_connection(method, url, payload, files=None):
             msg = 'premiumize.me login error: %s' % message
         logger.error(msg)
         if cfg.email_enabled:
-            email('Premiumize.me login', msg)
+            email('Premiumize.me login error', msg)
         return 'failed: premiumize.me login error'
     elif r.status_code != 200 or r_count == 10:
         try:
