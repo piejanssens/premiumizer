@@ -835,7 +835,8 @@ def download_task(task):
             shutil.rmtree(task.dldir)
         except:
             logger.warning('Could not delete folder for: %s', greenlet.task.name)
-        task.update(progress=100, category='', local_status='waiting')
+        if task.progress == 100:
+            task.update(category='', local_status='waiting')
     if not failed:
         try:
             greenlet.avgspeed = str(utils.sizeof_human((task.size / task.dltime)) + '/s')
@@ -1610,7 +1611,7 @@ def delete_task(message):
 def stop_task(message):
     task = get_task(message['data'])
     if task.local_status != 'stopped':
-        task.update(local_status='stopped')
+        task.update(progress=100, local_status='stopped')
 
 
 @socketio.on('connect')
