@@ -64,7 +64,8 @@
 </div>
 {% block js_footer %}
     <script src="{{ url_for('static', filename='js/jquery.min.js') }}?v=8"></script>
-    <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}?v=3"></script>
+    <script src="{{ url_for('static', filename='js/popper.min.js') }}?v1"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}?v=4"></script>
     <script src="{{ url_for('static', filename='js/bootstrap-switch.min.js') }}?v=3"></script>
     <script>$(".bootstrap_switch").bootstrapSwitch();</script>
 {% endblock %}
