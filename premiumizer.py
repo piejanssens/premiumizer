@@ -830,6 +830,7 @@ def download_task(task):
             logger.error('Download failed for: %s', task.name)
     elif task.local_status == 'stopped':
         logger.warning('Download stopped for: %s', greenlet.task.name)
+        gevent.sleep(3)
         try:
             shutil.rmtree(task.dldir)
         except:
