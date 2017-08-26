@@ -872,7 +872,7 @@ def download_task(task):
     else:
         task.update(local_status='finished')
 
-    if cfg.email_enabled and task.local_status != 'stopped':
+    if cfg.email_enabled and task.local_status != 'stopped' and task.local_status != 'waiting':
         if not failed:
             if not cfg.email_on_failure:
                 email('download success')
