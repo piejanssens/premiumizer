@@ -1071,7 +1071,9 @@ def check_downloads(dlsize, hash):
     except:
         return
     if dlsize == task.dlsize:
-        task.update(local_status=None)
+        dldir = get_cat_var(task.category)
+        dldir = dldir[0]
+        task.update(local_status=None, dldir=dldir)
         msg = 'Download: %s stuck restarting task' % task.name
         logger.warning(msg)
         if cfg.email_enabled:
