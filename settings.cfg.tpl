@@ -27,7 +27,7 @@ nzbtomedia_location = [Change to path]\nzbToMedia.py
 jd_enabled = 0
 jd_username =
 jd_password =
-jd_device =
+jd_device_name =
 
 
 [categories]
@@ -80,5 +80,5 @@ email_password =
 updated = 1
 auto_update = 0
 update_date = Never
-config_version = 1.4
+config_version = 1.5
 req_version = 5.5

@@ -187,7 +187,7 @@ class PremConfig:
         self.jd_enabled = prem_config.getboolean('downloads', 'jd_enabled')
         self.jd_username = prem_config.get('downloads', 'jd_username')
         self.jd_password = prem_config.get('downloads', 'jd_password')
-        self.jd_device = prem_config.get('downloads', 'jd_device')
+        self.jd_device_name = prem_config.get('downloads', 'jd_device_name')
         if self.jd_enabled:
             self.download_builtin = 0
             if not self.jd_connected:
@@ -195,15 +195,14 @@ class PremConfig:
                 try:
                     self.jd.set_app_key('https://git.io/vaDti')
                     self.jd.connect(self.jd_username, self.jd_password)
-                    self.jd_connected = 1
                 except:
                     logger.error('Could not connect to My Jdownloader')
-                    self.jd_connected = 0
                 try:
-                    self.jd.get_device(self.jd_device)
+                    self.jd_device = self.jd.get_device(self.jd_device_name)
+                    self.jd_connected = 1
                 except:
-                    logger.error('Could not get device name for My Jdownloader')
-
+                    self.jd = None
+                    logger.error('Could not get device name (%s) for My Jdownloader', self.jd_device_name)
         self.watchdir_enabled = prem_config.getboolean('upload', 'watchdir_enabled')
         self.watchdir_location = prem_config.get('upload', 'watchdir_location')
         if self.watchdir_enabled:
@@ -544,87 +543,83 @@ def email(subject, text=None):
         logger.error(log)
 
 
-def jd_query_id(jd, package):
+def jd_query_packages(id=None):
     count = 0
-    while isinstance(package, bool):
-        gevent.sleep(5)
-        package = jd_query_packages(jd)
-        count += 1
-        if count == 12:
-            package = {'status': 'Failed'}
-            logger.error('JD did not return package status for: %s', greenlet.task.name)
-
-    while 'status' not in package:
-        try:
-            package = package[0]
-            if 'status' in package:
-                break
-        except:
-            pass
-        gevent.sleep(5)
-        package = jd_query_packages(jd)
-        count += 1
-        if count == 24:
-            package = {'status': 'Failed'}
-            logger.error('JD did not return package status for: %s', greenlet.task.name)
-    return package
-
-
-def jd_query_packages(jd, id=None):
     global jd_packages
     if client_connected:
         seconds = 2
     else:
         seconds = 10
-    if jd_packages['time'] < datetime.now() - timedelta(seconds=seconds):
-        jd_packages['packages'] = jd.downloads.query_packages()
+    if jd_packages['time'] < (datetime.now() - timedelta(seconds=seconds)):
+        jd_packages['time'] = datetime.now()
+        response = cfg.jd_device.downloads.query_packages()
+        while not response:
+            gevent.sleep(5)
+            if not jd_packages['time'] < (datetime.now() - timedelta(seconds=seconds)):
+                response = jd_packages['packages']
+            else:
+                response = cfg.jd_device.downloads.query_packages()
+            count += 1
+            if count == 6:
+                logger.error('JD did not return package status for: %s', greenlet.task.name)
+                return False
+        while not len(response):
+            gevent.sleep(5)
+            if not jd_packages['time'] < (datetime.now() - timedelta(seconds=seconds)):
+                response = jd_packages['packages']
+            else:
+                response = cfg.jd_device.downloads.query_packages()
+            count += 1
+            if count == 12:
+                logger.error('Could not find package in JD for: %s', greenlet.task.name)
+                return False
+
+        jd_packages['packages'] = response
 
     if id:
         for package in jd_packages['packages']:
             try:
                 if id == str(package['uuid']):
-                    package = jd_query_id(jd, package)
+                    while 'status' not in package:
+                        try:
+                            package = package[0]
+                            if 'status' in package:
+                                break
+                        except:
+                            pass
+                        gevent.sleep(5)
+                        package = cfg.jd_device.downloads.query_packages([{"packageUUIDs": [id]}])
+                        count += 1
+                        if count == 24:
+                            package = {'status': 'Failed'}
+                            logger.error('JD did not return package status for: %s', greenlet.task.name)
                     return package
             except:
-                pass
+                return False
 
     return jd_packages['packages']
 
 
-def get_download_stats_jd(jd, package_name):
+def get_download_stats_jd(package_name):
     count = 0
     gevent.sleep(10)
-    start_time = time.time()
-    query_packages = jd_query_packages(jd)
-    while isinstance(query_packages, bool):
-        gevent.sleep(5)
-        query_packages = jd_query_packages(jd)
-        count += 1
-        if count == 5:
-            logger.error('JD did not return packages status for: %s', greenlet.task.name)
-            return 1
-    while not len(query_packages):
-        gevent.sleep(5)
-        query_packages = jd_query_packages(jd)
-        count += 1
-        if count == 10:
-            logger.error('Could not find package in JD for: %s', greenlet.task.name)
-            return 1
+    query_packages = jd_query_packages()
     while not any(package['name'] in package_name for package in query_packages):
         gevent.sleep(5)
-        query_packages = jd_query_packages(jd)
+        query_packages = jd_query_packages()
         count += 1
         if count == 10:
             logger.error('Could not find package in JD for: %s', greenlet.task.name)
             return 1
-
     for package in query_packages:
         if package['name'] in package_name:
+            start_time = time.time()
             package_id = str(package['uuid'])
             while package['status'] != 'Finished' and package['status'] != 'Failed':
                 if greenlet.task.local_status == 'stopped':
                     try:
-                        jd.downloads.cleanup("DELETE_ALL", "REMOVE_LINKS_ONLY", "ALL", packages_ids=[package_id])
+                        cfg.jd_device.downloads.cleanup("DELETE_ALL", "REMOVE_LINKS_ONLY", "ALL",
+                                                        packages_ids=[package_id])
                     except:
                         logger.error('Could not delete package in JD for : %s', greenlet.task.name)
                         pass
@@ -634,7 +629,7 @@ def get_download_stats_jd(jd, package_name):
                 except:
                     speed = 0
                 if speed == 0:
-                    if not 'Download' in package['status']:
+                    if 'Download' not in package['status']:
                         eta = package['status']
                     else:
                         eta = ' '
@@ -651,8 +646,8 @@ def get_download_stats_jd(jd, package_name):
                                      progress=progress,
                                      eta=eta)
                 gevent_sleep_time()
-                package = jd_query_packages(jd, package_id)
-            # cfg.jd.disconnect()
+                package = jd_query_packages(package_id)
+            # cfg.jd_device.disconnect()
 
             if package['status'] == 'Failed':
                 logger.error('JD returned failed for: %s', greenlet.task.name)
@@ -662,7 +657,8 @@ def get_download_stats_jd(jd, package_name):
             greenlet.task.update(dltime=dltime)
 
             try:
-                jd.downloads.cleanup("DELETE_FINISHED", "REMOVE_LINKS_ONLY", "ALL", packages_ids=[package_id])
+                cfg.jd_device.downloads.cleanup("DELETE_FINISHED", "REMOVE_LINKS_ONLY", "ALL",
+                                                packages_ids=[package_id])
             except:
                 logger.error('Could not delete package in JD for: %s', greenlet.task.name)
                 pass
@@ -694,20 +690,22 @@ def get_download_stats(downloader, total_size_downloaded):
 
 def download_file():
     logger.debug('def download_file started')
+    count = 0
     files_downloaded = 0
     total_size_downloaded = 0
     dltime = 0
     returncode = 0
     if cfg.jd_enabled:
         try:
-            cfg.jd.reconnect()
-            jd = cfg.jd.get_device(cfg.jd_device)
-            cfg.jd_connected = 1
+            if not cfg.jd.is_connected():
+                cfg.jd.reconnect()
+                cfg.jd_device = cfg.jd.get_device(cfg.jd_device_name)
+                cfg.jd_connected = 1
         except:
             try:
                 cfg.jd = myjdapi.Myjdapi()
                 cfg.jd.connect(cfg.jd_username, cfg.jd_password)
-                jd = cfg.jd.get_device(cfg.jd_device)
+                cfg.jd_device = cfg.jd.get_device(cfg.jd_device_name)
                 cfg.jd_connected = 1
             except:
                 logger.error(
@@ -715,7 +713,13 @@ def download_file():
                     greenlet.task.name)
                 cfg.jd_connected = 0
                 return 1
-        query_links = jd.downloads.query_links()
+        query_links = cfg.jd_device.downloads.query_links()
+        while query_links is False:
+            gevent.sleep(5)
+            query_links = cfg.jd_device.downloads.query_links()
+            count += 1
+            if count == 5:
+                return 1
         package_name = str(re.sub('[^0-9a-zA-Z]+', ' ', greenlet.task.name).lower())
 
     for download in greenlet.download_list:
@@ -757,14 +761,15 @@ def download_file():
                 if len(query_links):
                     if any(link['name'] == filename for link in query_links):
                         continue
-                jd.linkgrabber.add_links([{"autostart": True, "links": url, "packageName": package_name,
-                                           "destinationFolder": greenlet.task.dldir, "overwritePackagizerRules": True}])
+                cfg.jd_device.linkgrabber.add_links([{"autostart": True, "links": url, "packageName": package_name,
+                                                      "destinationFolder": greenlet.task.dldir,
+                                                      "overwritePackagizerRules": True}])
         else:
             logger.info('File not downloaded it already exists at: %s', download['path'])
 
     if cfg.jd_enabled and files_downloaded:
         if cfg.jd_connected:
-            returncode = get_download_stats_jd(jd, package_name)
+            returncode = get_download_stats_jd(package_name)
 
     return returncode
 
@@ -1056,7 +1061,7 @@ def parse_tasks(transfers):
             if task.local_status == 'downloading':
                 dlsize = task.dlsize
                 hash = task.hash
-                if not task.name in str(scheduler.scheduler.get_jobs('check_downloads')):
+                if task.name not in str(scheduler.scheduler.get_jobs('check_downloads')):
                     scheduler.scheduler.add_job(check_downloads, args=(dlsize, hash),
                                                 name=(task.name + ' check_downloads'), misfire_grace_time=7200,
                                                 jobstore='check_downloads', replace_existing=True, max_instances=1,
@@ -1385,7 +1390,7 @@ def history():
                     history_update(history, line, 'downloaded', '1')
                     history_update(history, line, 'info', taskinfo)
                 elif 'Deleted' in line:
-                    if not 'Automatically Deleted:' in line:
+                    if 'Automatically Deleted:' not in line:
                         history_update(history, line, 'check_name', '1')
                     history_update(history, line, 'deleted', '1')
                 elif 'Send to nzbToMedia:' in line:
@@ -1470,7 +1475,7 @@ def settings():
 
             prem_config.set('downloads', 'jd_username', request.form.get('jd_username'))
             prem_config.set('downloads', 'jd_password', request.form.get('jd_password'))
-            prem_config.set('downloads', 'jd_device', request.form.get('jd_device'))
+            prem_config.set('downloads', 'jd_device_name', request.form.get('jd_device_name'))
             prem_config.set('notifications', 'email_from', request.form.get('email_from'))
             prem_config.set('notifications', 'email_to', request.form.get('email_to'))
             prem_config.set('notifications', 'email_server', request.form.get('email_server'))
