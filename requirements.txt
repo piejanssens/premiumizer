@@ -16,7 +16,7 @@ gevent-websocket==0.10.1
 jinja2==2.9.6
 MarkupSafe==1.0
 pathtools==0.1.2
-https://github.com/neox387/pySmartDL/archive/1.2.6.zip#egg=PySmartDL==1.2.6
+https://github.com/neox387/pySmartDL/archive/1.2.7.zip#egg=PySmartDL==1.2.7
 requests==2.18.4
 python-socketio==1.8.0
 tzlocal==1.4
@@ -26,4 +26,4 @@ six==1.10.0
 gevent==1.2.2
 python-dateutil==2.6.1
 pycrypto==2.6.1
-myjdapi==1.0.2
+https://github.com/neox387/My.Jdownloader-API-Python-Library/archive/1.0.3.zip#egg=myjdapi==1.0.3
