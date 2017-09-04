@@ -696,14 +696,9 @@ def download_file():
     dltime = 0
     returncode = 0
     if cfg.jd_enabled:
-        try:
-            if not cfg.jd_connected:
-                cfg.jd.reconnect()
-                cfg.jd_device = cfg.jd.get_device(cfg.jd_device_name)
-                cfg.jd_connected = 1
-        except:
+        query_links = cfg.jd_device.downloads.query_links()
+        if query_links is False:
             try:
-                cfg.jd = myjdapi.Myjdapi()
                 cfg.jd.connect(cfg.jd_username, cfg.jd_password)
                 cfg.jd_device = cfg.jd.get_device(cfg.jd_device_name)
                 cfg.jd_connected = 1
@@ -713,13 +708,13 @@ def download_file():
                     greenlet.task.name)
                 cfg.jd_connected = 0
                 return 1
-        query_links = cfg.jd_device.downloads.query_links()
-        while query_links is False:
-            gevent.sleep(5)
             query_links = cfg.jd_device.downloads.query_links()
-            count += 1
-            if count == 5:
-                return 1
+            while query_links is False:
+                gevent.sleep(5)
+                query_links = cfg.jd_device.downloads.query_links()
+                count =+ 1
+                if count == 5:
+                    return 1
         package_name = str(re.sub('[^0-9a-zA-Z]+', ' ', greenlet.task.name).lower())
 
     for download in greenlet.download_list:
