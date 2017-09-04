@@ -697,7 +697,7 @@ def download_file():
     returncode = 0
     if cfg.jd_enabled:
         try:
-            if not cfg.jd.is_connected():
+            if not cfg.jd_connected:
                 cfg.jd.reconnect()
                 cfg.jd_device = cfg.jd.get_device(cfg.jd_device_name)
                 cfg.jd_connected = 1
