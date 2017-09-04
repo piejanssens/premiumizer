@@ -26,4 +26,4 @@ six==1.10.0
 gevent==1.2.2
 python-dateutil==2.6.1
 pycrypto==2.6.1
-https://github.com/neox387/myjdapi/archive/1.0.3.zip#egg=myjdapi==1.0.3
+https://github.com/neox387/myjdapi/archive/1.0.4.zip#egg=myjdapi==1.0.4
