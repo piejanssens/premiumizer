@@ -104,6 +104,7 @@ def uncaught_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, (SystemExit, KeyboardInterrupt)):
         return
     logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+    pass
 
 
 sys.excepthook = uncaught_exception
@@ -194,13 +195,15 @@ class PremConfig:
                 self.jd = myjdapi.Myjdapi()
                 try:
                     self.jd.set_app_key('https://git.io/vaDti')
-                    self.jd.connect(self.jd_username, self.jd_password)
-                except:
+                    self.jd.disconnect()
+                except BaseException as e:
+                    logger.error('myjdapi : ' + e.message)
                     logger.error('Could not connect to My Jdownloader')
                 try:
                     self.jd_device = self.jd.get_device(self.jd_device_name)
                     self.jd_connected = 1
-                except:
+                except BaseException as e:
+                    logger.error('myjdapi : ' + e.message)
                     self.jd = None
                     logger.error('Could not get device name (%s) for My Jdownloader', self.jd_device_name)
         self.watchdir_enabled = prem_config.getboolean('upload', 'watchdir_enabled')
@@ -552,13 +555,20 @@ def jd_query_packages(id=None):
         seconds = 10
     if jd_packages['time'] < (datetime.now() - timedelta(seconds=seconds)):
         jd_packages['time'] = datetime.now()
-        response = cfg.jd_device.downloads.query_packages()
+        try:
+            response = cfg.jd_device.downloads.query_packages()
+        except BaseException as e:
+            response = None
+            logger.error('myjdapi : ' + e.message)
         while not response:
             gevent.sleep(5)
             if not jd_packages['time'] < (datetime.now() - timedelta(seconds=seconds)):
                 response = jd_packages['packages']
             else:
-                response = cfg.jd_device.downloads.query_packages()
+                try:
+                    response = cfg.jd_device.downloads.query_packages()
+                except BaseException as e:
+                    logger.error('myjdapi : ' + e.message)
             count += 1
             if count == 6:
                 logger.error('JD did not return package status for: %s', greenlet.task.name)
@@ -568,7 +578,10 @@ def jd_query_packages(id=None):
             if not jd_packages['time'] < (datetime.now() - timedelta(seconds=seconds)):
                 response = jd_packages['packages']
             else:
-                response = cfg.jd_device.downloads.query_packages()
+                try:
+                    response = cfg.jd_device.downloads.query_packages()
+                except BaseException as e:
+                    logger.error('myjdapi : ' + e.message)
             count += 1
             if count == 12:
                 logger.error('Could not find package in JD for: %s', greenlet.task.name)
@@ -588,7 +601,10 @@ def jd_query_packages(id=None):
                         except:
                             pass
                         gevent.sleep(5)
-                        package = cfg.jd_device.downloads.query_packages([{"packageUUIDs": [id]}])
+                        try:
+                            package = cfg.jd_device.downloads.query_packages([{"packageUUIDs": [id]}])
+                        except BaseException as e:
+                            logger.error('myjdapi : ' + e.message)
                         count += 1
                         if count == 24:
                             package = {'status': 'Failed'}
@@ -620,7 +636,8 @@ def get_download_stats_jd(package_name):
                     try:
                         cfg.jd_device.downloads.cleanup("DELETE_ALL", "REMOVE_LINKS_ONLY", "ALL",
                                                         packages_ids=[package_id])
-                    except:
+                    except BaseException as e:
+                        logger.error('myjdapi : ' + e.message)
                         logger.error('Could not delete package in JD for : %s', greenlet.task.name)
                         pass
                     return 1
@@ -659,7 +676,8 @@ def get_download_stats_jd(package_name):
             try:
                 cfg.jd_device.downloads.cleanup("DELETE_FINISHED", "REMOVE_LINKS_ONLY", "ALL",
                                                 packages_ids=[package_id])
-            except:
+            except BaseException as e:
+                logger.error('myjdapi : ' + e.message)
                 logger.error('Could not delete package in JD for: %s', greenlet.task.name)
                 pass
             return 0
@@ -702,13 +720,17 @@ def download_file():
                 cfg.jd.connect(cfg.jd_username, cfg.jd_password)
                 cfg.jd_device = cfg.jd.get_device(cfg.jd_device_name)
                 cfg.jd_connected = 1
-            except:
+            except BaseException as e:
+                logger.error('myjdapi : ' + e.message)
                 logger.error(
                     'Could not connect to My Jdownloader check username/password & device name, task failed: %s',
                     greenlet.task.name)
                 cfg.jd_connected = 0
                 return 1
-            query_links = cfg.jd_device.downloads.query_links()
+            try:
+                query_links = cfg.jd_device.downloads.query_links()
+            except BaseException as e:
+                logger.error('myjdapi : ' + e.message)
             while query_links is False:
                 gevent.sleep(5)
                 query_links = cfg.jd_device.downloads.query_links()
@@ -756,9 +778,12 @@ def download_file():
                 if len(query_links):
                     if any(link['name'] == filename for link in query_links):
                         continue
-                cfg.jd_device.linkgrabber.add_links([{"autostart": True, "links": url, "packageName": package_name,
+                try:
+                    cfg.jd_device.linkgrabber.add_links([{"autostart": True, "links": url, "packageName": package_name,
                                                       "destinationFolder": greenlet.task.dldir,
                                                       "overwritePackagizerRules": True}])
+                except BaseException as e:
+                    logger.error('myjdapi : ' + e.message)
         else:
             logger.info('File not downloaded it already exists at: %s', download['path'])
 
