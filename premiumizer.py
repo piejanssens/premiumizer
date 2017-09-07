@@ -195,7 +195,7 @@ class PremConfig:
                 self.jd = myjdapi.Myjdapi()
                 try:
                     self.jd.set_app_key('https://git.io/vaDti')
-                    self.jd.connect()
+                    self.jd.connect(self.jd_username, self.jd_password)
                 except BaseException as e:
                     logger.error('myjdapi : ' + e.message)
                     logger.error('Could not connect to My Jdownloader')
