@@ -48,9 +48,9 @@ print ('------------------------------------------------------------------------
 prem_config = ConfigParser.RawConfigParser()
 runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0]
 rootdir = os.path.split(runningdir)
-try:
+if len(sys.argv) > 1:
     os_arg = sys.argv[1]
-except:
+else:
     os_arg = ''
 if not os.path.isfile(os.path.join(runningdir, 'settings.cfg')):
     shutil.copy(os.path.join(runningdir, 'settings.cfg.tpl'), os.path.join(runningdir, 'settings.cfg'))
@@ -422,6 +422,7 @@ def to_unicode(original, *args):
                 except:
                     raise
     except:
+        import traceback
         logger.error('Unable to decode value "%s..." : %s ', (repr(original)[:20], traceback.format_exc()))
         return 'ERROR DECODING STRING'
 
@@ -734,7 +735,7 @@ def download_file():
             while query_links is False:
                 gevent.sleep(5)
                 query_links = cfg.jd_device.downloads.query_links()
-                count =+ 1
+                count = + 1
                 if count == 5:
                     return 1
         package_name = str(re.sub('[^0-9a-zA-Z]+', ' ', greenlet.task.name).lower())
@@ -780,8 +781,8 @@ def download_file():
                         continue
                 try:
                     cfg.jd_device.linkgrabber.add_links([{"autostart": True, "links": url, "packageName": package_name,
-                                                      "destinationFolder": greenlet.task.dldir,
-                                                      "overwritePackagizerRules": True}])
+                                                          "destinationFolder": greenlet.task.dldir,
+                                                          "overwritePackagizerRules": True}])
                 except BaseException as e:
                     logger.error('myjdapi : ' + e.message)
         else:
