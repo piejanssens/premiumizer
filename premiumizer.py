@@ -318,7 +318,8 @@ def update_self():
         subprocess.call(['python', os.path.join(runningdir, 'utils.py'), '--update', '--windows'])
         os._exit(1)
     else:
-        subprocess.Popen(['python', os.path.join(runningdir, 'utils.py'), '--update'], shell=False, close_fds=True)
+        subprocess.Popen(['python', os.path.join(runningdir, 'utils.py'), '--update', '--none'], shell=False,
+                         close_fds=True)
         os._exit(1)
 
 
@@ -331,7 +332,8 @@ def restart():
         # windows service will automatically restart on 'failure'
         os._exit(1)
     else:
-        subprocess.Popen(['python', os.path.join(runningdir, 'utils.py'), '--restart'], shell=False, close_fds=True)
+        subprocess.Popen(['python', os.path.join(runningdir, 'utils.py'), '--restart', '--none'], shell=False,
+                         close_fds=True)
         os._exit(1)
 
 
