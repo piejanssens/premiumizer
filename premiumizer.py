@@ -941,10 +941,7 @@ def prem_connection(method, url, payload, files=None):
             elif method == 'get':
                 r = prem_session.get(url, params=payload, timeout=5)
             if 'Not logged in. Please log in first' in r.text:
-                try:
-                    msg = 'premiumize.me login error: %s for: %s' % (r.text, greenlet.task.name)
-                except:
-                    msg = 'premiumize.me login error: %s' % r.text
+                msg = 'premiumize.me login error: %s' % r.text
                 logger.error(msg)
                 if cfg.email_enabled:
                     email('Premiumize.me login error', msg)
