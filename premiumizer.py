@@ -940,43 +940,30 @@ def prem_connection(method, url, payload, files=None):
                 r = prem_session.post(url, payload, files=files, timeout=5)
             elif method == 'get':
                 r = prem_session.get(url, params=payload, timeout=5)
+            if 'Not logged in. Please log in first' in r.text:
+                try:
+                    msg = 'premiumize.me login error: %s for: %s' % (r.text, greenlet.task.name)
+                except:
+                    msg = 'premiumize.me login error: %s' % r.text
+                logger.error(msg)
+                if cfg.email_enabled:
+                    email('Premiumize.me login error', msg)
+                return 'failed: premiumize.me login error'
         except:
-            logger.warning('Connection to premiumize.me timed out')
             if r_count == 10:
-                logger.error('Connection to premiumize.me timed out 10 times')
-                break
-            pass
+                try:
+                    message = r.text
+                except:
+                    message = ' '
+                try:
+                    msg = 'premiumize.me error: %s for: %s' % (message, greenlet.task.name)
+                except:
+                    msg = 'premiumize.me error: %s' % message
+                logger.error(msg)
+                if cfg.email_enabled:
+                    email('Premiumize.me error', msg)
+                return 'failed'
             gevent.sleep(3)
-    try:
-        message = r.text
-    except:
-        message = ' '
-    if 'Not logged in. Please log in first' in message:
-        try:
-            msg = 'premiumize.me login error: %s for: %s' % (message, greenlet.task.name)
-        except:
-            msg = 'premiumize.me login error: %s' % message
-        logger.error(msg)
-        if cfg.email_enabled:
-            email('Premiumize.me login error', msg)
-        return 'failed: premiumize.me login error'
-    elif r.status_code != 200 or r_count == 10:
-        try:
-            msg = 'premiumize.me connection error: %s for: %s' % (message, greenlet.task.name)
-        except:
-            msg = 'premiumize.me connection error: %s' % message
-        logger.error(msg)
-        if cfg.email_enabled:
-            email('Premiumize.me connection error', msg)
-        return 'failed'
-    elif '"status":"error"' in message:
-        try:
-            msg = 'premiumize.me status error: %s for: %s' % (message, greenlet.task.name)
-        except:
-            msg = 'premiumize.me status error: %s' % message
-        logger.error(msg)
-        if cfg.email_enabled:
-            email('Premiumize.me status error', msg)
     return r
 
 
