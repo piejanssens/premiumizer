@@ -717,7 +717,11 @@ def download_file():
     dltime = 0
     returncode = 0
     if cfg.jd_enabled:
-        query_links = cfg.jd_device.downloads.query_links()
+        try:
+            query_links = cfg.jd_device.downloads.query_links()
+        except BaseException as e:
+            query_links = False
+            pass
         if query_links is False:
             try:
                 cfg.jd.connect(cfg.jd_username, cfg.jd_password)
