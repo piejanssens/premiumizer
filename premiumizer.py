@@ -724,6 +724,7 @@ def download_file():
             pass
         if query_links is False:
             try:
+                cfg.jd = myjdapi.Myjdapi()
                 cfg.jd.connect(cfg.jd_username, cfg.jd_password)
                 cfg.jd_device = cfg.jd.get_device(cfg.jd_device_name)
                 cfg.jd_connected = 1
