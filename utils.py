@@ -50,19 +50,17 @@ def update():
         time.sleep(3)
         execfile(os.path.join(runningdir, 'premiumizer.py'), globals(), globals())
 
-update()
-try:
-    option_arg = sys.argv[1]
-except:
-    sys.exit()
-try:
-    os_arg = sys.argv[2]
-except:
-    os_arg = ''
-if os_arg == '--windows':
-    rootdir = runningdir[:-12]
 
-if sys.argv[1] == '--restart':
-    restart()
-elif sys.argv[1] == '--update':
-    update()
+if len(sys.argv) == 3:
+    option_arg = sys.argv[1]
+    os_arg = sys.argv[2]
+    if os_arg == '--windows':
+        rootdir = runningdir[:-12]
+    else:
+        os_arg = ''
+    if option_arg == '--restart':
+        restart()
+    elif option_arg == '--update':
+        update()
+else:
+    sys.exit()
