@@ -22,7 +22,7 @@ class DownloadTask:
         self.delsample = delsample
         self.dlnzbtomedia = dlnzbtomedia
         self.dltime = 0
-        self.dlsize = None
+        self.dlsize = ''
 
     def update(self, **kwargs):
         self.previous_timestamp = self.timestamp

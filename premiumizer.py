@@ -637,7 +637,7 @@ def get_download_stats_jd(package_name):
             while package['status'] != 'Finished' and package['status'] != 'Failed':
                 if greenlet.task.local_status == 'stopped':
                     try:
-                        cfg.jd_device.downloads.cleanup("DELETE_ALL", "REMOVE_LINKS_ONLY", "ALL",
+                        cfg.jd_device.downloads.cleanup("DELETE_ALL", "REMOVE_LINKS_AND_DELETE_FILES", "SELECTED",
                                                         packages_ids=[package_id])
                     except BaseException as e:
                         logger.error('myjdapi : ' + e.message)
@@ -884,7 +884,8 @@ def download_task(task):
         try:
             shutil.rmtree(task.dldir)
         except:
-            logger.warning('Could not delete folder for: %s', greenlet.task.name)
+            if not cfg.jd_enabled:
+                logger.warning('Could not delete folder for: %s', greenlet.task.name)
         if task.progress == 100:
             task.update(category='', local_status='waiting')
     if not failed:
@@ -1647,7 +1648,7 @@ def delete_task(message):
 def stop_task(message):
     task = get_task(message['data'])
     if task.local_status != 'stopped':
-        task.update(progress=100, local_status='stopped')
+        task.update(dlsize='', progress=100, local_status='stopped')
 
 
 @socketio.on('connect')
