@@ -2,7 +2,7 @@ import time
 
 
 class DownloadTask:
-    def __init__(self, callback, hash, size, name, category, dldir, dlext, delsample, dlnzbtomedia):
+    def __init__(self, callback, hash, size, name, category, dldir, dlext, delsample, dlnzbtomedia, type):
         self.progress = None
         self.speed = None
         self.size = size
@@ -23,6 +23,8 @@ class DownloadTask:
         self.dlnzbtomedia = dlnzbtomedia
         self.dltime = 0
         self.dlsize = ''
+        self.type = type
+        self.download_list = []
 
     def update(self, **kwargs):
         self.previous_timestamp = self.timestamp
@@ -57,10 +59,13 @@ class DownloadTask:
             self.dltime = kwargs.get('dltime')
         if 'dlsize' in kwargs:
             self.dlsize = kwargs.get('dlsize')
+        if 'type' in kwargs:
+            self.type = kwargs.get('type')
+        if 'download_list' in kwargs:
+            self.download_list = kwargs.get('download_list')
         self.callback('update_task', {'task': self.get_json()})
 
     def get_json(self):
         return {'progress': self.progress, 'speed': self.speed, 'dlsize': self.dlsize, 'eta': self.eta,
-                'hash': self.hash,
-                'name': self.name,
-                'cloud_status': self.cloud_status, 'local_status': self.local_status, 'category': self.category}
+                'hash': self.hash, 'name': self.name, 'cloud_status': self.cloud_status,
+                'local_status': self.local_status, 'category': self.category, 'type': self.type}

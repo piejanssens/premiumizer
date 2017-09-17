@@ -45,7 +45,7 @@ function update_task(task) {
     if (task.cloud_status == 'downloading') {
         stateColor = 'info';
         stateStr = 'Downloading';
-        stateIcon = 'cloud';
+        stateIcon = 'cloud-downloading';
         categoryState = '';
     } else if (task.cloud_status == 'waiting') {
         stateColor = 'warning';
@@ -55,7 +55,7 @@ function update_task(task) {
     } else if (task.cloud_status == 'queued') {
         stateColor = 'warning';
         stateStr = 'Download queued';
-        stateIcon = 'cloud';
+        stateIcon = 'cloud-upload';
         categoryState = '';
     } else if (task.cloud_status == 'finished' && task.local_status == null) {
         stateColor = 'success';
@@ -109,6 +109,11 @@ function update_task(task) {
         stateStr = 'Failed: nzbToMedia';
         stateIcon = 'desktop';
         categoryState = '';
+    } else if (task.cloud_status == 'finished' && task.local_status == 'failed: filehost') {
+        stateColor = 'danger';
+        stateStr = 'Failed: Filehost';
+        stateIcon = 'desktop';
+        categoryState = '';
     } else {
         stateColor = 'danger';
         stateStr = 'check js console';
@@ -133,6 +138,7 @@ function update_task(task) {
         '<span class="col-md-1 text-center">' +
         '<div class="row"><i class="fa fa-' + stateIcon + ' fa-fw fa-2x"></i></div>' +
         '<div class="row"><span class="label label-' + stateColor + '">' + stateStr + '</span></div>' +
+        '<div class="row"><h5>' + task.type + '</h5></div>' +
         '</span>' +
         '<span class="col-md-1 text-center">' +
         '<div class="row">' + dropDown + '</div>' +
@@ -155,6 +161,7 @@ function update_task(task) {
         $("#download_section").prepend(htmlString);
     }
 }
+
 
 +function ($) {
     'use strict';
@@ -202,6 +209,33 @@ function update_task(task) {
             }
         });
     };
+
+    var uploadFilehostUrls = function (filehosturls) {
+        console.log(filehosturls);
+        $.ajax({
+            type: "POST",
+            url: 'upload',
+            data: filehosturls,
+            contentType: 'text/plain',
+            success: function (data, textStatus, jqXHR) {
+                //data - response from server
+                console.log('done');
+                $('#filehost_urls').val('');
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+                $('#filehost_urls').val('');
+            }
+        });
+    };
+
+    $('#filehost_urls').on('click', function () {
+        var element = document.getElementsByClassName("form-control custom-control");
+        setTimeout(function () {
+            var urls = $(element).val();
+            uploadFilehostUrls(urls);
+        }, 100);
+    });
 
     $('#torrent-file-upload').on('change', function (e) {
         e.preventDefault();
@@ -327,6 +361,7 @@ function delete_task(e) {
         data: hash
     });
 }
+
 /*
  function pause_task(e) {
  var elem = $(e.target);
