@@ -1518,6 +1518,9 @@ def settings():
         elif 'Update' in request.form.values():
             gevent.spawn_later(1, update_self)
             return 'Updating, please try and refresh the page in a few seconds...'
+        elif 'Send Test Email' in request.form.values():
+            email('Test Email from premiumizer !')
+            flash('Email send!', 'info')
         else:
             global prem_config
             enable_watchdir = 0
