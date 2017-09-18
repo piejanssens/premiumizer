@@ -45,7 +45,7 @@ function update_task(task) {
     if (task.cloud_status == 'downloading') {
         stateColor = 'info';
         stateStr = 'Downloading';
-        stateIcon = 'cloud-downloading';
+        stateIcon = 'cloud-download';
         categoryState = '';
     } else if (task.cloud_status == 'waiting') {
         stateColor = 'warning';

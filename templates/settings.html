@@ -245,6 +245,7 @@
             {% else %}
                 <input type="checkbox" class="form-control bootstrap_switch" name="email_enabled" data-size="small">
             {% endif %}
+            <p>&nbsp;</p>
             <label for="email_on_failure">Only on failure:</label>
             {% if settings.get('notifications', 'email_on_failure') == '1' %}
                 <input type="checkbox" class="form-control bootstrap_switch" name="email_on_failure" data-size="small"
@@ -252,6 +253,7 @@
             {% else %}
                 <input type="checkbox" class="form-control bootstrap_switch" name="email_on_failure" data-size="small">
             {% endif %}
+            <p>&nbsp;</p>
             <label for="email_encryption">Use encryption SSL/TLS:</label>
             {% if settings.get('notifications', 'email_encryption') == '1' %}
                 <input type="checkbox" class="form-control bootstrap_switch" name="email_encryption" data-size="small"

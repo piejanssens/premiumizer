@@ -135,13 +135,37 @@ if prem_config.getboolean('update', 'updated'):
     logger.info('---------------------------Premiumizer has been updated!!----------------------------')
     logger.info('*************************************************************************************')
     if os.path.isfile(os.path.join(runningdir, 'settings.cfg.old2')):
-        logger.info('*************************************************************************************')
-        logger.info('-------Settings file has been updated, old settings file renamed to .old-------')
-        logger.info('*************************************************************************************')
         try:
             shutil.move(os.path.join(runningdir, 'settings.cfg.old2'), os.path.join(runningdir, 'settings.cfg.old'))
+            logger.info('*************************************************************************************')
+            logger.info('-------Settings file has been updated, old settings file renamed to .old-------')
+            logger.info('*************************************************************************************')
         except:
             logger.error('Could not rename old settings file')
+    if os.path.isfile(os.path.join(runningdir, 'premiumizer.log')):
+        try:
+            os.remove(os.path.join(runningdir, 'premiumizer.log'))
+            logger.info('*************************************************************************************')
+            logger.info('----------------Premiumizer.log file has been deleted as a precaution----------------')
+            logger.info('*************************************************************************************')
+        except:
+            logger.error('Could not delete old premiumizer.log file')
+    if os.path.isfile(os.path.join(runningdir, 'premiumizerDEBUG.log')):
+        try:
+            os.remove(os.path.join(runningdir, 'premiumizerDEBUG.log'))
+            logger.info('*************************************************************************************')
+            logger.info('---------------PremiumizerDEBUG file has been deleted as a precaution----------------')
+            logger.info('*************************************************************************************')
+        except:
+            logger.error('Could not delete old premiumizerDEBUG.log file')
+    if os.path.isfile(os.path.join(runningdir, 'premiumizer.db')):
+        try:
+            os.remove(os.path.join(runningdir, 'premiumizer.db'))
+            logger.info('*************************************************************************************')
+            logger.info('---------------Premiumizer.db file has been deleted as a precaution----------------')
+            logger.info('*************************************************************************************')
+        except:
+            logger.error('Could not delete old premiumizer.db file')
     prem_config.set('update', 'updated', '0')
     with open(os.path.join(runningdir, 'settings.cfg'), 'w') as configfile:
         prem_config.write(configfile)
@@ -367,7 +391,7 @@ logger.debug('Initializing Flask complete')
 
 # Initialise Database
 logger.debug('Initializing Database')
-if os.path.exists(os.path.join(runningdir, 'premiumizer.db')):
+if os.path.isfile(os.path.join(runningdir, 'premiumizer.db')):
     db = shelve.open(os.path.join(runningdir, 'premiumizer.db'))
     if not db.keys():
         db.close()
@@ -478,7 +502,7 @@ def email(subject, text=None):
     global last_email
     if subject == 'download success':
         subject = 'Success for "%s"' % greenlet.task.name
-        text = 'Download of "%s" has successfully completed.' % greenlet.task.name
+        text = 'Download of %s: "%s" has successfully completed.' % (greenlet.task.type, greenlet.task.name)
         text += '\nStatus: SUCCESS'
         text += '\n\nStatistics:'
         text += '\nDownloaded size: %s' % utils.sizeof_human(greenlet.task.size)
@@ -487,10 +511,11 @@ def email(subject, text=None):
         text += '\n\nFiles:'
         for download in greenlet.task.download_list:
             text += '\n' + os.path.basename(download['path'])
+        text += '\nLocation: %s' % greenlet.task.dldir
 
     elif subject == 'download failed':
         subject = 'Failure for "%s"' % greenlet.task.name
-        text = 'Download of "%s" has failed.' % greenlet.task.name
+        text = 'Download of %s: "%s" has failed.' % (greenlet.task.type, greenlet.task.name)
         text += '\nStatus: FAILED\nError: %s' % greenlet.task.local_status
         text += '\n\nLog:\n'
         try:
@@ -903,18 +928,19 @@ def download_task(task):
             if failed:
                 task.update(local_status='failed: nzbToMedia')
 
-    if cfg.remove_cloud:
-        if not failed:
-            delete_task(task.hash)
-    else:
-        task.update(local_status='finished')
-
     if cfg.email_enabled and task.local_status != 'stopped' and task.local_status != 'waiting':
         if not failed:
             if not cfg.email_on_failure:
                 email('download success')
         else:
             email('download failed')
+
+    if cfg.remove_cloud:
+        if not failed:
+            delete_task(task.hash)
+    else:
+        task.update(local_status='finished')
+
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
 
 
@@ -954,6 +980,8 @@ def prem_connection(method, url, payload, files=None):
                     email('Premiumize.me error', msg)
                 return 'failed'
             gevent.sleep(3)
+            r = None
+            continue
     return r
 
 
@@ -1146,7 +1174,8 @@ def add_task(hash, size, name, category, type):
         name = name.replace('%5B', '[').replace('%5D', ']').replace('%20', ' ')
         task = DownloadTask(socketio.emit, hash, size, name, category, dldir, dlext, delsample, dlnzbtomedia, type)
         tasks.append(task)
-        logger.info('Added: %s -- Category: %s', task.name, task.category)
+        if not task.type == 'FILEHOST':
+            logger.info('Added: %s -- Category: %s -- Type: %s', task.name, task.category, task.type)
     else:
         task = 'duplicate'
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
@@ -1227,7 +1256,7 @@ def upload_filehost(urls):
             except:
                 logger.error('filehost error for %s', urls)
             break
-    task = get_task(hash)
+    logger.info('Added: %s -- Category: %s -- Type: %s', name, task.category, task.type)
     if failed:
         try:
             eta = r.text
@@ -1441,9 +1470,10 @@ def history():
                         taskdate = line.split("root", 1)[0].splitlines()[0]
                     else:
                         taskdate = line.split(": INFO ", 1)[0].splitlines()[0]
-                    taskcat = line.split("Category: ", 1)[1].splitlines()[0]
+                    taskcat = line.split("Category: ", 1)[1].splitlines()[0].split(" --", 1)[0]
+                    tasktype = line.split("Type: ", 1)[1].splitlines()[0]
                     history.append(
-                        {'date': taskdate, 'name': taskname, 'category': taskcat, 'downloaded': '', 'deleted': '',
+                        {'date': taskdate, 'name': taskname, 'category': taskcat, 'type': tasktype, 'downloaded': '', 'deleted': '',
                          'nzbtomedia': '', 'email': '', 'info': '', })
                 elif 'Downloading:' in line:
                     history_update(history, line, 'check_name', '')

@@ -8,6 +8,7 @@
             <th class="text-center">Date</th>
             <th class="text-center">Name</th>
             <th>Category</th>
+            <th>Type</th>
             <th>Downloaded</th>
             <th>Deleted</th>
             <th>nzbToMedia</th>
@@ -20,37 +21,38 @@
                 <TD class="c1 vert-align">{{ item.date }}</TD>
                 <TD class="c2 vert-align">{{ item.name }}</TD>
                 <TD class="c3 vert-align">{{ item.category }}</TD>
+                <TD class="c4 vert-align">{{ item.type }}</TD>
                 {% if item.downloaded == '1' %}
-                    <TD class="c4 vert-align"><span class="label label-status label-success">SUCCESS</span></TD>
-                {% elif item.downloaded == '0' %}
-                    <TD class="c4 vert-align"><span class="label label-status label-danger">FAILED</span></TD>
-                {% else %}
-                    <TD class="c4 vert-align">{{ item.downloaded }}</TD>
-                {% endif %}
-                {% if item.deleted == '1' %}
                     <TD class="c5 vert-align"><span class="label label-status label-success">SUCCESS</span></TD>
-                {% elif item.deleted == '0' %}
+                {% elif item.downloaded == '0' %}
                     <TD class="c5 vert-align"><span class="label label-status label-danger">FAILED</span></TD>
                 {% else %}
-                    <TD class="c5 vert-align">{{ item.deleted }}</TD>
+                    <TD class="c5 vert-align"><span class="label label-status label-default">N/A</span></TD>
+                {% endif %}
+                {% if item.deleted == '1' %}
+                    <TD class="c6 vert-align"><span class="label label-status label-success">SUCCESS</span></TD>
+                {% elif item.deleted == '0' %}
+                    <TD class="c6 vert-align"><span class="label label-status label-danger">FAILED</span></TD>
+                {% else %}
+                    <TD class="c5 vert-align"><span class="label label-status label-default">N/A</span></TD>
                 {% endif %}
                 {% if item.nzbtomedia == '1' %}
-                    <TD class="c6 vert-align text-center"><span class="label label-status label-success">SUCCESS</span>
+                    <TD class="c7 vert-align text-center"><span class="label label-status label-success">SUCCESS</span>
                     </TD>
                 {% elif item.nzbtomedia == '0' %}
-                    <TD class="c6 vert-align text-center"><span class="label label-status label-danger">FAILED</span>
+                    <TD class="c7 vert-align text-center"><span class="label label-status label-danger">FAILED</span>
                     </TD>
                 {% else %}
-                    <TD class="c6 vert-align text-center">{{ item.nzbtomedia }}</TD>
+                    <TD class="c5 vert-align"><span class="label label-status label-default">N/A</span></TD>
                 {% endif %}
                 {% if item.email == '1' %}
-                    <TD class="c7 vert-align"><span class="label label-status label-success">SUCCESS</span></TD>
+                    <TD class="c8 vert-align"><span class="label label-status label-success">SUCCESS</span></TD>
                 {% elif item.email == '0' %}
-                    <TD class="c7 vert-align"><span class="label label-status label-danger">FAILED</span></TD>
+                    <TD class="c8 vert-align"><span class="label label-status label-danger">FAILED</span></TD>
                 {% else %}
-                    <TD class="c7 vert-align">{{ item.email }}</TD>
+                    <TD class="c5 vert-align"><span class="label label-status label-default">N/A</span></TD>
                 {% endif %}
-                <TD class="c8">
+                <TD class="c9">
                     {% for line in item.info.splitlines() %}
                         {{ line }}<br>
                     {% endfor %}</TD>
