@@ -88,3 +88,6 @@
 .table tbody>tr>td.vert-align{
     vertical-align: middle;
 }
+
+.bootstrap-switch-container{ white-space:nowrap;
+}

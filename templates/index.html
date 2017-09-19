@@ -24,12 +24,20 @@
             Update available !! Go to the settings page.
         </div>
     {% endif %}
+    {% if jd_update_available == 1 %}
+        <p>&nbsp;</p>
+        <div id="jd_update_available" class="alert alert-info" role="alert" style="display:inline;">
+            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+            <span class="sr-only">Info:</span>
+            Jdownloader Update available !! Go to the settings page.
+        </div>
+    {% endif %}
     {% if download_speed != -1 %}
         <p>&nbsp;</p>
         <div id="download_speed" class="alert alert-info" role="alert" style="display:inline;">
             <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
             <span class="sr-only">Info:</span>
-            Download speed is limited to {{ download_speed }} kBps.
+            Download speed is limited to {{ download_speed }}/s
         </div>
     {% endif %}
     <div id="main_container" class="container">

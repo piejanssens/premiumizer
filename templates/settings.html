@@ -42,6 +42,10 @@
                 <p class="text-primary">Changes:</p>
                 <pre>{{ cfg.update_diffcommit }}</pre>
             {% endif %}
+            {% if cfg.jd_update_available %}
+                <p>Pressing Update will restart Jdownloader.</p>
+                <input type="submit" class="btn-danger" name="submit" value="JDUP">
+            {% endif %}
         </div>
         <p>&nbsp;</p>
 
@@ -131,7 +135,7 @@
             <label for="download_max">Max Simultaneous downloads: (Restart required)</label>
             <input type="number" class="form-control" name="download_max"
                    aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_max') }}">
-            <label for="download_speed">Speed limit per download in kiloBytes (-1 = no limit)</label>
+            <label for="download_speed">Speed limit in MegaBytes/s (-1 = no limit)</label>
             <input type="number" class="form-control" name="download_speed"
                    aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_speed') }}">
             <label for="download_location">Download Location:</label>
