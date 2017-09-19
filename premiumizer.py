@@ -131,17 +131,6 @@ if not log_flask:
 
 # Check if premiumizer has been updated
 if prem_config.getboolean('update', 'updated'):
-    logger.info('*************************************************************************************')
-    logger.info('---------------------------Premiumizer has been updated!!----------------------------')
-    logger.info('*************************************************************************************')
-    if os.path.isfile(os.path.join(runningdir, 'settings.cfg.old2')):
-        try:
-            shutil.move(os.path.join(runningdir, 'settings.cfg.old2'), os.path.join(runningdir, 'settings.cfg.old'))
-            logger.info('*************************************************************************************')
-            logger.info('-------Settings file has been updated, old settings file renamed to .old-------')
-            logger.info('*************************************************************************************')
-        except:
-            logger.error('Could not rename old settings file')
     if os.path.isfile(os.path.join(runningdir, 'premiumizer.log')):
         try:
             with open(os.path.join(runningdir, 'premiumizer.log'), 'w'):
@@ -168,10 +157,20 @@ if prem_config.getboolean('update', 'updated'):
             logger.info('*************************************************************************************')
         except:
             logger.error('Could not delete old premiumizer.db file')
+    if os.path.isfile(os.path.join(runningdir, 'settings.cfg.old2')):
+        try:
+            shutil.move(os.path.join(runningdir, 'settings.cfg.old2'), os.path.join(runningdir, 'settings.cfg.old'))
+            logger.info('*************************************************************************************')
+            logger.info('-------Settings file has been updated, old settings file renamed to .old-------')
+            logger.info('*************************************************************************************')
+        except:
+            logger.error('Could not rename old settings file')
     prem_config.set('update', 'updated', '0')
     with open(os.path.join(runningdir, 'settings.cfg'), 'w') as configfile:
         prem_config.write(configfile)
-
+    logger.info('*************************************************************************************')
+    logger.info('---------------------------Premiumizer has been updated!!----------------------------')
+    logger.info('*************************************************************************************')
 #
 logger.info('Running at %s', runningdir)
 
