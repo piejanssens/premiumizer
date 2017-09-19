@@ -237,15 +237,19 @@ class PremConfig:
                 try:
                     self.jd_device = self.jd.get_device(self.jd_device_name)
                     self.jd_connected = 1
+                except BaseException as e:
+                    logger.error('myjdapi : ' + e.message)
+                    self.jd = None
+                    logger.error('Could not get device name (%s) for My Jdownloader', self.jd_device_name)
+            if self.jd_connected:
+                try:
                     if self.download_speed == -1:
                         self.jd_device.toolbar.disable_downloadSpeedLimit()
                     else:
                         self.jd_device.toolbar.enable_downloadSpeedLimit()
                         self.download_speed = self.jd_device.toolbar.get_status().get('limitspeed')
-                except BaseException as e:
-                    logger.error('myjdapi : ' + e.message)
-                    self.jd = None
-                    logger.error('Could not get device name (%s) for My Jdownloader', self.jd_device_name)
+                except:
+                    logger.error('Could not enable Jdownloader speed limit')
         self.watchdir_enabled = prem_config.getboolean('upload', 'watchdir_enabled')
         self.watchdir_location = prem_config.get('upload', 'watchdir_location')
         if self.watchdir_enabled:
