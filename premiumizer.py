@@ -1445,6 +1445,16 @@ def watchdir():
 @app.route('/')
 @login_required
 def home():
+    if cfg.jd_enabled:
+        try:
+            download_speed = cfg.jd_device.toolbar.get_status().get('limitspeed')
+            if download_speed == 0:
+                cfg.download_speed = -1
+            else:
+                cfg.download_speed = download_speed
+        except:
+            pass
+
     if not cfg.download_speed == -1:
         download_speed = utils.sizeof_human(cfg.download_speed)
     else:
