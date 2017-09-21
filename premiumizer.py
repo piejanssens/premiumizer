@@ -588,7 +588,7 @@ def email(subject, text=None):
             log = 'Email send for: %s' % greenlet.task.name
         except:
             log = 'Email send for: %s' % subject
-            logger.info(log)
+        logger.info(log)
     except Exception as err:
         try:
             log = 'Email error for: %s error: %s' % (greenlet.task.name, err)
