@@ -37,14 +37,14 @@
                     target="_blank">{{ cfg.update_localcommit }}</a></p>
             {% if cfg.update_available %}
                 <p>Pressing Update will restart Premiumizer.</p>
-                <input type="submit" class="btn-danger" name="submit" value="Update">
+                <input type="submit" class="btn-danger" name="submit" value="Update Premiumizer">
 
                 <p class="text-primary">Changes:</p>
                 <pre>{{ cfg.update_diffcommit }}</pre>
             {% endif %}
             {% if cfg.jd_update_available %}
                 <p>Pressing Update will restart Jdownloader.</p>
-                <input type="submit" class="btn-danger" name="submit" value="JDUP">
+                <input type="submit" class="btn-danger" name="submit" value="Update Jdownloader">
             {% endif %}
         </div>
         <p>&nbsp;</p>
