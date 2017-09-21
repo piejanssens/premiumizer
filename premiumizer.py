@@ -588,7 +588,7 @@ def email(subject, text=None):
             log = 'Email send for: %s' % greenlet.task.name
         except:
             log = 'Email send for: %s' % subject
-            logger.info(log)
+        logger.info(log)
     except Exception as err:
         try:
             log = 'Email error for: %s error: %s' % (greenlet.task.name, err)
@@ -1573,14 +1573,18 @@ def settings():
         elif 'Shutdown' in request.form.values():
             gevent.spawn_later(1, shutdown)
             return 'Shutting down...'
-        elif 'Update' in request.form.values():
+        elif 'Update Premiumizer' in request.form.values():
             gevent.spawn_later(1, update_self)
             return 'Updating, please try and refresh the page in a few seconds...'
-        elif 'JDUP' in request.form.values():
+        elif 'Update Jdownloader' in request.form.values():
             try:
                 cfg.jd_device.update.restart_and_update()
+                flash('Jdownloader update started', 'info')
+                cfg.jd_update_available = 0
             except:
                 logger.error('Jdownloader update failed')
+                flash('Jdownloader update failed', 'info')
+                cfg.jd_update_available = 1
         elif 'Send Test Email' in request.form.values():
             email('Test Email from premiumizer !')
             flash('Email send!', 'info')
