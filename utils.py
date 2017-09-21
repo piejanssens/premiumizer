@@ -23,10 +23,12 @@ def update():
     prem_config.read(os.path.join(runningdir, 'settings.cfg'))
     default_config.read(os.path.join(runningdir, 'settings.cfg.tpl'))
 
+    prem_config.set('update', 'updated', '1')
+    with open(os.path.join(runningdir, 'settings.cfg'), 'w') as configfile:
+        prem_config.write(configfile)
     if prem_config.getfloat('update', 'req_version') < default_config.getfloat('update', 'req_version'):
         import pip
         pip.main(['install', '-r', os.path.join(runningdir, 'requirements.txt')])
-        prem_config.set('update', 'updated', '1')
         prem_config.set('update', 'req_version', (default_config.getfloat('update', 'req_version')))
         with open(os.path.join(runningdir, 'settings.cfg'), 'w') as configfile:
             prem_config.write(configfile)

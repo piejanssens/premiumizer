@@ -73,15 +73,15 @@ if debug_enabled:
     print ('------------------------PREMIUMIZER IS RUNNING IN DEBUG MODE, THIS IS NOT RECOMMENDED--------------------')
     print ('|                                                                                                        |')
     print ('---------------------------------------------------------------------------------------------------------')
-    logger.info('----------------------------------')
-    logger.info('----------------------------------')
-    logger.info('----------------------------------')
-    logger.info('DEBUG Logger Initialized')
+    logger.debug('----------------------------------')
+    logger.debug('----------------------------------')
+    logger.debug('----------------------------------')
+    logger.debug('DEBUG Logger Initialized')
     handler = logging.handlers.RotatingFileHandler(os.path.join(runningdir, 'premiumizerDEBUG.log'),
                                                    maxBytes=(500 * 1024))
     handler.setFormatter(formatterdebug)
     logger.addHandler(handler)
-    logger.info('DEBUG Logfile Initialized')
+    logger.debug('DEBUG Logfile Initialized')
 else:
     logger = logging.getLogger("Rotating log")
     logger.setLevel(logging.INFO)
@@ -89,14 +89,14 @@ else:
     syslog.setFormatter(formatter)
     logger.addHandler(syslog)
     logging.getLogger('apscheduler.executors').addHandler(logging.NullHandler())
-    logger.info('-------------------------------------------------------------------------------------')
-    logger.info('-------------------------------------------------------------------------------------')
-    logger.info('-------------------------------------------------------------------------------------')
-    logger.info('Logger Initialized')
+    logger.debug('-------------------------------------------------------------------------------------')
+    logger.debug('-------------------------------------------------------------------------------------')
+    logger.debug('-------------------------------------------------------------------------------------')
+    logger.debug('Logger Initialized')
     handler = logging.handlers.RotatingFileHandler(os.path.join(runningdir, 'premiumizer.log'), maxBytes=(500 * 1024))
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-    logger.info('Logfile Initialized')
+    logger.debug('Logfile Initialized')
 
 
 # Catch uncaught exceptions in log
@@ -131,21 +131,46 @@ if not log_flask:
 
 # Check if premiumizer has been updated
 if prem_config.getboolean('update', 'updated'):
-    logger.info('*************************************************************************************')
-    logger.info('---------------------------Premiumizer has been updated!!----------------------------')
-    logger.info('*************************************************************************************')
+    if os.path.isfile(os.path.join(runningdir, 'premiumizer.log')):
+        try:
+            with open(os.path.join(runningdir, 'premiumizer.log'), 'w'):
+                pass
+            logger.info('*************************************************************************************')
+            logger.info('----------------Premiumizer.log file has been deleted as a precaution----------------')
+            logger.info('*************************************************************************************')
+        except:
+            logger.error('Could not delete old premiumizer.log file')
+    if os.path.isfile(os.path.join(runningdir, 'premiumizerDEBUG.log')):
+        try:
+            with open(os.path.join(runningdir, 'premiumizerDEBUG.log'), 'w'):
+                pass
+            logger.info('*************************************************************************************')
+            logger.info('---------------PremiumizerDEBUG file has been deleted as a precaution----------------')
+            logger.info('*************************************************************************************')
+        except:
+            logger.error('Could not delete old premiumizerDEBUG.log file')
+    if os.path.isfile(os.path.join(runningdir, 'premiumizer.db')):
+        try:
+            os.remove(os.path.join(runningdir, 'premiumizer.db'))
+            logger.info('*************************************************************************************')
+            logger.info('---------------Premiumizer.db file has been deleted as a precaution----------------')
+            logger.info('*************************************************************************************')
+        except:
+            logger.error('Could not delete old premiumizer.db file')
     if os.path.isfile(os.path.join(runningdir, 'settings.cfg.old2')):
-        logger.info('*************************************************************************************')
-        logger.info('-------Settings file has been updated, old settings file renamed to .old-------')
-        logger.info('*************************************************************************************')
         try:
             shutil.move(os.path.join(runningdir, 'settings.cfg.old2'), os.path.join(runningdir, 'settings.cfg.old'))
+            logger.info('*************************************************************************************')
+            logger.info('-------Settings file has been updated, old settings file renamed to .old-------')
+            logger.info('*************************************************************************************')
         except:
             logger.error('Could not rename old settings file')
     prem_config.set('update', 'updated', '0')
     with open(os.path.join(runningdir, 'settings.cfg'), 'w') as configfile:
         prem_config.write(configfile)
-
+    logger.info('*************************************************************************************')
+    logger.info('---------------------------Premiumizer has been updated!!----------------------------')
+    logger.info('*************************************************************************************')
 #
 logger.info('Running at %s', runningdir)
 
@@ -178,7 +203,15 @@ class PremConfig:
         if self.download_enabled:
             self.download_builtin = 1
         self.download_max = prem_config.getint('downloads', 'download_max')
-        self.download_speed = prem_config.getint('downloads', 'download_speed')
+        self.download_speed = prem_config.get('downloads', 'download_speed')
+        if self.download_speed == '0':
+            self.download_enabled = 0
+        elif self.download_speed == '-1':
+            self.download_speed = int(self.download_speed)
+        else:
+            self.download_speed = float(self.download_speed)
+            self.download_speed = int(self.download_speed * 1048576)
+
         self.download_location = prem_config.get('downloads', 'download_location')
         if os.path.isfile(os.path.join(runningdir, 'nzbtomedia', 'NzbToMedia.py')):
             self.nzbtomedia_location = (os.path.join(runningdir, 'nzbtomedia', 'NzbToMedia.py'))
@@ -189,7 +222,8 @@ class PremConfig:
         self.jd_username = prem_config.get('downloads', 'jd_username')
         self.jd_password = prem_config.get('downloads', 'jd_password')
         self.jd_device_name = prem_config.get('downloads', 'jd_device_name')
-        if self.jd_enabled:
+        self.jd_update_available = 0
+        if self.jd_enabled and self.download_enabled:
             self.download_builtin = 0
             if not self.jd_connected:
                 self.jd = myjdapi.Myjdapi()
@@ -206,6 +240,15 @@ class PremConfig:
                     logger.error('myjdapi : ' + e.message)
                     self.jd = None
                     logger.error('Could not get device name (%s) for My Jdownloader', self.jd_device_name)
+            if self.jd_connected:
+                try:
+                    if self.download_speed == -1:
+                        self.jd_device.toolbar.disable_downloadSpeedLimit()
+                    else:
+                        self.jd_device.toolbar.enable_downloadSpeedLimit()
+                        self.download_speed = self.jd_device.toolbar.get_status().get('limitspeed')
+                except:
+                    logger.error('Could not enable Jdownloader speed limit')
         self.watchdir_enabled = prem_config.getboolean('upload', 'watchdir_enabled')
         self.watchdir_location = prem_config.get('upload', 'watchdir_location')
         if self.watchdir_enabled:
@@ -301,6 +344,11 @@ def check_update(auto_update=cfg.auto_update):
             else:
                 cfg.update_status = 'No update available --- last time checked: ' + datetime.now().strftime(
                     "%d-%m %H:%M:%S") + ' --- last time updated: ' + cfg.update_date
+        if cfg.jd_enabled:
+            try:
+                cfg.jd_update_available = cfg.jd_device.update.update_available()
+            except:
+                logger.error('Jdownloader update check failed')
         scheduler.scheduler.reschedule_job('check_update', trigger='interval', hours=6)
 
 
@@ -367,7 +415,7 @@ logger.debug('Initializing Flask complete')
 
 # Initialise Database
 logger.debug('Initializing Database')
-if os.path.exists(os.path.join(runningdir, 'premiumizer.db')):
+if os.path.isfile(os.path.join(runningdir, 'premiumizer.db')):
     db = shelve.open(os.path.join(runningdir, 'premiumizer.db'))
     if not db.keys():
         db.close()
@@ -478,19 +526,20 @@ def email(subject, text=None):
     global last_email
     if subject == 'download success':
         subject = 'Success for "%s"' % greenlet.task.name
-        text = 'Download of "%s" has successfully completed.' % greenlet.task.name
+        text = 'Download of %s: "%s" has successfully completed.' % (greenlet.task.type, greenlet.task.name)
         text += '\nStatus: SUCCESS'
         text += '\n\nStatistics:'
         text += '\nDownloaded size: %s' % utils.sizeof_human(greenlet.task.size)
         text += '\nDownload Time: %s' % utils.time_human(greenlet.task.dltime, fmt_short=True)
         text += '\nAverage download speed: %s' % greenlet.avgspeed
         text += '\n\nFiles:'
-        for download in greenlet.download_list:
+        for download in greenlet.task.download_list:
             text += '\n' + os.path.basename(download['path'])
+        text += '\n\nLocation: %s' % greenlet.task.dldir
 
     elif subject == 'download failed':
         subject = 'Failure for "%s"' % greenlet.task.name
-        text = 'Download of "%s" has failed.' % greenlet.task.name
+        text = 'Download of %s: "%s" has failed.' % (greenlet.task.type, greenlet.task.name)
         text += '\nStatus: FAILED\nError: %s' % greenlet.task.local_status
         text += '\n\nLog:\n'
         try:
@@ -634,7 +683,7 @@ def get_download_stats_jd(package_name):
         if package['name'] in package_name:
             start_time = time.time()
             package_id = str(package['uuid'])
-            while package['status'] != 'Finished' and package['status'] != 'Failed':
+            while 'finished' not in package and package['status'] != 'Failed':
                 if greenlet.task.local_status == 'stopped':
                     try:
                         cfg.jd_device.downloads.cleanup("DELETE_ALL", "REMOVE_LINKS_AND_DELETE_FILES", "SELECTED",
@@ -669,12 +718,22 @@ def get_download_stats_jd(package_name):
                 package = jd_query_packages(package_id)
             # cfg.jd_device.disconnect()
 
-            if package['status'] == 'Failed':
-                logger.error('JD returned failed for: %s', greenlet.task.name)
-                return 1
             stop_time = time.time()
             dltime = int(stop_time - start_time)
             greenlet.task.update(dltime=dltime)
+
+            while 'Extracting' in package['status']:
+                try:
+                    eta = package['status'].split('ETA: ', 1)[1].split(')', 1)[0]
+                except:
+                    eta = ''
+                greenlet.task.update(speed=" ", progress=99, eta=' Extracting ' + eta)
+                gevent_sleep_time()
+                package = jd_query_packages(package_id)
+
+            if package['status'] == 'Failed':
+                logger.error('JD returned failed for: %s', greenlet.task.name)
+                return 1
 
             try:
                 cfg.jd_device.downloads.cleanup("DELETE_FINISHED", "REMOVE_LINKS_ONLY", "ALL",
@@ -702,9 +761,9 @@ def get_download_stats(downloader, total_size_downloaded):
                                  greenlet.task.size) + ' --- ', progress=progress, eta=eta)
 
     elif downloader.get_status() == 'combining':
-        greenlet.task.update(speed=' ', eta=' Combining files')
+        greenlet.task.update(progress=99, speed=' ', eta=' Combining files')
     elif downloader.get_status() == 'paused':
-        greenlet.task.update(speed=' ', eta=' Download paused')
+        greenlet.task.update(progress=99, speed=' ', eta=' Download paused')
     else:
         logger.debug('Want to update stats, but downloader status is invalid.')
 
@@ -746,21 +805,31 @@ def download_file():
                 if count == 5:
                     return 1
         package_name = str(re.sub('[^0-9a-zA-Z]+', ' ', greenlet.task.name).lower())
-
-    for download in greenlet.download_list:
+    for download in greenlet.task.download_list:
+        if greenlet.task.type == 'FILEHOST':
+            payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'src': download['url']}
+            r = prem_connection("post", "https://www.premiumize.me/api/transfer/create", payload)
+            try:
+                download['url'] = r.text.split('"location":"', 1)[1].splitlines()[0].split('",', 1)[0].replace('\\', '')
+            except:
+                return 1
+            download['path'] = os.path.join(greenlet.task.dldir, download['path'])
         logger.debug('Downloading file: %s', download['path'])
         filename = os.path.basename(download['path'])
         if not os.path.isfile(download['path']) or not os.path.isfile(os.path.join(greenlet.task.dldir, filename)):
             files_downloaded = 1
             if cfg.download_builtin:
                 downloader = SmartDL(download['url'], download['path'], progress_bar=False, logger=logger,
-                                     threads_count=1)
+                                     threads_count=1, fix_urls=False)
                 downloader.start(blocking=False)
-                if cfg.download_speed > 0:
-                    downloader.limit_speed(kbytes=cfg.download_speed)
                 while not downloader.isFinished():
+                    if cfg.download_speed != -1:
+                        jobs = len(scheduler.scheduler._lookup_executor('downloads')._instances)
+                        if jobs != 0:
+                            downloader.limit_speed(kbytes=((cfg.download_speed / 1000) / jobs))
+                        else:
+                            downloader.limit_speed(kbytes=cfg.download_speed / 1000)
                     get_download_stats(downloader, total_size_downloaded)
-                    gevent_sleep_time()
                     # if greenlet.task.local_status == "paused":            #   When paused to long
                     #   downloader.pause()                                  #   PysmartDl fails with WARNING :
                     #   while greenlet.task.local_status == "paused":       #   Diff between downloaded files and expected
@@ -771,6 +840,7 @@ def download_file():
                             downloader.stop()  # does not stop when called once ..
                             gevent.sleep(0.5)  # let's hammer the stop call..
                         return 1
+                    gevent_sleep_time()
                 if downloader.isSuccessful():
                     dltime += downloader.get_dl_time()
                     total_size_downloaded += downloader.get_dl_size()
@@ -815,6 +885,8 @@ def is_sample(dir_content):
 
 def process_dir(dir_content, path):
     logger.debug('def processing_dir started')
+    total_size = 0
+    download_list = []
     if not dir_content:
         return None
     for x in dir_content:
@@ -835,25 +907,24 @@ def process_dir(dir_content, path):
                     if not os.path.exists(path):
                         os.makedirs(path)
                     download = {'path': os.path.join(path, clean_name(x)), 'url': dir_content[x]['url']}
-                    greenlet.download_list.append(download)
-                    greenlet.task.size += dir_content[x]['size']
+                    download_list.append(download)
+                    total_size += dir_content[x]['size']
+                    greenlet.task.update(download_list=download_list, size=total_size)
 
 
 def download_process():
     logger.debug('def download_process started')
     returncode = 0
-    greenlet.download_list = []
-    payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
-               'hash': greenlet.task.hash}
-    r = prem_connection("post", "https://www.premiumize.me/api/torrent/browse", payload)
-    if 'failed' in r:
-        return 1
     greenlet.task.update(local_status='downloading', progress=0, speed=' ', eta=' ')
     greenlet.task.dldir = os.path.join(greenlet.task.dldir, clean_name(greenlet.task.name))
-    greenlet.task.size = 0
-    process_dir(json.loads(r.content)['content'], greenlet.task.dldir)
+    if not greenlet.task.type == 'FILEHOST':
+        payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'hash': greenlet.task.hash}
+        r = prem_connection("post", "https://www.premiumize.me/api/torrent/browse", payload)
+        if 'failed' in r:
+            return 1
+        process_dir(json.loads(r.content)['content'], greenlet.task.dldir)
     logger.info('Downloading: %s', greenlet.task.name)
-    if greenlet.download_list:
+    if greenlet.task.download_list:
         returncode = download_file()
     else:
         logger.error('Error for %s: Nothing to download .. Filtered out or bad torrent/nzb ?')
@@ -901,36 +972,20 @@ def download_task(task):
             if failed:
                 task.update(local_status='failed: nzbToMedia')
 
-    if cfg.remove_cloud:
-        if not failed:
-            payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'type': 'torrent', 'id': task.hash}
-            r = prem_connection("post", "https://www.premiumize.me/api/transfer/delete", payload)
-            if 'failed' not in r:
-                responsedict = json.loads(r.content)
-                if responsedict['status'] == "success":
-                    logger.info('Automatically Deleted: %s from cloud', task.name)
-                    socketio.emit('delete_success', {'data': task.hash})
-                else:
-                    msg = 'Download could not be deleted from the cloud for: %s, message: %s' % (
-                        task.name, responsedict['message'])
-                    logger.error(msg)
-                    logger.info(responsedict['message'])
-                    if cfg.email_enabled:
-                        email('Download could not be deleted', msg)
-                    socketio.emit('delete_failed', {'data': task.hash})
-            else:
-                logger.error('Download could not be removed from cloud: %s', task.name)
-                socketio.emit('delete_failed', {'data': task.hash})
-    else:
-        task.update(local_status='finished')
-
     if cfg.email_enabled and task.local_status != 'stopped' and task.local_status != 'waiting':
         if not failed:
             if not cfg.email_on_failure:
                 email('download success')
         else:
             email('download failed')
-    scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
+
+    if cfg.remove_cloud:
+        if not failed:
+            delete_task(task.hash)
+    else:
+        task.update(local_status='finished')
+
+    scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
 
 
 def prem_connection(method, url, payload, files=None):
@@ -952,6 +1007,8 @@ def prem_connection(method, url, payload, files=None):
                 if cfg.email_enabled:
                     email('Premiumize.me login error', msg)
                 return 'failed: premiumize.me login error'
+            if r.status_code != 200:
+                raise
         except:
             if r_count == 10:
                 try:
@@ -967,6 +1024,8 @@ def prem_connection(method, url, payload, files=None):
                     email('Premiumize.me error', msg)
                 return 'failed'
             gevent.sleep(3)
+            r = None
+            continue
     return r
 
 
@@ -999,6 +1058,14 @@ def parse_tasks(transfers):
     idle = True
     for task in tasks:
         hashes_local.append(task.hash)
+        if task.type == 'FILEHOST':
+            try:
+                x = db[task.hash]
+            except:
+                task.callback = None
+                db[task.hash] = task
+                task.callback = socketio.emit
+            task.update()
     for transfer in reversed(transfers):
         task = get_task(transfer['hash'].encode("utf-8"))
         if not task:
@@ -1006,7 +1073,8 @@ def parse_tasks(transfers):
                 name = 'Loading name'
             else:
                 name = transfer['name']
-            add_task(transfer['hash'].encode("utf-8"), transfer['size'], name, '')
+            type = str.upper(transfer['type'].encode("utf-8"))
+            add_task(transfer['hash'].encode("utf-8"), transfer['size'], name, '', type)
             task = get_task(transfer['hash'].encode("utf-8"))
             hashes_local.append(task.hash)
             task.update(progress=(int(transfer['progress'] * 100)), cloud_status=transfer['status'],
@@ -1089,10 +1157,9 @@ def parse_tasks(transfers):
     hash_diff = [aa for aa in hashes_local if aa not in set(hashes_online)]
     for task_hash in hash_diff:
         for task in tasks:
-            if task.hash == task_hash:
+            if task.type != 'FILEHOST' and task.hash == task_hash:
                 tasks.remove(task)
                 del db[task_hash]
-                break
     db.sync()
     socketio.emit('tasks_updated', {})
     return idle
@@ -1113,7 +1180,7 @@ def check_downloads(dlsize, hash):
         logger.warning(msg)
         if cfg.email_enabled:
             email('Download stuck', msg)
-        scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
+        scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
 
 
 def get_task(hash):
@@ -1142,15 +1209,21 @@ def get_cat_var(category):
     return dldir, dlext, delsample, dlnzbtomedia
 
 
-def add_task(hash, size, name, category):
+def add_task(hash, size, name, category, type):
     logger.debug('def add_task started')
-    dldir, dlext, delsample, dlnzbtomedia = get_cat_var(category)
-    name = name.replace('%5B', '[').replace('%5D', ']').replace('%20', ' ')
-    task = DownloadTask(socketio.emit, hash, size, name, category, dldir, dlext, delsample, dlnzbtomedia)
-    tasks.append(task)
-    logger.info('Added: %s -- Category: %s', task.name, task.category)
-
-    scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
+    task = ''
+    exists = get_task(hash)
+    if not exists:
+        dldir, dlext, delsample, dlnzbtomedia = get_cat_var(category)
+        name = name.replace('%5B', '[').replace('%5D', ']').replace('%20', ' ')
+        task = DownloadTask(socketio.emit, hash, size, name, category, dldir, dlext, delsample, dlnzbtomedia, type)
+        tasks.append(task)
+        if not task.type == 'FILEHOST':
+            logger.info('Added: %s -- Category: %s -- Type: %s', task.name, task.category, task.type)
+    else:
+        task = 'duplicate'
+    scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
+    return task
 
 
 def upload_torrent(filename):
@@ -1191,6 +1264,51 @@ def upload_magnet(magnet):
             return 1
     else:
         return 1
+
+
+def upload_filehost(urls):
+    logger.debug('def upload_filehost started')
+    download_list = []
+    hash = hashlib.sha1(bencode.bencode(urls)).hexdigest()
+    total_filesize = 0
+    failed = 0
+    name = ''
+    task = add_task(hash, 0, name, '', 'FILEHOST')
+    if task == 'duplicate':
+        return
+    for url in urls.splitlines():
+        payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'src': url}
+        r = prem_connection("post", "https://www.premiumize.me/api/transfer/create", payload)
+        try:
+            full_name = r.text.split('"filename":"', 1)[1].splitlines()[0].split('",', 1)[0].encode("utf-8")
+            if task.name == '':
+                name = os.path.splitext(full_name)[0]
+                if name.endswith('.part1'):
+                    name = name.split('.part1', 1)[0]
+            download = {'path': clean_name(full_name), 'url': url}
+            download_list.append(download)
+            try:
+                filesize = int(r.text.split('"filesize":"', 1)[1].splitlines()[0].split('",', 1)[0].encode("utf-8"))
+                total_filesize += filesize
+            except:
+                pass
+        except:
+            failed = 1
+            try:
+                logger.error('filehost error: %s for %s', r.text, urls)
+            except:
+                logger.error('filehost error for %s', urls)
+            break
+    logger.info('Added: %s -- Category: %s -- Type: %s', name, task.category, task.type)
+    if failed:
+        try:
+            eta = r.text
+        except:
+            eta = ""
+        task.update(name=urls, local_status='failed: filehost', cloud_status='finished', speed="", progress=0, eta=eta)
+    else:
+        task.update(name=name, local_status='waiting', cloud_status='finished', progress=100,
+                    download_list=download_list, size=total_filesize)
 
 
 def upload_nzb(filename):
@@ -1240,7 +1358,7 @@ class MyHandler(events.PatternMatchingEventHandler):
 
             if watchdir_file.endswith('.torrent'):
                 hash, name = torrent_metainfo(watchdir_file)
-                add_task(hash, 0, name, category)
+                add_task(hash, 0, name, category, 'TORRENT')
                 failed = upload_torrent(watchdir_file)
             elif watchdir_file.endswith('.magnet'):
                 with open(watchdir_file) as f:
@@ -1255,12 +1373,12 @@ class MyHandler(events.PatternMatchingEventHandler):
                         except AttributeError:
                             logger.error('Extracting hash / name from .magnet failed for: %s', watchdir_file)
                             return
-                        add_task(hash, 0, name, category)
+                        add_task(hash, 0, name, category, 'TORRENT')
                         failed = upload_magnet(magnet)
             elif watchdir_file.endswith('.nzb'):
                 hash = hash_file(watchdir_file)
                 name = os.path.basename(watchdir_file)
-                add_task(hash, 0, name, category)
+                add_task(hash, 0, name, category, 'NZB')
                 failed = upload_nzb(watchdir_file)
             if not failed:
                 logger.debug('Deleting file from watchdir: %s', watchdir_file)
@@ -1314,7 +1432,7 @@ def watchdir():
         watchdog_handler = MyHandler()
         observer.schedule(watchdog_handler, path=cfg.watchdir_location, recursive=True)
         observer.start()
-        logger.info('Initializing watchdog complete')
+        logger.debug('Initializing watchdog complete')
         for dirpath, dirs, files in os.walk(cfg.watchdir_location):
             for file in files:
                 filepath = os.path.join(dirpath, file)
@@ -1327,8 +1445,22 @@ def watchdir():
 @app.route('/')
 @login_required
 def home():
-    return render_template('index.html', download_speed=cfg.download_speed, debug_enabled=debug_enabled,
-                           update_available=cfg.update_available)
+    if cfg.jd_enabled:
+        try:
+            download_speed = cfg.jd_device.toolbar.get_status().get('limitspeed')
+            if download_speed == 0:
+                cfg.download_speed = -1
+            else:
+                cfg.download_speed = download_speed
+        except:
+            pass
+
+    if not cfg.download_speed == -1:
+        download_speed = utils.sizeof_human(cfg.download_speed)
+    else:
+        download_speed = cfg.download_speed
+    return render_template('index.html', download_speed=download_speed, debug_enabled=debug_enabled,
+                           update_available=cfg.update_available, jd_update_available=cfg.jd_update_available)
 
 
 @app.route('/upload', methods=["POST"])
@@ -1350,8 +1482,11 @@ def upload():
             os.remove(upload_file)
             scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
     elif request.data:
-        upload_magnet(request.data)
-        scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
+        if str(request.data).startswith('magnet:'):
+            upload_magnet(request.data)
+        else:
+            upload_filehost(request.data)
+        scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
     return 'OK'
 
 
@@ -1392,9 +1527,11 @@ def history():
                         taskdate = line.split("root", 1)[0].splitlines()[0]
                     else:
                         taskdate = line.split(": INFO ", 1)[0].splitlines()[0]
-                    taskcat = line.split("Category: ", 1)[1].splitlines()[0]
+                    taskcat = line.split("Category: ", 1)[1].splitlines()[0].split(" --", 1)[0]
+                    tasktype = line.split("Type: ", 1)[1].splitlines()[0]
                     history.append(
-                        {'date': taskdate, 'name': taskname, 'category': taskcat, 'downloaded': '', 'deleted': '',
+                        {'date': taskdate, 'name': taskname, 'category': taskcat, 'type': tasktype, 'downloaded': '',
+                         'deleted': '',
                          'nzbtomedia': '', 'email': '', 'info': '', })
                 elif 'Downloading:' in line:
                     history_update(history, line, 'check_name', '')
@@ -1439,6 +1576,14 @@ def settings():
         elif 'Update' in request.form.values():
             gevent.spawn_later(1, update_self)
             return 'Updating, please try and refresh the page in a few seconds...'
+        elif 'JDUP' in request.form.values():
+            try:
+                cfg.jd_device.update.restart_and_update()
+            except:
+                logger.error('Jdownloader update failed')
+        elif 'Send Test Email' in request.form.values():
+            email('Test Email from premiumizer !')
+            flash('Email send!', 'info')
         else:
             global prem_config
             enable_watchdir = 0
@@ -1612,27 +1757,49 @@ def load_user(userid):
 
 @socketio.on('delete_task')
 def delete_task(message):
-    task = get_task(message['data'])
-    if task.local_status != 'stopped':
-        task.update(local_status='stopped')
-    payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'type': 'torrent', 'id': message['data']}
-    r = prem_connection("post", "https://www.premiumize.me/api/transfer/delete", payload)
-    if 'failed' not in r:
-        responsedict = json.loads(r.content)
-        task = get_task(message['data'])
-        if responsedict['status'] == "success":
-            logger.info('Deleted from the cloud: %s', task.name)
-            emit('delete_success', {'data': message['data']})
-            scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
-        else:
-            msg = 'Download could not be deleted from the cloud for: %s, message: %s' % (
-                task.name, responsedict['message'])
+    try:
+        hash = message['data']
+    except:
+        hash = message
+    task = get_task(hash)
+    try:
+        if task.local_status != 'stopped':
+            task.update(local_status='stopped')
+            if cfg.download_builtin:
+                gevent.sleep(8)
+    except:
+        pass
+    if task.type == 'FILEHOST':
+        try:
+            tasks.remove(task)
+            del db[task.hash]
+            db.sync()
+            socketio.emit('delete_success', {'data': hash})
+        except:
+            msg = 'Download could not be deleted from the database: %s' % task.name
             logger.error(msg)
             if cfg.email_enabled:
                 email('Download could not be deleted', msg)
-            emit('delete_failed', {'data': message['data']})
+            socketio.emit('delete_failed', {'data': hash})
     else:
-        emit('delete_failed')
+        payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'type': 'torrent', 'id': hash}
+        r = prem_connection("post", "https://www.premiumize.me/api/transfer/delete", payload)
+        if 'failed' not in r:
+            responsedict = json.loads(r.content)
+            if responsedict['status'] == "success":
+                logger.info('Deleted from the cloud: %s', task.name)
+                socketio.emit('delete_success', {'data': hash})
+            else:
+                msg = 'Download could not be deleted from the cloud for: %s, message: %s' % (
+                    task.name, responsedict['message'])
+                logger.error(msg)
+                if cfg.email_enabled:
+                    email('Download could not be deleted', msg)
+                socketio.emit('delete_failed', {'data': hash})
+        else:
+            logger.error('Download could not be removed from cloud: %s', task.name)
+            socketio.emit('delete_failed', {'data': hash})
+    scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
 
 
 # @socketio.on('pause_task')
@@ -1687,11 +1854,23 @@ def change_category(message):
     data = message['data']
     task = get_task(data['hash'])
     dldir, dlext, delsample, dlnzbtomedia = get_cat_var(data['category'])
-    task.update(local_status=None, process=None, speed=None, category=data['category'], dldir=dldir, dlext=dlext,
-                delsample=delsample,
-                dlnzbtomedia=dlnzbtomedia)
-    logger.info('Task: %s -- Category set to: %s', task.name, task.category)
-    scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
+    if task.type == 'FILEHOST':
+        if task.local_status != 'failed: filehost':
+            task.update(local_status=None, process=None, speed=None, category=data['category'], dldir=dldir,
+                        dlext=dlext, delsample=delsample, dlnzbtomedia=dlnzbtomedia)
+            if cfg.download_enabled:
+                if task.category in cfg.download_categories:
+                    if not task.local_status == ('queued' or 'downloading'):
+                        task.update(local_status='queued')
+                        gevent.sleep(3)
+                        scheduler.scheduler.add_job(download_task, args=(task,), name=task.name,
+                                                    misfire_grace_time=7200, coalesce=False, max_instances=1,
+                                                    jobstore='downloads', executor='downloads', replace_existing=True)
+    else:
+        task.update(local_status=None, process=None, speed=None, category=data['category'], dldir=dldir, dlext=dlext,
+                    delsample=delsample, dlnzbtomedia=dlnzbtomedia)
+        logger.info('Task: %s -- Category set to: %s', task.name, task.category)
+        scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
 
 
 # start the server with the 'run()' method

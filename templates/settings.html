@@ -32,7 +32,7 @@
             {% endif %}
             <p>&nbsp;</p>
             <p class="text-primary">{{ cfg.update_status }}</p>
-            <p class="text-primary">You are on commit: <a
+            <p class="text-primary">Premiumizer is running on commit: <a
                     href="https://github.com/piejanssens/premiumizer/commits/master"
                     target="_blank">{{ cfg.update_localcommit }}</a></p>
             {% if cfg.update_available %}
@@ -41,6 +41,10 @@
 
                 <p class="text-primary">Changes:</p>
                 <pre>{{ cfg.update_diffcommit }}</pre>
+            {% endif %}
+            {% if cfg.jd_update_available %}
+                <p>Pressing Update will restart Jdownloader.</p>
+                <input type="submit" class="btn-danger" name="submit" value="JDUP">
             {% endif %}
         </div>
         <p>&nbsp;</p>
@@ -131,7 +135,7 @@
             <label for="download_max">Max Simultaneous downloads: (Restart required)</label>
             <input type="number" class="form-control" name="download_max"
                    aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_max') }}">
-            <label for="download_speed">Speed limit per download in kiloBytes (-1 = no limit)</label>
+            <label for="download_speed">Speed limit in MegaBytes/s (-1 = no limit)</label>
             <input type="number" class="form-control" name="download_speed"
                    aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_speed') }}">
             <label for="download_location">Download Location:</label>
@@ -245,6 +249,7 @@
             {% else %}
                 <input type="checkbox" class="form-control bootstrap_switch" name="email_enabled" data-size="small">
             {% endif %}
+            <p>&nbsp;</p>
             <label for="email_on_failure">Only on failure:</label>
             {% if settings.get('notifications', 'email_on_failure') == '1' %}
                 <input type="checkbox" class="form-control bootstrap_switch" name="email_on_failure" data-size="small"
@@ -252,6 +257,7 @@
             {% else %}
                 <input type="checkbox" class="form-control bootstrap_switch" name="email_on_failure" data-size="small">
             {% endif %}
+            <p>&nbsp;</p>
             <label for="email_encryption">Use encryption SSL/TLS:</label>
             {% if settings.get('notifications', 'email_encryption') == '1' %}
                 <input type="checkbox" class="form-control bootstrap_switch" name="email_encryption" data-size="small"
@@ -278,7 +284,8 @@
             <label for="email_password">Password (if required):</label>
             <input type="password" class="form-control" name="email_password"
                    aria-describedby="basic-addon1" value="{{ settings.get('notifications', 'email_password') }}">
-
+            <p>&nbsp;</p>
+            <input type="submit" class="btn-info" name="submit" value="Send Test Email">
         </div>
 
     </form>

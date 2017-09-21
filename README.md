@@ -2,7 +2,7 @@
 
 Premiumizer is a download management tool for premiumize.me cloud downloads.
 
-  - Web interface to manage premiumize.me cloud downloads
+  - Web interface to manage premiumize.me downloads: cloud Torrent & Nzb and Filehosts links
   - Category based automatic downloader of finished cloud tasks to local file system
   - Integrates with SickRage, CouchPotato, ... (BlackHole)
   - Integrates with nzbToMedia (post processing)
@@ -60,9 +60,9 @@ Git & Python 2.7 (with pip)
 
 Optional: 
 
-[virtualenv] (https://pypi.python.org/pypi/virtualenv)
+[virtualenv](https://pypi.python.org/pypi/virtualenv)
 
-[NzbToMedia] (https://github.com/clinton-hall/nzbToMedia) version 10.14 & higher
+[NzbToMedia](https://github.com/clinton-hall/nzbToMedia) version 10.14 & higher
 
 
 ### Synology
@@ -71,7 +71,7 @@ Package coming soon(ish).
 ### Windows
 Automatic installation:
 
-Use the [PremiumizerInstaller] (https://github.com/neox387/PremiumizerInstaller/releases)
+Use the [PremiumizerInstaller](https://github.com/neox387/PremiumizerInstaller/releases)
 
 Open services.msc & edit Premiumizer service to logon using your account that is an administrator.
 
@@ -80,12 +80,11 @@ Edit autoProcessMedia.cfg.spc & save it to autoProcessMedia.cfg
 
 Manual installation:
 
-Install [Git] (https://git-scm.com/download/win) &  select: Use git from the windows command prompt.
+Install [Git](https://git-scm.com/download/win) &  select: Use git from the windows command prompt.
 
-Download [Python] (https://www.python.org/ftp/python/2.7.11/python-2.7.11.msi)
+Download [Python](https://www.python.org/ftp/python/2.7.11/python-2.7.11.msi)
 
-1. ```git clone
-https://github.com/piejanssens/premiumizer.git [to a folder]```
+1. ```git clonehttps://github.com/piejanssens/premiumizer.git [to a folder]```
 2. ```pip.exe install virtualenv```
 3. ```virtualenv [your folder]\env```
 4. ```env\Scripts\activate.bat```
@@ -102,15 +101,15 @@ Install NzbToMedia & pywin32 & Microsoft Visual c++ python compiler:
 ### OS X
 Install [brew](http://brew.sh/), use brew to install python
 
-1. ```git clone
-https://github.com/piejanssens/premiumizer.git```
+1. ```git clonehttps://github.com/piejanssens/premiumizer.git```
 2. ```cd premiumizer```
 3. ```virtualenv virtualenv```
 4. ```source virtualenv/bin/activate```
 5. ```pip install -r requirements.txt```
 6. ```./premiumizer.py```
 
-Now use your browser to access [http://127.0.0.1:5000/](http://127.0.0.1:5000/).
+Now use your browser to access [http://127.0.0.1:5000/](http://127.0.0.1:5000/)
+
 Extra: Google how you can turn it into a service and run it in background
 
 ## Updating
@@ -125,4 +124,4 @@ Once you can access the premiumizer web interface make sure you head over to the
 Want to contribute? Great!
 Just fork the github repo, do some awesome stuff and create a pull request.
 
-Report issues or feature enhancements/requests on the [Issues] (https://github.com/piejanssens/premiumizer/issues) page
+Report issues or feature enhancements/requests on the [Issues](https://github.com/piejanssens/premiumizer/issues) page

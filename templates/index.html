@@ -24,15 +24,22 @@
             Update available !! Go to the settings page.
         </div>
     {% endif %}
+    {% if jd_update_available == 1 %}
+        <p>&nbsp;</p>
+        <div id="jd_update_available" class="alert alert-info" role="alert" style="display:inline;">
+            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+            <span class="sr-only">Info:</span>
+            Jdownloader Update available !! Go to the settings page.
+        </div>
+    {% endif %}
     {% if download_speed != -1 %}
         <p>&nbsp;</p>
         <div id="download_speed" class="alert alert-info" role="alert" style="display:inline;">
             <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
             <span class="sr-only">Info:</span>
-            Download speed is limited to {{ download_speed }} kBps.
+            Download speed is limited to {{ download_speed }}/s
         </div>
     {% endif %}
-    <p>&nbsp;</p>
     <div id="main_container" class="container">
 
         <div class="row">
@@ -62,6 +69,16 @@
                 </div>
             </div><!-- /.col-lg-6 -->
         </div><!-- /.row -->
+        <div class="col-lg-12">
+            <div class="input-group">
+                <div class="icon-addon addon-fa">
+                    <textarea class="form-control custom-control" rows="3" style="resize:none"
+                              placeholder="Paste filehosts links"></textarea>
+                    <i class="fa fa-external-link"></i>
+                </div>
+                <span class="input-group-addon btn btn-primary" id="filehost_urls">Start</span>
+            </div>
+        </div>
         <div id="loading_upload" class="row" style="display:none">
             <div class="col-lg-12 text-center">
                 <i class="fa fa-cog fa-spin fa-5x"></i>
@@ -99,5 +116,5 @@
 {% block js_footer %}
     {{ super() }}
     <script type="text/javascript" src="{{ url_for('static', filename='js/socket.io.slim.js') }}?v=1"></script>
-    <script type="text/javascript" src="{{ url_for('static', filename='js/control.js') }}?v=7"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/control.js') }}?v=8"></script>
 {% endblock %}
