@@ -226,20 +226,22 @@ class PremConfig:
         if self.jd_enabled and self.download_enabled:
             self.download_builtin = 0
             if not self.jd_connected:
-                self.jd = myjdapi.Myjdapi()
                 try:
+                    self.jd = myjdapi.Myjdapi()
                     self.jd.set_app_key('https://git.io/vaDti')
                     self.jd.connect(self.jd_username, self.jd_password)
+                    self.jd_connected = 1
                 except BaseException as e:
                     logger.error('myjdapi : ' + e.message)
                     logger.error('Could not connect to My Jdownloader')
+                    self.jd_connected = 0
                 try:
                     self.jd_device = self.jd.get_device(self.jd_device_name)
                     self.jd_connected = 1
                 except BaseException as e:
                     logger.error('myjdapi : ' + e.message)
-                    self.jd = None
                     logger.error('Could not get device name (%s) for My Jdownloader', self.jd_device_name)
+                    self.jd_connected = 0
             if self.jd_connected:
                 try:
                     if self.download_speed == -1:
@@ -303,6 +305,25 @@ class PremConfig:
 cfg = PremConfig()
 
 
+def jd_connect():
+    try:
+        cfg.jd = myjdapi.Myjdapi()
+        cfg.jd.set_app_key('https://git.io/vaDti')
+        cfg.jd.connect(cfg.jd_username, cfg.jd_password)
+        cfg.jd_connected = 1
+    except BaseException as e:
+        logger.error('myjdapi : ' + e.message)
+        logger.error('Could not connect to My Jdownloader')
+        cfg.jd_connected = 0
+    try:
+        cfg.jd_device = cfg.jd.get_device(cfg.jd_device_name)
+        cfg.jd_connected = 1
+    except BaseException as e:
+        logger.error('myjdapi : ' + e.message)
+        logger.error('Could not get device name (%s) for My Jdownloader', cfg.jd_device_name)
+        cfg.jd_connected = 0
+
+
 # Automatic update checker
 def check_update(auto_update=cfg.auto_update):
     logger.debug('def check_update started')
@@ -348,7 +369,11 @@ def check_update(auto_update=cfg.auto_update):
             try:
                 cfg.jd_update_available = cfg.jd_device.update.update_available()
             except:
-                logger.error('Jdownloader update check failed')
+                jd_connect()
+                try:
+                    cfg.jd_update_available = cfg.jd_device.update.update_available()
+                except:
+                    logger.error('Jdownloader update check failed')
         scheduler.scheduler.reschedule_job('check_update', trigger='interval', hours=6)
 
 
@@ -610,8 +635,12 @@ def jd_query_packages(id=None):
         try:
             response = cfg.jd_device.downloads.query_packages()
         except BaseException as e:
-            response = None
-            logger.error('myjdapi : ' + e.message)
+            jd_connect()
+            try:
+                response = cfg.jd_device.downloads.query_packages()
+            except:
+                response = None
+                logger.error('myjdapi : ' + e.message)
         while not response:
             gevent.sleep(5)
             if not jd_packages['time'] < (datetime.now() - timedelta(seconds=seconds)):
@@ -779,31 +808,21 @@ def download_file():
         try:
             query_links = cfg.jd_device.downloads.query_links()
         except BaseException as e:
-            query_links = False
-            pass
-        if query_links is False:
-            try:
-                cfg.jd = myjdapi.Myjdapi()
-                cfg.jd.connect(cfg.jd_username, cfg.jd_password)
-                cfg.jd_device = cfg.jd.get_device(cfg.jd_device_name)
-                cfg.jd_connected = 1
-            except BaseException as e:
-                logger.error('myjdapi : ' + e.message)
-                logger.error(
-                    'Could not connect to My Jdownloader check username/password & device name, task failed: %s',
-                    greenlet.task.name)
-                cfg.jd_connected = 0
+            jd_connect()
+            if cfg.jd_connected:
+                try:
+                    query_links = cfg.jd_device.downloads.query_links()
+                except BaseException as e:
+                    query_links = False
+                while query_links is False:
+                    gevent.sleep(5)
+                    query_links = cfg.jd_device.downloads.query_links()
+                    count = + 1
+                    if count == 5:
+                        logger.error('myjdapi : ' + e.message)
+                        return 1
+            else:
                 return 1
-            try:
-                query_links = cfg.jd_device.downloads.query_links()
-            except BaseException as e:
-                logger.error('myjdapi : ' + e.message)
-            while query_links is False:
-                gevent.sleep(5)
-                query_links = cfg.jd_device.downloads.query_links()
-                count = + 1
-                if count == 5:
-                    return 1
         package_name = str(re.sub('[^0-9a-zA-Z]+', ' ', greenlet.task.name).lower())
     for download in greenlet.task.download_list:
         if greenlet.task.type == 'FILEHOST':
