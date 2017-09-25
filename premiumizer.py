@@ -1369,7 +1369,7 @@ class MyHandler(events.PatternMatchingEventHandler):
                     else:
                         try:
                             hash = re.search('btih:(.+?)&', magnet).group(1)
-                            name = re.search('&dn=(.+?)&', magnet).group(1)
+                            name = re.search('&dn=(.+?)(&|.torrent)', magnet).group(1)
                         except AttributeError:
                             logger.error('Extracting hash / name from .magnet failed for: %s', watchdir_file)
                             return
