@@ -1149,7 +1149,7 @@ def parse_tasks(transfers):
                 idle = False
             elif task.cloud_status == 'finished':
                 if cfg.download_enabled:
-                    if task.category in cfg.download_categories:
+                    if task.category in cfg.download_categories or cfg.download_all:
                         if not task.local_status == ('queued' or 'downloading'):
                             task.update(local_status='queued')
                             gevent.sleep(3)
