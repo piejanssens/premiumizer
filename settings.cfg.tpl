@@ -19,6 +19,7 @@ pin =
 
 [downloads]
 download_enabled = 0
+download_all = 0
 download_max = 1
 download_speed = -1
 remove_cloud = 0
@@ -56,6 +57,11 @@ cat_dir[5] =
 cat_ext[5] =
 cat_delsample[5] = 0
 cat_nzbtomedia[5] = 0
+cat_name[6] = default
+cat_dir[6] =
+cat_ext[6] =
+cat_delsample[6] = 0
+cat_nzbtomedia[6] = 0
 
 
 [upload]
@@ -80,5 +86,5 @@ email_password =
 updated = 1
 auto_update = 0
 update_date = Never
-config_version = 1.5
+config_version = 1.6
 req_version = 5.9
