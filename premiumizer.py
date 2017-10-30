@@ -199,6 +199,7 @@ class PremConfig:
         self.prem_customer_id = prem_config.get('premiumize', 'customer_id')
         self.prem_pin = prem_config.get('premiumize', 'pin')
         self.remove_cloud = prem_config.getboolean('downloads', 'remove_cloud')
+        self.download_all = prem_config.getboolean('downloads', 'download_all')
         self.download_enabled = prem_config.getboolean('downloads', 'download_enabled')
         if self.download_enabled:
             self.download_builtin = 1
@@ -1093,7 +1094,10 @@ def parse_tasks(transfers):
             else:
                 name = transfer['name']
             type = str.upper(transfer['type'].encode("utf-8"))
-            add_task(transfer['hash'].encode("utf-8"), transfer['size'], name, '', type)
+            if cfg.download_all:
+                add_task(transfer['hash'].encode("utf-8"), transfer['size'], name, 'default', type)
+            else:
+                add_task(transfer['hash'].encode("utf-8"), transfer['size'], name, '', type)
             task = get_task(transfer['hash'].encode("utf-8"))
             hashes_local.append(task.hash)
             task.update(progress=(int(transfer['progress'] * 100)), cloud_status=transfer['status'],
@@ -1145,6 +1149,8 @@ def parse_tasks(transfers):
                 idle = False
             elif task.cloud_status == 'finished':
                 if cfg.download_enabled:
+                    if task.category == '' and cfg.download_all:
+                        task.update(category='default')
                     if task.category in cfg.download_categories:
                         if not task.local_status == ('queued' or 'downloading'):
                             task.update(local_status='queued')
@@ -1622,6 +1628,10 @@ def settings():
                 prem_config.set('downloads', 'download_enabled', '1')
             else:
                 prem_config.set('downloads', 'download_enabled', '0')
+            if request.form.get('download_all'):
+                prem_config.set('downloads', 'download_all', '1')
+            else:
+                prem_config.set('downloads', 'download_all', '0')
             if request.form.get('remove_cloud'):
                 prem_config.set('downloads', 'remove_cloud', '1')
             else:
