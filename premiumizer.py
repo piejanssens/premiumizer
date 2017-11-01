@@ -199,6 +199,7 @@ class PremConfig:
         self.prem_customer_id = prem_config.get('premiumize', 'customer_id')
         self.prem_pin = prem_config.get('premiumize', 'pin')
         self.remove_cloud = prem_config.getboolean('downloads', 'remove_cloud')
+        self.seed_torrent = prem_config.getboolean('downloads', 'seed_torrent')
         self.download_all = prem_config.getboolean('downloads', 'download_all')
         self.download_enabled = prem_config.getboolean('downloads', 'download_enabled')
         if self.download_enabled:
@@ -1253,7 +1254,10 @@ def add_task(hash, size, name, category, type):
 
 def upload_torrent(filename):
     logger.debug('def upload_torrent started')
-    payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'type': 'torrent'}
+    if cfg.seed_torrent:
+        payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'type': 'torrent', 'seed': '2or48h'}
+    else:
+        payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'type': 'torrent'}
     files = {'src': open(filename, 'rb')}
     logger.debug('Uploading torrent to the cloud: %s', filename)
     r = prem_connection("postfile", "https://www.premiumize.me/api/transfer/create", payload, files)
@@ -1636,6 +1640,10 @@ def settings():
                 prem_config.set('downloads', 'remove_cloud', '1')
             else:
                 prem_config.set('downloads', 'remove_cloud', '0')
+            if request.form.get('seed_torrent'):
+                prem_config.set('downloads', 'seed_torrent', '1')
+            else:
+                prem_config.set('downloads', 'seed_torrent', '0')
             if request.form.get('jd_enabled'):
                 prem_config.set('downloads', 'jd_enabled', '1')
             else:
