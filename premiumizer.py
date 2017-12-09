@@ -1094,7 +1094,11 @@ def parse_tasks(transfers):
                 name = 'Loading name'
             else:
                 name = transfer['name']
-            type = str.upper(transfer['type'].encode("utf-8"))
+            if name.endswith('.nzb'):
+                name = os.path.splitext(name)[0]
+                type = 'NZB'
+            else:
+                type = str.upper(transfer['type'].encode("utf-8"))
             if cfg.download_all:
                 add_task(transfer['hash'].encode("utf-8"), transfer['size'], name, 'default', type)
             else:
@@ -1144,6 +1148,9 @@ def parse_tasks(transfers):
                 else:
                     size = utils.sizeof_human(transfer['size'] / 100 * progress) + ' / ' + utils.sizeof_human(
                         transfer['size'])
+                if name.endswith('.nzb'):
+                    name = os.path.splitext(name)[0]
+                    type = 'NZB'
                 task.update(progress=(int(transfer['progress'] * 100)), cloud_status=transfer['status'],
                             name=name,
                             dlsize=size + ' --- ', speed=speed + ' --- ', eta=eta)
@@ -1407,6 +1414,7 @@ class MyHandler(events.PatternMatchingEventHandler):
             elif watchdir_file.endswith('.nzb'):
                 hash = hash_file(watchdir_file)
                 name = os.path.basename(watchdir_file)
+                name = os.path.splitext(name)[0]
                 add_task(hash, 0, name, category, 'NZB')
                 failed = upload_nzb(watchdir_file)
             if not failed:
