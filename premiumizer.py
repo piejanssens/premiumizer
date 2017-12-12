@@ -1094,7 +1094,11 @@ def parse_tasks(transfers):
                 name = 'Loading name'
             else:
                 name = transfer['name']
-            type = str.upper(transfer['type'].encode("utf-8"))
+            if name.endswith('.nzb'):
+                name = os.path.splitext(name)[0]
+                type = 'NZB'
+            else:
+                type = str.upper(transfer['type'].encode("utf-8"))
             if cfg.download_all:
                 add_task(transfer['hash'].encode("utf-8"), transfer['size'], name, 'default', type)
             else:
@@ -1106,13 +1110,12 @@ def parse_tasks(transfers):
         if task.local_status is None:
             if task.cloud_status != 'finished':
                 progress = int(transfer['progress'] * 100)
-                if transfer['name'] is None or transfer['name'] == 0:
-                    if task.name is None:
-                        name = 'Loading name'
-                    else:
-                        name = task.name
-                else:
+                if task.name is not None and task.name != 'Loading name':
+                    name = task.name
+                elif task.name == 'Loading name' and transfer['name'] is not None and transfer['name'] != 0:
                     name = transfer['name']
+                else:
+                    name = 'Loading name'
                 if transfer['eta'] is None or transfer['eta'] == 0:
                     try:
                         if 'ETA is' in transfer['message']:
@@ -1144,6 +1147,9 @@ def parse_tasks(transfers):
                 else:
                     size = utils.sizeof_human(transfer['size'] / 100 * progress) + ' / ' + utils.sizeof_human(
                         transfer['size'])
+                if name.endswith('.nzb'):
+                    name = os.path.splitext(name)[0]
+                    type = 'NZB'
                 task.update(progress=(int(transfer['progress'] * 100)), cloud_status=transfer['status'],
                             name=name,
                             dlsize=size + ' --- ', speed=speed + ' --- ', eta=eta)
@@ -1185,7 +1191,10 @@ def parse_tasks(transfers):
         for task in tasks:
             if task.type != 'FILEHOST' and task.hash == task_hash:
                 tasks.remove(task)
-                del db[task_hash]
+                try:
+                    del db[task_hash]
+                except:
+                    pass
     db.sync()
     socketio.emit('tasks_updated', {})
     return idle
@@ -1248,7 +1257,7 @@ def add_task(hash, size, name, category, type):
             logger.info('Added: %s -- Category: %s -- Type: %s', task.name, task.category, task.type)
     else:
         task = 'duplicate'
-    scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
+    scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=5)
     return task
 
 
@@ -1407,11 +1416,13 @@ class MyHandler(events.PatternMatchingEventHandler):
             elif watchdir_file.endswith('.nzb'):
                 hash = hash_file(watchdir_file)
                 name = os.path.basename(watchdir_file)
+                name = os.path.splitext(name)[0]
                 add_task(hash, 0, name, category, 'NZB')
                 failed = upload_nzb(watchdir_file)
             if not failed:
                 logger.debug('Deleting file from watchdir: %s', watchdir_file)
                 os.remove(watchdir_file)
+                scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
 
     def on_created(self, event):
         self.process(event)
