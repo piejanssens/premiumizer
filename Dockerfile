@@ -9,7 +9,8 @@ RUN addgroup -S -g 6006 premiumizer \
     && adduser -S -D -u 6006 -G premiumizer premiumizer
 COPY --from=0 /usr/local/lib/python2.7/site-packages /usr/local/lib/python2.7/site-packages/ 
 COPY . /premiumizer/
-RUN chown -R premiumizer:premiumizer /premiumizer && chmod -R 777 /premiumizer
+RUN chown -R premiumizer:premiumizer /premiumizer && chmod -R 777 /premiumizer \
+    && sed -i "s/127.0.0.1/0.0.0.0/g" premiumizer/settings.cfg.tpl
 USER premiumizer
 WORKDIR /premiumizer
 EXPOSE 5000
