@@ -37,7 +37,6 @@ from watchdog.observers import Observer
 from werkzeug.utils import secure_filename
 
 from DownloadTask import DownloadTask
-from pyaria2 import PyAria2
 
 # "https://www.premiumize.me/api"
 print ('------------------------------------------------------------------------------------------------------------')
