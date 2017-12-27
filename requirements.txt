@@ -1,5 +1,5 @@
 watchdog==0.8.3
-APScheduler==3.4.0
+APScheduler==3.5.0
 greenlet==0.4.12
 bencode==1.0
 chardet==3.0.4
@@ -8,7 +8,7 @@ futures==3.2.0
 python-engineio==2.0.1
 flask==0.12.2
 flask_apscheduler==1.7.1
-flask_socketio==2.9.2
+flask_socketio==2.9.3
 flask-login==0.4.1
 flask-compress==1.4.0
 flask-reverse-proxy==0.2.0.2
@@ -18,7 +18,7 @@ MarkupSafe==1.0
 pathtools==0.1.2
 https://github.com/neox387/pySmartDL/archive/1.2.7.zip#egg=PySmartDL==1.2.7
 requests==2.18.4
-python-socketio==1.8.3
+python-socketio==1.8.4
 tzlocal==1.5.1
 werkzeug==0.13
 itsdangerous==0.24
