@@ -28,10 +28,10 @@ function show_premiumize_connect_error() {
     $('#main_container').attr('style', 'display: none');
 }
 
-function category_selected(hash, category) {
+function category_selected(id, category) {
     socket.emit('change_category', {
         data: {
-            hash: hash,
+            id: id,
             category: category
         }
     });
@@ -121,24 +121,23 @@ function update_task(task) {
     }
 
     var update = false;
-    if ($("#" + task.hash).length > 0) {
+    if ($("#" + task.id).length > 0) {
         update = true;
     }
 
     var dropDown = '<div class="dropdown"><button class="btn btn-primary dropdown-toggle' + categoryState + '" type="button" data-toggle="dropdown">' +
         task.category + '<span class="caret"></span></button><ul class="dropdown-menu">';
     for (category in download_categories) {
-        dropDown += '<li><a href="javascript:category_selected(\'' + task.hash + '\', \'' + download_categories[category] + '\')" class="download_category">' + download_categories[category] + '</a></li>';
+        dropDown += '<li><a href="javascript:category_selected(\'' + task.id + '\', \'' + download_categories[category] + '\')" class="download_category">' + download_categories[category] + '</a></li>';
     }
     dropDown += '</ul></div>';
 
-    var htmlString = '<div class="panel panel-default' + (!update ? ' animated fadeInDown' : "") + ' task_panel" id="' + task.hash + '">' +
+    var htmlString = '<div class="panel panel-default' + (!update ? ' animated fadeInDown' : "") + ' task_panel" id="' + task.id + '">' +
         '<div class="panel-body">' +
         '<div class="row">' +
         '<span class="col-md-1 text-center">' +
         '<div class="row"><i class="fa fa-' + stateIcon + ' fa-fw fa-2x"></i></div>' +
         '<div class="row"><span class="label label-' + stateColor + '">' + stateStr + '</span></div>' +
-        '<div class="row"><h5>' + task.type + '</h5></div>' +
         '</span>' +
         '<span class="col-md-1 text-center">' +
         '<div class="row">' + dropDown + '</div>' +
@@ -149,14 +148,14 @@ function update_task(task) {
         '<div class="row"><h6>' + (task.progress != 100 ? "Speed: " + task.speed + "Progress: " + task.dlsize + " ETA: " + task.eta : '') + '</h6></div>' +
         '</span>' +
         '<span class="col-md-3">' +
-        '<div class="btn-toolbar text-center"><a class="btn btn-danger delete_btn" href="#" onclick="delete_task(event)"><i class="fa fa-trash-o fa-lg"></i> Delete</a>' + (task.cloud_status == "finished" ? '<a class="btn btn-success" href="https://www.premiumize.me/browsetorrent?hash=' + task.hash + '" target="_blank"><i class="fa fa-folder-open-o fa-lg"></i> Browse</a>' : "") + (task.local_status == "downloading" ? '<a class="btn btn-warning"href="#" onclick="stop_task(event)"><i class="fa fa-trash-o fa-lg"></i> Stop DL</a>' : "") + '</div>' +
+        '<div class="btn-toolbar text-center"><a class="btn btn-danger delete_btn" href="#" onclick="delete_task(event)"><i class="fa fa-trash-o fa-lg"></i> Delete</a>' + (task.cloud_status == "finished" ? '<a class="btn btn-success" href="https://www.premiumize.me/files?folder_id=' + task.id + '" target="_blank"><i class="fa fa-folder-open-o fa-lg"></i> Browse</a>' : "") + (task.local_status == "downloading" ? '<a class="btn btn-warning"href="#" onclick="stop_task(event)"><i class="fa fa-trash-o fa-lg"></i> Stop DL</a>' : "") + '</div>' +
         '</span>' +
         '</div>' +
         '</div>' +
         '</div>';
 
     if (update) {
-        $("#" + task.hash).replaceWith(htmlString);
+        $("#" + task.id).replaceWith(htmlString);
     } else {
         $("#download_section").prepend(htmlString);
     }
@@ -356,26 +355,26 @@ function update_task(task) {
 
 function delete_task(e) {
     var elem = $(e.target);
-    var hash = elem.closest('.panel').attr('id');
+    var id = elem.closest('.panel').attr('id');
     socket.emit('delete_task', {
-        data: hash
+        data: id
     });
 }
 
 /*
  function pause_task(e) {
  var elem = $(e.target);
- var hash = elem.closest('.panel').attr('id');
+ var id = elem.closest('.panel').attr('id');
  socket.emit('pause_task', {
- data: hash
+ data: id
  });
  }
  */
 function stop_task(e) {
     var elem = $(e.target);
-    var hash = elem.closest('.panel').attr('id');
+    var id = elem.closest('.panel').attr('id');
     socket.emit('stop_task', {
-        data: hash
+        data: id
     });
 }
 
