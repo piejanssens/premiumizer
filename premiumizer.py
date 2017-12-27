@@ -919,7 +919,7 @@ def process_dir(dir_content, path):
                 if cfg.download_enabled:
                     if not os.path.exists(path):
                         os.makedirs(path)
-                    download = {'path': os.path.join(path, clean_name(x)), 'url': x['link']}
+                    download = {'path': os.path.join(path, clean_name(x['name'])), 'url': x['link']}
                     download_list.append(download)
                     total_size += x['size']
                     greenlet.task.update(download_list=download_list, size=total_size)
@@ -939,7 +939,7 @@ def download_process():
     if greenlet.task.download_list:
         returncode = download_file()
     else:
-        logger.error('Error for %s: Nothing to download .. Filtered out or bad torrent/nzb ?')
+        logger.error('Error for %s: Nothing to download .. Filtered out or bad torrent/nzb ?', greenlet.task.name)
         returncode = 1
     if returncode == 0:
         greenlet.task.update(progress=100, speed=' ', eta=' ')
