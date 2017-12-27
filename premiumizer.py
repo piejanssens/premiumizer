@@ -553,7 +553,7 @@ def email(subject, text=None):
     global last_email
     if subject == 'download success':
         subject = 'Success for "%s"' % greenlet.task.name
-        text = 'Download of %s: "%s" has successfully completed.' % greenlet.task.name
+        text = 'Download of %s: has successfully completed.' % greenlet.task.name
         text += '\nStatus: SUCCESS'
         text += '\n\nStatistics:'
         text += '\nDownloaded size: %s' % utils.sizeof_human(greenlet.task.size)
@@ -566,7 +566,7 @@ def email(subject, text=None):
 
     elif subject == 'download failed':
         subject = 'Failure for "%s"' % greenlet.task.name
-        text = 'Download of %s: "%s" has failed.' % greenlet.task.name
+        text = 'Download of %s: has failed.' % greenlet.task.name
         text += '\nStatus: FAILED\nError: %s' % greenlet.task.local_status
         text += '\n\nLog:\n'
         try:
@@ -1244,12 +1244,13 @@ def add_task(id, size, name, category, folder_id=None):
     if not exists:
         dldir, dlext, delsample, dlnzbtomedia = get_cat_var(category)
         name = name.replace('%5B', '[').replace('%5D', ']').replace('%20', ' ')
-        task = DownloadTask(socketio.emit, id.encode('ascii','ignore'), folder_id, size, name, category, dldir, dlext, delsample, dlnzbtomedia)
+        task = DownloadTask(socketio.emit, id.encode('ascii', 'ignore'), folder_id, size, name, category, dldir, dlext,
+                            delsample, dlnzbtomedia)
         tasks.append(task)
         logger.info('Added: %s -- Category: %s', task.name, task.category)
     else:
         task = 'duplicate'
-    #scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=5)
+    # scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=5)
     return task
 
 
