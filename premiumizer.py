@@ -930,6 +930,9 @@ def download_process():
     returncode = 0
     greenlet.task.update(local_status='downloading', progress=0, speed=' ', eta=' ')
     greenlet.task.dldir = os.path.join(greenlet.task.dldir, clean_name(greenlet.task.name))
+    if greenlet.task.folder_id is None:
+        logger.error('Download failed for: %s, folder_id is None', greenlet.task.name)
+        return 1
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'id': greenlet.task.folder_id}
     r = prem_connection("post", "https://www.premiumize.me/api/folder/list", payload)
     if 'failed' in r:
@@ -1072,80 +1075,61 @@ def parse_tasks(transfers):
         id_local.append(task.id)
     for transfer in reversed(transfers):
         task = get_task(transfer['id'].encode("utf-8"))
+        try:
+            if 'ETA is' in transfer['message']:
+                eta = transfer['message'].split("ETA is", 1)[1]
+            else:
+                eta = ' '
+        except:
+            eta = ' '
+        try:
+            if 'Downloading at' in transfer['message']:
+                speed = transfer['message'].split("Downloading at", 1)[1].split(". ", 1)[0]
+            else:
+                speed = ' '
+        except:
+            speed = ' '
+        try:
+            if '% of' in transfer['message']:
+                size = transfer['message'].split("of ", 1)[1].split(" finished", 1)[0]
+                progress = int(transfer['message'].split("s.", 1)[1].split(" of", 1)[0])
+            else:
+                size = ' '
+                progress = int(round(float(transfer['progress']) * 100))
+        except:
+            size = ' '
+            progress = int(round(float(transfer['progress']) * 100))
+        try:
+            folder_id = transfer['folder_id'].encode("utf-8")
+        except:
+            folder_id = None
         if not task:
             if transfer['name'] is None or transfer['name'] == 0:
                 name = 'Loading name'
             else:
                 name = transfer['name']
-            try:
-                size = transfer['size']
-            except:
-                size = 0
-            try:
-                speed_down = transfer['speed_down']
-            except:
-                speed_down = ' '
+                if 'download.php?id=' in name:
+                    name = name.split("&f=", 1)[1]
             if cfg.download_all:
-                add_task(transfer['id'].encode("utf-8"), size, name, 'default', transfer['folder_id'].encode("utf-8"))
+                add_task(transfer['id'].encode("utf-8"), size, name, 'default', folder_id)
             else:
-                add_task(transfer['id'].encode("utf-8"), size, name, '', transfer['folder_id'].encode("utf-8"))
+                add_task(transfer['id'].encode("utf-8"), size, name, '', folder_id)
             task = get_task(transfer['id'].encode("utf-8"))
             id_local.append(task.id)
-            task.update(progress=(int(transfer['progress'] * 100)), cloud_status=transfer['status'], speed=speed_down)
+            task.update(progress=progress, cloud_status=transfer['status'], dlsize=size + ' --- ',
+                        speed=speed + ' --- ', eta=eta)
         if task.local_status is None:
             if task.cloud_status != 'finished':
-                progress = int(transfer['progress'] * 100)
                 if task.name is not None and task.name != 'Loading name':
                     name = task.name
                 elif task.name == 'Loading name' and transfer['name'] is not None and transfer['name'] != 0:
                     name = transfer['name']
+                    if 'download.php?id=' in name:
+                        name = name.split("&f=", 1)[1]
                 else:
                     name = 'Loading name'
-                try:
-                    if transfer['eta'] is None or transfer['eta'] == 0:
-                        try:
-                            if 'ETA is' in transfer['message']:
-                                eta = transfer['message'].split("ETA is", 1)[1]
-                            else:
-                                eta = ' '
-                        except:
-                            eta = ' '
-                    else:
-                        eta = utils.time_human(transfer['eta'], fmt_short=True)
-                except:
-                    eta = ' '
-                try:
-                    if transfer['speed_down'] is None or transfer['speed_down'] == 0:
-                        try:
-                            if 'Downloading at' in transfer['message']:
-                                speed = transfer['message'].split("Downloading at", 1)[1].split(". ", 1)[0]
-                            else:
-                                speed = ' '
-                        except:
-                            speed = ' '
-                    else:
-                        speed = utils.sizeof_human(transfer['speed_down']) + '/s '
-                except:
-                    speed = ' '
-                try:
-                    if transfer['size'] is None or transfer['size'] == 0:
-                        try:
-                            if '% of' in transfer['message']:
-                                size = transfer['message'].split("s.", 1)[1].split(" finished", 1)[0]
-                            else:
-                                size = ' '
-                        except:
-                            size = ' '
-                    else:
-                        size = utils.sizeof_human(transfer['size'] / 100 * progress) + ' / ' + utils.sizeof_human(
-                            transfer['size'])
-                except:
-                    size = ' '
-                if name.endswith('.nzb'):
-                    name = os.path.splitext(name)[0]
-                task.update(progress=(int(transfer['progress'] * 100)), cloud_status=transfer['status'],
-                            name=name,
-                            dlsize=size + ' --- ', speed=speed + ' --- ', eta=eta)
+                task.update(progress=progress, cloud_status=transfer['status'], name=name, dlsize=size + ' --- ',
+                            speed=speed + ' --- ', eta=eta)
                 idle = False
             elif task.cloud_status == 'finished':
                 if cfg.download_enabled:
@@ -1153,22 +1137,20 @@ def parse_tasks(transfers):
                         task.update(category='default')
                     if task.category in cfg.download_categories:
                         if not task.local_status == ('queued' or 'downloading'):
-                            task.update(local_status='queued')
+                            task.update(local_status='queued', folder_id=folder_id)
                             gevent.sleep(3)
                             scheduler.scheduler.add_job(download_task, args=(task,), name=task.name,
                                                         misfire_grace_time=7200, coalesce=False, max_instances=1,
                                                         jobstore='downloads', executor='downloads',
                                                         replace_existing=True)
                     elif task.category == '':
-                        task.update(local_status='waiting', progress=100)
+                        task.update(local_status='waiting', progress=100, folder_id=folder_id)
                 else:
-                    task.update(local_status='finished', speed=None)
+                    task.update(local_status='finished', speed=None, folder_id=folder_id)
         else:
             if task.local_status == 'downloading':
-                dlsize = task.dlsize
-                id = task.id
                 if task.name not in str(scheduler.scheduler.get_jobs('check_downloads')):
-                    scheduler.scheduler.add_job(check_downloads, args=(dlsize, id),
+                    scheduler.scheduler.add_job(check_downloads, args=(task.dlsize, task.id),
                                                 name=(task.name + ' check_downloads'), misfire_grace_time=7200,
                                                 jobstore='check_downloads', replace_existing=True, max_instances=1,
                                                 coalesce=True, next_run_time=(datetime.now() + timedelta(minutes=1)))
@@ -1243,8 +1225,11 @@ def add_task(id, size, name, category, folder_id=None):
     exists = get_task(id)
     if not exists:
         dldir, dlext, delsample, dlnzbtomedia = get_cat_var(category)
-        name = name.replace('%5B', '[').replace('%5D', ']').replace('%20', ' ')
-        task = DownloadTask(socketio.emit, id.encode('ascii', 'ignore'), folder_id, size, name, category, dldir, dlext,
+        try:
+            name = name.replace('%5B', '[').replace('%5D', ']').replace('%20', ' ')
+        except:
+            pass
+        task = DownloadTask(socketio.emit, id.encode("utf-8"), folder_id, size, name, category, dldir, dlext,
                             delsample, dlnzbtomedia)
         tasks.append(task)
         logger.info('Added: %s -- Category: %s', task.name, task.category)
@@ -1273,9 +1258,9 @@ def upload_torrent(filename):
             logger.error(msg)
             if cfg.email_enabled:
                 email('Upload of torrent failed', msg)
-            return 1
+            return 'failed'
     else:
-        return 1
+        return 'failed'
 
 
 def upload_magnet(magnet):
@@ -1292,9 +1277,9 @@ def upload_magnet(magnet):
             logger.error(msg)
             if cfg.email_enabled:
                 email('Upload of magnet failed', msg)
-            return 1
+            return 'failed'
     else:
-        return 1
+        return 'failed'
 
 
 def upload_filehost(urls):
@@ -1359,9 +1344,9 @@ def upload_nzb(filename):
             logger.error(msg)
             if cfg.email_enabled:
                 email('Upload of nzb failed', msg)
-            return 1
+            return 'failed'
     else:
-        return 1
+        return 'failed'
 
 
 def send_categories():
@@ -1389,7 +1374,7 @@ class MyHandler(events.PatternMatchingEventHandler):
                 category = ''
             if watchdir_file.endswith('.torrent'):
                 id = upload_torrent(watchdir_file)
-                if id == 1:
+                if id == 'failed':
                     failed = 1
                 name = torrent_metainfo(watchdir_file)
                 add_task(id, 0, name, category)
@@ -1407,11 +1392,11 @@ class MyHandler(events.PatternMatchingEventHandler):
                             return
                         id = upload_magnet(magnet)
                         add_task(id, 0, name, category)
-                        if id == 1:
+                        if id == 'failed':
                             failed = 1
             elif watchdir_file.endswith('.nzb'):
                 id = upload_nzb(watchdir_file)
-                if id == 1:
+                if id == 'failed':
                     failed = 1
                 name = os.path.basename(watchdir_file)
                 name = os.path.splitext(name)[0]
@@ -1503,6 +1488,7 @@ def home():
 @app.route('/upload', methods=["POST"])
 @login_required
 def upload():
+    failed = 0
     if request.files:
         upload_file = request.files['file']
         filename = secure_filename(upload_file.filename)
