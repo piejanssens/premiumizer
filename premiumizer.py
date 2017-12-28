@@ -1092,7 +1092,7 @@ def parse_tasks(transfers):
         try:
             if '% of' in transfer['message']:
                 size = transfer['message'].split("of ", 1)[1].split(" finished", 1)[0]
-                progress = int(transfer['message'].split("s.", 1)[1].split(" of", 1)[0])
+                progress = int(transfer['message'].split("s.", 1)[1].split("% of", 1)[0])
             else:
                 size = ' '
                 progress = int(round(float(transfer['progress']) * 100))
