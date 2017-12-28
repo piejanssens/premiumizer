@@ -1078,6 +1078,8 @@ def parse_tasks(transfers):
         try:
             if 'ETA is' in transfer['message']:
                 eta = transfer['message'].split("ETA is", 1)[1]
+            elif transfer['message'] == 'Loading...':
+                eta = 'Loading...'
             else:
                 eta = ' '
         except:
