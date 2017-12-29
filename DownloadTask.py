@@ -72,5 +72,5 @@ class DownloadTask:
 
     def get_json(self):
         return {'progress': self.progress, 'speed': self.speed, 'dlsize': self.dlsize, 'eta': self.eta, 'id': self.id,
-                'name': self.name, 'cloud_status': self.cloud_status, 'local_status': self.local_status,
-                'category': self.category}
+                'folder_id': self.folder_id, 'file_id': self.file_id, 'name': self.name,
+                'cloud_status': self.cloud_status, 'local_status': self.local_status, 'category': self.category}
