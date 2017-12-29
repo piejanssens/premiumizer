@@ -747,8 +747,6 @@ def get_download_stats_jd(package_name):
                                      eta=eta)
                 gevent_sleep_time()
                 package = jd_query_packages(package_id)
-            # cfg.jd_device.disconnect()
-
             stop_time = time.time()
             dltime = int(stop_time - start_time)
             greenlet.task.update(dltime=dltime)
@@ -849,9 +847,9 @@ def download_file():
                     #       gevent_sleep_time()                               #   filesizes is .... Retrying...
                     #   downloader.unpause()
                     if greenlet.task.local_status == "stopped":
-                        while not downloader.isFinished():  # Have to use while loop
-                            downloader.stop()  # does not stop when called once ..
-                            gevent.sleep(0.5)  # let's hammer the stop call..
+                        while not downloader.isFinished():
+                            downloader.stop()
+                            gevent.sleep(0.5)
                         return 1
                     gevent_sleep_time()
                 if downloader.isSuccessful():
@@ -889,7 +887,7 @@ def is_sample(dir_content):
     media_extensions = [".mkv", ".avi", ".divx", ".xvid", ".mov", ".wmv", ".mp4", ".mpg", ".mpeg", ".vob", ".iso"]
     media_size = 150 * 1024 * 1024
     if dir_content['size'] < media_size:
-        if dir_content['url'].lower().endswith(tuple(media_extensions)):
+        if dir_content['link'].lower().endswith(tuple(media_extensions)):
             if ('sample' or 'rarbg.com' in dir_content['url'].lower()) and (
                     'sample' not in greenlet.task.name.lower()):
                 return True
@@ -930,14 +928,21 @@ def download_process():
     returncode = 0
     greenlet.task.update(local_status='downloading', progress=0, speed=' ', eta=' ')
     greenlet.task.dldir = os.path.join(greenlet.task.dldir, clean_name(greenlet.task.name))
-    if greenlet.task.folder_id is None:
-        logger.error('Download failed for: %s, folder_id is None', greenlet.task.name)
-        return 1
-    payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'id': greenlet.task.folder_id}
-    r = prem_connection("post", "https://www.premiumize.me/api/folder/list", payload)
+    if greenlet.task.folder_id:
+        r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
+                            {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'id': greenlet.task.folder_id})
+        dir_content = json.loads(r.content)['content']
+    elif greenlet.task.file_id:
+        r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
+                            {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin})
+        dir_content = []
+        for x in json.loads(r.content)['content']:
+            if x['id'] == greenlet.task.file_id:
+                dir_content.append(x)
+                break
     if 'failed' in r:
         return 1
-    process_dir(json.loads(r.content)['content'], greenlet.task.dldir)
+    process_dir(dir_content, greenlet.task.dldir)
     logger.info('Downloading: %s', greenlet.task.name)
     if greenlet.task.download_list:
         returncode = download_file()
@@ -1105,13 +1110,15 @@ def parse_tasks(transfers):
             folder_id = transfer['folder_id'].encode("utf-8")
         except:
             folder_id = None
+        try:
+            file_id = transfer['file_id'].encode("utf-8")
+        except:
+            file_id = None
         if not task:
             if transfer['name'] is None or transfer['name'] == 0:
                 name = 'Loading name'
             else:
                 name = transfer['name']
-                if 'download.php?id=' in name:
-                    name = name.split("&f=", 1)[1]
             if cfg.download_all:
                 add_task(transfer['id'].encode("utf-8"), size, name, 'default', folder_id)
             else:
@@ -1119,7 +1126,9 @@ def parse_tasks(transfers):
             task = get_task(transfer['id'].encode("utf-8"))
             id_local.append(task.id)
             task.update(progress=progress, cloud_status=transfer['status'], dlsize=size + ' --- ',
-                        speed=speed + ' --- ', eta=eta)
+                        speed=speed + ' --- ', eta=eta, file_id=file_id)
+        if task.folder_id:
+            folder_id = task.folder_id
         if task.local_status is None:
             if task.cloud_status != 'finished':
                 if task.name is not None and task.name != 'Loading name':
@@ -1131,7 +1140,7 @@ def parse_tasks(transfers):
                 else:
                     name = 'Loading name'
                 task.update(progress=progress, cloud_status=transfer['status'], name=name, dlsize=size + ' --- ',
-                            speed=speed + ' --- ', eta=eta)
+                            speed=speed + ' --- ', eta=eta, folder_id=folder_id, file_id=file_id)
                 idle = False
             elif task.cloud_status == 'finished':
                 if cfg.download_enabled:
@@ -1139,16 +1148,16 @@ def parse_tasks(transfers):
                         task.update(category='default')
                     if task.category in cfg.download_categories:
                         if not task.local_status == ('queued' or 'downloading'):
-                            task.update(local_status='queued', folder_id=folder_id)
+                            task.update(local_status='queued', folder_id=folder_id, file_id=file_id)
                             gevent.sleep(3)
                             scheduler.scheduler.add_job(download_task, args=(task,), name=task.name,
                                                         misfire_grace_time=7200, coalesce=False, max_instances=1,
                                                         jobstore='downloads', executor='downloads',
                                                         replace_existing=True)
                     elif task.category == '':
-                        task.update(local_status='waiting', progress=100, folder_id=folder_id)
+                        task.update(local_status='waiting', progress=100, folder_id=folder_id, file_id=file_id)
                 else:
-                    task.update(local_status='finished', speed=None, folder_id=folder_id)
+                    task.update(local_status='finished', speed=None, folder_id=folder_id, file_id=file_id)
         else:
             if task.local_status == 'downloading':
                 if task.name not in str(scheduler.scheduler.get_jobs('check_downloads')):
@@ -1156,7 +1165,7 @@ def parse_tasks(transfers):
                                                 name=(task.name + ' check_downloads'), misfire_grace_time=7200,
                                                 jobstore='check_downloads', replace_existing=True, max_instances=1,
                                                 coalesce=True, next_run_time=(datetime.now() + timedelta(minutes=1)))
-            task.update(cloud_status=transfer['status'])
+            task.update(cloud_status=transfer['status'], folder_id=folder_id, file_id=file_id)
         id_online.append(task.id)
         task.callback = None
         db[task.id] = task
@@ -1229,6 +1238,12 @@ def add_task(id, size, name, category, folder_id=None):
         dldir, dlext, delsample, dlnzbtomedia = get_cat_var(category)
         try:
             name = name.replace('%5B', '[').replace('%5D', ']').replace('%20', ' ')
+            if 'download.php?id=' in name:
+                name = name.split("&f=", 1)[1]
+            if name.endswith('.torrent'):
+                name = name.split('.torrent', 1)[0]
+            elif name.endswith('.nzb'):
+                name = name.split('.nzb', 1)[0]
         except:
             pass
         task = DownloadTask(socketio.emit, id.encode("utf-8"), folder_id, size, name, category, dldir, dlext,
@@ -1237,26 +1252,25 @@ def add_task(id, size, name, category, folder_id=None):
         logger.info('Added: %s -- Category: %s', task.name, task.category)
     else:
         task = 'duplicate'
-    # scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=5)
     return task
 
 
-def upload_torrent(filename):
+def upload_torrent(torrent):
     logger.debug('def upload_torrent started')
     if cfg.seed_torrent:
         payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'seed': '2or48h'}
     else:
         payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
-    files = {'src': open(filename, 'rb')}
-    logger.debug('Uploading torrent to the cloud: %s', filename)
+    files = {'src': open(torrent, 'rb')}
+    logger.debug('Uploading torrent to the cloud: %s', torrent)
     r = prem_connection("postfile", "https://www.premiumize.me/api/transfer/create", payload, files)
     if 'failed' not in r:
         response_content = json.loads(r.content)
         if response_content['status'] == "success":
-            logger.debug('Upload successful: %s', filename)
+            logger.debug('Upload successful: %s', torrent)
             return response_content['id']
         else:
-            msg = 'Upload of torrent: %s failed, message: %s' % (filename, response_content['message'])
+            msg = 'Upload of torrent: %s failed, message: %s' % (torrent, response_content['message'])
             logger.error(msg)
             if cfg.email_enabled:
                 email('Upload of torrent failed', msg)
@@ -1378,7 +1392,6 @@ class MyHandler(events.PatternMatchingEventHandler):
                 id = upload_torrent(watchdir_file)
                 if id == 'failed':
                     failed = 1
-                name = torrent_metainfo(watchdir_file)
                 add_task(id, 0, name, category)
             elif watchdir_file.endswith('.magnet'):
                 with open(watchdir_file) as f:
@@ -1400,13 +1413,14 @@ class MyHandler(events.PatternMatchingEventHandler):
                 id = upload_nzb(watchdir_file)
                 if id == 'failed':
                     failed = 1
-                name = os.path.basename(watchdir_file)
-                name = os.path.splitext(name)[0]
                 add_task(id, 0, name, category)
             if not failed:
                 gevent.sleep(3)
                 logger.debug('Deleting file from watchdir: %s', watchdir_file)
-                os.remove(watchdir_file)
+                try:
+                    os.remove(watchdir_file)
+                except Exception as err:
+                    logger.error('Could not remove file from watchdir: %s --- error: %s', watchdir_file, err)
                 scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
 
     def on_created(self, event):
