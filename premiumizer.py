@@ -1,6 +1,5 @@
 #! /usr/bin/env python
 import ConfigParser
-import hashlib
 import json
 import logging
 import os
@@ -12,6 +11,7 @@ import subprocess
 import sys
 import time
 import unicodedata
+import uuid
 from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from logging.handlers import RotatingFileHandler
@@ -429,7 +429,7 @@ proxied = FlaskReverseProxied()
 app = Flask(__name__)
 proxied.init_app(app)
 Compress(app)
-app.config['SECRET_KEY'] = os.urandom(24)
+app.config['SECRET_KEY'] = uuid.uuid4().hex
 app.config.update(DEBUG=debug_enabled)
 app.logger.addHandler(handler)
 socketio = SocketIO(app, async_mode='gevent')
@@ -937,12 +937,7 @@ def download_process():
     greenlet.task.update(local_status='downloading', progress=0, speed=' ', eta=' ')
     greenlet.task.dldir = os.path.join(greenlet.task.dldir, clean_name(greenlet.task.name))
     if not greenlet.task.type == 'Filehost':
-        if greenlet.task.folder_id:
-            r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
-                                {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
-                                 'id': greenlet.task.folder_id})
-            dir_content = json.loads(r.content)['content']
-        elif greenlet.task.file_id:
+        if greenlet.task.file_id:
             r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
                                 {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin})
             dir_content = []
@@ -950,6 +945,11 @@ def download_process():
                 if x['id'] == greenlet.task.file_id:
                     dir_content.append(x)
                     break
+        else:
+            r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
+                                {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
+                                 'id': greenlet.task.folder_id})
+            dir_content = json.loads(r.content)['content']
         if 'failed' in r:
             return 1
         process_dir(dir_content, greenlet.task.dldir)
@@ -1038,7 +1038,7 @@ def prem_connection(method, url, payload, files=None):
                     email('Premiumize.me login error', msg)
                 return 'failed: premiumize.me login error'
             if r.status_code != 200:
-                raise
+                raise Exception('status_code != 200')
         except:
             if r_count == 10:
                 try:
@@ -1101,8 +1101,6 @@ def parse_tasks(transfers):
         try:
             if 'ETA is' in transfer['message']:
                 eta = transfer['message'].split("ETA is", 1)[1]
-            elif transfer['message'] == 'Loading...':
-                eta = 'Loading...'
             elif transfer['message']:
                 eta = transfer['message']
         except:
@@ -1250,7 +1248,6 @@ def get_cat_var(category):
 
 def add_task(id, size, name, category, type='', folder_id=None):
     logger.debug('def add_task started')
-    task = ''
     exists = get_task(id)
     if not exists:
         dldir, dlext, delsample, dlnzbtomedia = get_cat_var(category)
@@ -1322,8 +1319,7 @@ def upload_magnet(magnet):
 def upload_filehost(urls):
     logger.debug('def upload_filehost started')
     download_list = []
-    id = hashlib.sha1(bencode.bencode(urls)).hexdigest()
-    folder_id = ""
+    id = uuid.uuid4().hex
     total_filesize = 0
     failed = 0
     name = ''
@@ -1454,26 +1450,6 @@ class MyHandler(events.PatternMatchingEventHandler):
 
     def on_created(self, event):
         self.process(event)
-
-
-def hash_file(filename):
-    """"This function returns the SHA-1 id
-    of the file passed into it"""
-
-    # make a hash object
-    h = hashlib.sha1()
-
-    # open file for reading in binary mode
-    with open(filename, 'rb') as file:
-        # loop till the end of the file
-        chunk = 0
-        while chunk != b'':
-            # read only 1024 bytes at a time
-            chunk = file.read(1024)
-            h.update(chunk)
-
-    # return the hex representation of digest
-    return h.hexdigest()
 
 
 def torrent_metainfo(torrent):
@@ -1863,7 +1839,7 @@ def delete_task(message):
             logger.error(msg)
             if cfg.email_enabled:
                 email('Download could not be deleted', msg)
-                socketio.emit('delete_failed', {'data': hash})
+                socketio.emit('delete_failed', {'data': id})
     else:
         payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'id': task.id}
         r = prem_connection("post", "https://www.premiumize.me/api/transfer/delete", payload)
