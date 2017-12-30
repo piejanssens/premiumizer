@@ -114,9 +114,15 @@ function update_task(task) {
         stateStr = 'Failed: Filehost';
         stateIcon = 'desktop';
         categoryState = '';
+    } else if (task.cloud_status == 'error') {
+        stateColor = 'danger';
+        stateStr = 'Cloud: Error';
+        stateIcon = 'cloud-download';
+        categoryState = '';
     } else {
         stateColor = 'danger';
         stateStr = 'check js console';
+        stateIcon = 'exclamation-triangle';
         console.log('UNKNOWN STATUS - cloud: ' + task.cloud_status + ', local: ' + task.local_status);
     }
 

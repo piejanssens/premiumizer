@@ -1139,6 +1139,11 @@ def parse_tasks(transfers):
                         name = name.split("&f=", 1)[1]
                 else:
                     name = 'Loading name'
+                if task.cloud_status == 'error':
+                    try:
+                        eta = transfer['message']
+                    except:
+                        pass
                 task.update(progress=progress, cloud_status=transfer['status'], name=name, dlsize=size + ' --- ',
                             speed=speed + ' --- ', eta=eta, folder_id=folder_id, file_id=file_id)
                 idle = False
