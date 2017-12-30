@@ -1546,18 +1546,17 @@ def upload():
             failed = upload_torrent(upload_file)
         if upload_file.endswith('.nzb'):
             failed = upload_nzb(upload_file)
-        if not failed:
+        if failed != 'failed':
             try:
                 os.remove(upload_file)
             except Exception as err:
                 logger.error('Could not remove file from watchdir: %s --- error: %s', upload_file, err)
-            scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
     elif request.data:
         if str(request.data).startswith('magnet:'):
             upload_magnet(request.data)
         else:
             upload_filehost(request.data)
-        scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
+    scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
     return 'OK'
 
 
