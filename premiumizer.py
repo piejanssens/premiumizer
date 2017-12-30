@@ -825,6 +825,14 @@ def download_file():
                 return 1
         package_name = str(re.sub('[^0-9a-zA-Z]+', ' ', greenlet.task.name).lower())
     for download in greenlet.task.download_list:
+        if greenlet.task.type == 'Filehost':
+            payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'src': download['url']}
+            r = prem_connection("post", "https://www.premiumize.me/api/transfer/create", payload)
+            try:
+                download['url'] = r.text.split('"location":"', 1)[1].splitlines()[0].split('",', 1)[0].replace('\\', '')
+            except:
+                return 1
+            download['path'] = os.path.join(greenlet.task.dldir, download['path'])
         logger.debug('Downloading file: %s', download['path'])
         filename = os.path.basename(download['path'])
         if not os.path.isfile(download['path']) or not os.path.isfile(os.path.join(greenlet.task.dldir, filename)):
@@ -928,23 +936,25 @@ def download_process():
     returncode = 0
     greenlet.task.update(local_status='downloading', progress=0, speed=' ', eta=' ')
     greenlet.task.dldir = os.path.join(greenlet.task.dldir, clean_name(greenlet.task.name))
-    if greenlet.task.folder_id:
-        r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
-                            {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'id': greenlet.task.folder_id})
-        dir_content = json.loads(r.content)['content']
-    elif greenlet.task.file_id:
-        r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
-                            {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin})
-        dir_content = []
-        for x in json.loads(r.content)['content']:
-            if x['id'] == greenlet.task.file_id:
-                dir_content.append(x)
-                break
-    if 'failed' in r:
-        return 1
-    process_dir(dir_content, greenlet.task.dldir)
-    logger.info('Downloading: %s', greenlet.task.name)
+    if not greenlet.task.type == 'Filehost':
+        if greenlet.task.folder_id:
+            r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
+                                {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
+                                 'id': greenlet.task.folder_id})
+            dir_content = json.loads(r.content)['content']
+        elif greenlet.task.file_id:
+            r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
+                                {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin})
+            dir_content = []
+            for x in json.loads(r.content)['content']:
+                if x['id'] == greenlet.task.file_id:
+                    dir_content.append(x)
+                    break
+        if 'failed' in r:
+            return 1
+        process_dir(dir_content, greenlet.task.dldir)
     if greenlet.task.download_list:
+        logger.info('Downloading: %s', greenlet.task.name)
         returncode = download_file()
     else:
         logger.error('Error for %s: Nothing to download .. Filtered out or bad torrent/nzb ?', greenlet.task.name)
@@ -1078,6 +1088,14 @@ def parse_tasks(transfers):
     idle = True
     for task in tasks:
         id_local.append(task.id)
+        if task.type == 'Filehost':
+            try:
+                x = db[task.id]
+            except:
+                task.callback = None
+                db[task.id] = task
+                task.callback = socketio.emit
+            task.update()
     for transfer in reversed(transfers):
         task = get_task(transfer['id'].encode("utf-8"))
         try:
@@ -1175,7 +1193,7 @@ def parse_tasks(transfers):
     id_diff = [aa for aa in id_local if aa not in set(id_online)]
     for task_id in id_diff:
         for task in tasks:
-            if task.id == task_id:
+            if task.type != 'Filehost' and task.id == task_id:
                 tasks.remove(task)
                 try:
                     del db[task_id]
@@ -1251,7 +1269,8 @@ def add_task(id, size, name, category, type='', folder_id=None):
         task = DownloadTask(socketio.emit, id.encode("utf-8"), folder_id, size, name, category, dldir, dlext,
                             delsample, dlnzbtomedia, type)
         tasks.append(task)
-        logger.info('Added: %s -- Category: %s -- Type: %s', task.name, task.category, task.type)
+        if not task.type == 'Filehost':
+            logger.info('Added: %s -- Category: %s -- Type: %s', task.name, task.category, task.type)
     else:
         task = 'duplicate'
     return task
@@ -1303,12 +1322,12 @@ def upload_magnet(magnet):
 def upload_filehost(urls):
     logger.debug('def upload_filehost started')
     download_list = []
-    id = ""
+    id = hashlib.sha1(bencode.bencode(urls)).hexdigest()
     folder_id = ""
     total_filesize = 0
     failed = 0
     name = ''
-    task = add_task(id, 0, name, '')
+    task = add_task(id, 0, name, '', type='Filehost')
     if task == 'duplicate':
         return
     for url in urls.splitlines():
@@ -1316,10 +1335,12 @@ def upload_filehost(urls):
         r = prem_connection("post", "https://www.premiumize.me/api/transfer/create", payload)
         try:
             full_name = r.text.split('"filename":"', 1)[1].splitlines()[0].split('",', 1)[0].encode("utf-8")
-            if task.name == '':
+            if name == '':
                 name = os.path.splitext(full_name)[0]
                 if name.endswith('.part1'):
                     name = name.split('.part1', 1)[0]
+                elif name.endswith('.part01'):
+                    name = name.split('.part01', 1)[0]
             download = {'path': clean_name(full_name), 'url': url}
             download_list.append(download)
             try:
@@ -1330,9 +1351,9 @@ def upload_filehost(urls):
         except:
             failed = 1
             try:
-                logger.error('filehost error: %s for %s', r.text, urls)
+                logger.error('Filehost error: %s for %s', r.text, urls)
             except:
-                logger.error('filehost error for %s', urls)
+                logger.error('Filehost error for %s', urls)
             break
     logger.info('Added: %s -- Category: %s -- Type: %s', name, task.category, task.type)
     if failed:
@@ -1340,7 +1361,7 @@ def upload_filehost(urls):
             eta = r.text
         except:
             eta = ""
-        task.update(name=urls, local_status='failed: filehost', cloud_status='finished', speed="", progress=0, eta=eta)
+        task.update(name=urls, local_status='failed: Filehost', cloud_status='finished', speed="", progress=0, eta=eta)
     else:
         task.update(name=name, local_status='waiting', cloud_status='finished', progress=100,
                     download_list=download_list, size=total_filesize)
@@ -1830,23 +1851,38 @@ def delete_task(message):
                 gevent.sleep(8)
     except:
         pass
-    payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'id': task.id}
-    r = prem_connection("post", "https://www.premiumize.me/api/transfer/delete", payload)
-    if 'failed' not in r:
-        responsedict = json.loads(r.content)
-        if responsedict['status'] == "success":
-            logger.info('Deleted from the cloud: %s', task.name)
+    if task.type == 'Filehost':
+        try:
+            tasks.remove(task)
+            del db[task.id]
+            db.sync()
             socketio.emit('delete_success', {'data': id})
-        else:
-            msg = 'Download could not be deleted from the cloud for: %s, message: %s' % (
-                task.name, responsedict['message'])
+            msg = 'Deleted from the database: %s' % task.name
+            logger.info(msg)
+        except:
+            msg = 'Download could not be deleted from the database: %s' % task.name
             logger.error(msg)
             if cfg.email_enabled:
                 email('Download could not be deleted', msg)
-            socketio.emit('delete_failed', {'data': id})
+                socketio.emit('delete_failed', {'data': hash})
     else:
-        logger.error('Download could not be removed from cloud: %s', task.name)
-        socketio.emit('delete_failed', {'data': id})
+        payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'id': task.id}
+        r = prem_connection("post", "https://www.premiumize.me/api/transfer/delete", payload)
+        if 'failed' not in r:
+            responsedict = json.loads(r.content)
+            if responsedict['status'] == "success":
+                logger.info('Deleted from the cloud: %s', task.name)
+                socketio.emit('delete_success', {'data': id})
+            else:
+                msg = 'Download could not be deleted from the cloud for: %s, message: %s' % (
+                    task.name, responsedict['message'])
+                logger.error(msg)
+                if cfg.email_enabled:
+                    email('Download could not be deleted', msg)
+                socketio.emit('delete_failed', {'data': id})
+        else:
+            logger.error('Download could not be removed from cloud: %s', task.name)
+            socketio.emit('delete_failed', {'data': id})
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
 
 
@@ -1902,10 +1938,23 @@ def change_category(message):
     data = message['data']
     task = get_task(data['id'])
     dldir, dlext, delsample, dlnzbtomedia = get_cat_var(data['category'])
-    task.update(local_status=None, process=None, speed=None, category=data['category'], dldir=dldir, dlext=dlext,
-                delsample=delsample, dlnzbtomedia=dlnzbtomedia)
-    logger.info('Task: %s -- Category set to: %s', task.name, task.category)
-    scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
+    if task.type == 'Filehost':
+        if task.local_status != 'failed: Filehost':
+            task.update(local_status=None, process=None, speed=None, category=data['category'], dldir=dldir,
+                        dlext=dlext, delsample=delsample, dlnzbtomedia=dlnzbtomedia)
+            if cfg.download_enabled:
+                if task.category in cfg.download_categories:
+                    if not task.local_status == ('queued' or 'downloading'):
+                        task.update(local_status='queued')
+                        gevent.sleep(3)
+                        scheduler.scheduler.add_job(download_task, args=(task,), name=task.name,
+                                                    misfire_grace_time=7200, coalesce=False, max_instances=1,
+                                                    jobstore='downloads', executor='downloads', replace_existing=True)
+    else:
+        task.update(local_status=None, process=None, speed=None, category=data['category'], dldir=dldir, dlext=dlext,
+                    delsample=delsample, dlnzbtomedia=dlnzbtomedia)
+        logger.info('Task: %s -- Category set to: %s', task.name, task.category)
+        scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
 
 
 # start the server with the 'run()' method
