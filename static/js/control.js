@@ -109,14 +109,20 @@ function update_task(task) {
         stateStr = 'Failed: nzbToMedia';
         stateIcon = 'desktop';
         categoryState = '';
-    } else if (task.cloud_status == 'finished' && task.local_status == 'failed: filehost') {
+    } else if (task.cloud_status == 'finished' && task.local_status == 'failed: Filehost') {
         stateColor = 'danger';
         stateStr = 'Failed: Filehost';
         stateIcon = 'desktop';
         categoryState = '';
+    } else if (task.cloud_status == 'error') {
+        stateColor = 'danger';
+        stateStr = 'Cloud: Error';
+        stateIcon = 'cloud-download';
+        categoryState = '';
     } else {
         stateColor = 'danger';
         stateStr = 'check js console';
+        stateIcon = 'exclamation-triangle';
         console.log('UNKNOWN STATUS - cloud: ' + task.cloud_status + ', local: ' + task.local_status);
     }
 
@@ -138,6 +144,7 @@ function update_task(task) {
         '<span class="col-md-1 text-center">' +
         '<div class="row"><i class="fa fa-' + stateIcon + ' fa-fw fa-2x"></i></div>' +
         '<div class="row"><span class="label label-' + stateColor + '">' + stateStr + '</span></div>' +
+        '<div class="row"><h5>' + task.type + '</h5></div>' +
         '</span>' +
         '<span class="col-md-1 text-center">' +
         '<div class="row">' + dropDown + '</div>' +
@@ -148,7 +155,7 @@ function update_task(task) {
         '<div class="row"><h6>' + (task.progress != 100 ? "Speed: " + task.speed + "Size: " + task.dlsize + " ETA: " + task.eta : '') + '</h6></div>' +
         '</span>' +
         '<span class="col-md-3">' +
-        '<div class="btn-toolbar text-center"><a class="btn btn-danger delete_btn" href="#" onclick="delete_task(event)"><i class="fa fa-trash-o fa-lg"></i> Delete</a>' + (task.cloud_status == "finished" ? '<a class="btn btn-success" href="https://www.premiumize.me/files?folder_id=' + task.folder_id + '" target="_blank"><i class="fa fa-folder-open-o fa-lg"></i> Browse</a>' : "") + (task.local_status == "downloading" ? '<a class="btn btn-warning"href="#" onclick="stop_task(event)"><i class="fa fa-trash-o fa-lg"></i> Stop DL</a>' : "") + '</div>' +
+        '<div class="btn-toolbar text-center"><a class="btn btn-danger delete_btn" href="#" onclick="delete_task(event)"><i class="fa fa-trash-o fa-lg"></i> Delete</a>' + (task.cloud_status == "finished" ? (!task.file_id ? '<a class="btn btn-success" href="https://www.premiumize.me/files?folder_id=' + task.folder_id + '" target="_blank"><i class="fa fa-folder-open-o fa-lg"></i> Browse</a>' : "") + (task.file_id ? '<a class="btn btn-success" href="https://www.premiumize.me/files?file_id=' + task.file_id + '" target="_blank"><i class="fa fa-folder-open-o fa-lg"></i> Browse</a>' : "") : "") + (task.local_status == "downloading" ? '<a class="btn btn-warning"href="#" onclick="stop_task(event)"><i class="fa fa-trash-o fa-lg"></i> Stop DL</a>' : "") + '</div>' +
         '</span>' +
         '</div>' +
         '</div>' +
