@@ -1392,6 +1392,7 @@ class MyHandler(events.PatternMatchingEventHandler):
                 id = upload_torrent(watchdir_file)
                 if id == 'failed':
                     failed = 1
+                name = torrent_metainfo(watchdir_file)
                 add_task(id, 0, name, category)
             elif watchdir_file.endswith('.magnet'):
                 with open(watchdir_file) as f:
@@ -1413,6 +1414,8 @@ class MyHandler(events.PatternMatchingEventHandler):
                 id = upload_nzb(watchdir_file)
                 if id == 'failed':
                     failed = 1
+                name = os.path.basename(watchdir_file)
+                name = os.path.splitext(name)[0]
                 add_task(id, 0, name, category)
             if not failed:
                 gevent.sleep(3)
@@ -1518,7 +1521,10 @@ def upload():
         if upload_file.endswith('.nzb'):
             failed = upload_nzb(upload_file)
         if not failed:
-            os.remove(upload_file)
+            try:
+                os.remove(upload_file)
+            except Exception as err:
+                logger.error('Could not remove file from watchdir: %s --- error: %s', upload_file, err)
             scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
     elif request.data:
         if str(request.data).startswith('magnet:'):
