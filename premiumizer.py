@@ -553,7 +553,7 @@ def email(subject, text=None):
     global last_email
     if subject == 'download success':
         subject = 'Success for "%s"' % greenlet.task.name
-        text = 'Download of %s: has successfully completed.' % greenlet.task.name
+        text = 'Download of %s: "%s" has successfully completed.' % (greenlet.task.type, greenlet.task.name)
         text += '\nStatus: SUCCESS'
         text += '\n\nStatistics:'
         text += '\nDownloaded size: %s' % utils.sizeof_human(greenlet.task.size)
@@ -566,7 +566,7 @@ def email(subject, text=None):
 
     elif subject == 'download failed':
         subject = 'Failure for "%s"' % greenlet.task.name
-        text = 'Download of %s: has failed.' % greenlet.task.name
+        text = 'Download of %s: "%s" has failed.' % (greenlet.task.type, greenlet.task.name)
         text += '\nStatus: FAILED\nError: %s' % greenlet.task.local_status
         text += '\n\nLog:\n'
         try:
@@ -1085,8 +1085,8 @@ def parse_tasks(transfers):
                 eta = transfer['message'].split("ETA is", 1)[1]
             elif transfer['message'] == 'Loading...':
                 eta = 'Loading...'
-            else:
-                eta = ' '
+            elif transfer['message']:
+                eta = transfer['message']
         except:
             eta = ' '
         try:
@@ -1120,9 +1120,9 @@ def parse_tasks(transfers):
             else:
                 name = transfer['name']
             if cfg.download_all:
-                add_task(transfer['id'].encode("utf-8"), size, name, 'default', folder_id)
+                add_task(transfer['id'].encode("utf-8"), size, name, 'default', folder_id=folder_id)
             else:
-                add_task(transfer['id'].encode("utf-8"), size, name, '', folder_id)
+                add_task(transfer['id'].encode("utf-8"), size, name, '', folder_id=folder_id)
             task = get_task(transfer['id'].encode("utf-8"))
             id_local.append(task.id)
             task.update(progress=progress, cloud_status=transfer['status'], dlsize=size + ' --- ',
@@ -1139,11 +1139,6 @@ def parse_tasks(transfers):
                         name = name.split("&f=", 1)[1]
                 else:
                     name = 'Loading name'
-                if task.cloud_status == 'error':
-                    try:
-                        eta = transfer['message']
-                    except:
-                        pass
                 task.update(progress=progress, cloud_status=transfer['status'], name=name, dlsize=size + ' --- ',
                             speed=speed + ' --- ', eta=eta, folder_id=folder_id, file_id=file_id)
                 idle = False
@@ -1235,7 +1230,7 @@ def get_cat_var(category):
     return dldir, dlext, delsample, dlnzbtomedia
 
 
-def add_task(id, size, name, category, folder_id=None):
+def add_task(id, size, name, category, type='', folder_id=None):
     logger.debug('def add_task started')
     task = ''
     exists = get_task(id)
@@ -1247,14 +1242,16 @@ def add_task(id, size, name, category, folder_id=None):
                 name = name.split("&f=", 1)[1]
             if name.endswith('.torrent'):
                 name = name.split('.torrent', 1)[0]
+                type = 'Torrent'
             elif name.endswith('.nzb'):
                 name = name.split('.nzb', 1)[0]
+                type = 'NZB'
         except:
             pass
         task = DownloadTask(socketio.emit, id.encode("utf-8"), folder_id, size, name, category, dldir, dlext,
-                            delsample, dlnzbtomedia)
+                            delsample, dlnzbtomedia, type)
         tasks.append(task)
-        logger.info('Added: %s -- Category: %s', task.name, task.category)
+        logger.info('Added: %s -- Category: %s -- Type: %s', task.name, task.category, task.type)
     else:
         task = 'duplicate'
     return task
@@ -1337,7 +1334,7 @@ def upload_filehost(urls):
             except:
                 logger.error('filehost error for %s', urls)
             break
-    logger.info('Added: %s -- Category: %s', name, task.category)
+    logger.info('Added: %s -- Category: %s -- Type: %s', name, task.category, task.type)
     if failed:
         try:
             eta = r.text
@@ -1398,7 +1395,8 @@ class MyHandler(events.PatternMatchingEventHandler):
                 if id == 'failed':
                     failed = 1
                 name = torrent_metainfo(watchdir_file)
-                add_task(id, 0, name, category)
+                type = 'Torrent'
+                add_task(id, 0, name, category, type=type)
             elif watchdir_file.endswith('.magnet'):
                 with open(watchdir_file) as f:
                     magnet = f.read()
@@ -1412,7 +1410,8 @@ class MyHandler(events.PatternMatchingEventHandler):
                             logger.error('Extracting id / name from .magnet failed for: %s', watchdir_file)
                             return
                         id = upload_magnet(magnet)
-                        add_task(id, 0, name, category)
+                        type = 'Torrent'
+                        add_task(id, 0, name, category, type=type)
                         if id == 'failed':
                             failed = 1
             elif watchdir_file.endswith('.nzb'):
@@ -1421,7 +1420,8 @@ class MyHandler(events.PatternMatchingEventHandler):
                     failed = 1
                 name = os.path.basename(watchdir_file)
                 name = os.path.splitext(name)[0]
-                add_task(id, 0, name, category)
+                type = 'NZB'
+                add_task(id, 0, name, category, type=type)
             if not failed:
                 gevent.sleep(3)
                 logger.debug('Deleting file from watchdir: %s', watchdir_file)
@@ -1578,10 +1578,10 @@ def history():
                     else:
                         taskdate = line.split(": INFO ", 1)[0].splitlines()[0]
                     taskcat = line.split("Category: ", 1)[1].splitlines()[0].split(" --", 1)[0]
+                    tasktype = line.split("Type: ", 1)[1].splitlines()[0]
                     history.append(
-                        {'date': taskdate, 'name': taskname, 'category': taskcat, 'downloaded': '',
-                         'deleted': '',
-                         'nzbtomedia': '', 'email': '', 'info': '', })
+                        {'date': taskdate, 'name': taskname, 'category': taskcat, 'type': tasktype, 'downloaded': '',
+                         'deleted': '', 'nzbtomedia': '', 'email': '', 'info': '', })
                 elif 'Downloading:' in line:
                     history_update(history, line, 'check_name', '')
                 elif 'Download finished:' in line:

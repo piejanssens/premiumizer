@@ -144,6 +144,7 @@ function update_task(task) {
         '<span class="col-md-1 text-center">' +
         '<div class="row"><i class="fa fa-' + stateIcon + ' fa-fw fa-2x"></i></div>' +
         '<div class="row"><span class="label label-' + stateColor + '">' + stateStr + '</span></div>' +
+        '<div class="row"><h5>' + task.type + '</h5></div>' +
         '</span>' +
         '<span class="col-md-1 text-center">' +
         '<div class="row">' + dropDown + '</div>' +
