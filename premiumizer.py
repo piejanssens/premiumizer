@@ -228,23 +228,22 @@ class PremConfig:
                 self.jd_device_name = prem_config.get('downloads', 'jd_device_name')
                 self.jd_update_available = 0
                 self.aria2_enabled = 0
-                if not self.jd_connected:
-                    try:
-                        self.jd = myjdapi.Myjdapi()
-                        self.jd.set_app_key('https://git.io/vaDti')
-                        self.jd.connect(self.jd_username, self.jd_password)
-                        self.jd_connected = 1
-                    except BaseException as e:
-                        logger.error('myjdapi : ' + e.message)
-                        logger.error('Could not connect to My Jdownloader')
-                        self.jd_connected = 0
-                    try:
-                        self.jd_device = self.jd.get_device(self.jd_device_name)
-                        self.jd_connected = 1
-                    except BaseException as e:
-                        logger.error('myjdapi : ' + e.message)
-                        logger.error('Could not get device name (%s) for My Jdownloader', self.jd_device_name)
-                        self.jd_connected = 0
+                try:
+                    self.jd = myjdapi.Myjdapi()
+                    self.jd.set_app_key('https://git.io/vaDti')
+                    self.jd.connect(self.jd_username, self.jd_password)
+                    self.jd_connected = 1
+                except BaseException as e:
+                    logger.error('myjdapi : ' + e.message)
+                    logger.error('Could not connect to My Jdownloader')
+                    self.jd_connected = 0
+                try:
+                    self.jd_device = self.jd.get_device(self.jd_device_name)
+                    self.jd_connected = 1
+                except BaseException as e:
+                    logger.error('myjdapi : ' + e.message)
+                    logger.error('Could not get device name (%s) for My Jdownloader', self.jd_device_name)
+                    self.jd_connected = 0
                 if self.jd_connected:
                     try:
                         if self.download_speed == -1:
