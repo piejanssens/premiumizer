@@ -20,7 +20,7 @@ https://github.com/neox387/pySmartDL/archive/1.2.7.zip#egg=PySmartDL==1.2.7
 requests==2.18.4
 python-socketio==1.8.4
 tzlocal==1.5.1
-werkzeug==0.13
+werkzeug==0.14.1
 itsdangerous==0.24
 six==1.11
 gevent==1.2.2
