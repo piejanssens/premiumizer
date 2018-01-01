@@ -8,6 +8,22 @@
         <span class="sr-only">Error:</span>
         Cannot connect to premiumize.me. Check your premiumize account details in settings and if premiumize.me is up.
     </div>
+    {% if cfg.jd_connected == 0 and cfg.jd_enabled %}
+        <p>&nbsp;</p>
+        <div id="cfg.jd_connected" class="alert alert-danger" role="alert" style="display:inline;">
+            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+            <span class="sr-only">Warning:</span>
+            Jdownloader connection error.
+        </div>
+    {% endif %}
+    {% if cfg.aria2_connected == 0 and cfg.aria2_enabled %}
+        <p>&nbsp;</p>
+        <div id="cfg.aria2_connected" class="alert alert-danger" role="alert" style="display:inline;">
+            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+            <span class="sr-only">Warning:</span>
+            Aria2 connection error
+        </div>
+    {% endif %}
     {% if debug_enabled == 1 %}
         <p>&nbsp;</p>
         <div id="debug_enabled" class="alert alert-warning" role="alert" style="display:inline;">
@@ -16,7 +32,7 @@
             Debug mode is enabled, this is not recommended, disable it in the settings page & restart.
         </div>
     {% endif %}
-    {% if update_available == 1 %}
+    {% if cfg.update_available == 1 %}
         <p>&nbsp;</p>
         <div id="update_available" class="alert alert-info" role="alert" style="display:inline;">
             <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
@@ -24,7 +40,7 @@
             Update available !! Go to the settings page.
         </div>
     {% endif %}
-    {% if jd_update_available == 1 %}
+    {% if cfg.jd_update_available == 1 %}
         <p>&nbsp;</p>
         <div id="jd_update_available" class="alert alert-info" role="alert" style="display:inline;">
             <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>

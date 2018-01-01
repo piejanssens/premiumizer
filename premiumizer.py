@@ -1598,6 +1598,8 @@ def watchdir():
 @login_required
 def home():
     if cfg.jd_enabled:
+        if not cfg.jd_connected:
+            jd_connect()
         try:
             download_speed = cfg.jd_device.toolbar.get_status().get('limitspeed')
             if download_speed == 0:
@@ -1606,12 +1608,14 @@ def home():
                 cfg.download_speed = download_speed
         except:
             pass
+    if cfg.aria2_enabled and not cfg.aria2_connected:
+        aria2_connect()
     if not cfg.download_speed == -1:
         download_speed = utils.sizeof_human(cfg.download_speed)
     else:
         download_speed = cfg.download_speed
-    return render_template('index.html', download_speed=download_speed, debug_enabled=debug_enabled,
-                           update_available=cfg.update_available, jd_update_available=cfg.jd_update_available)
+
+    return render_template('index.html', download_speed=download_speed, debug_enabled=debug_enabled, cfg=cfg)
 
 
 @app.route('/upload', methods=["POST"])
