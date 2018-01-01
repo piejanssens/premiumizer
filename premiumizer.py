@@ -181,10 +181,13 @@ class PremConfig:
     def __init__(self):
         self.jd_update_available = 0
         self.jd_connected = 0
+        self.aria2_connected = 0
         self.check_config()
 
     def check_config(self):
         logger.debug('Initializing config')
+        self.jd_connected = 0
+        self.aria2_connected = 0
         self.bind_ip = prem_config.get('global', 'bind_ip')
         self.web_login_enabled = prem_config.getboolean('security', 'login_enabled')
         if self.web_login_enabled:
