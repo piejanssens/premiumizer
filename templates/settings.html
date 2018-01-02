@@ -168,7 +168,7 @@
         <p>&nbsp;</p>
 
         <div class="form-group">
-            <label for="jd_enabled">Use Jdownloader for downloads instead of builtin downloader:</label>
+            <label for="jd_enabled">Use Jdownloader:</label>
             {% if settings.get('downloads', 'jd_enabled') == '1' %}
                 <input type="checkbox" class="form-control bootstrap_switch" name="jd_enabled"
                        data-size="small" checked>
@@ -186,6 +186,29 @@
             <label for="jd_device_name">Device Name:</label>
             <input type="text" class="form-control" name="jd_device_name"
                    aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'jd_device_name') }}">
+
+            <p>&nbsp;</p>
+        </div>
+
+        <div class="form-group">
+            <label for="aria2_enabled">Use Aria2:</label>
+            {% if settings.get('downloads', 'aria2_enabled') == '1' %}
+                <input type="checkbox" class="form-control bootstrap_switch" name="aria2_enabled"
+                       data-size="small" checked>
+            {% else %}
+                <input type="checkbox" class="form-control bootstrap_switch" name="aria2_enabled"
+                       data-size="small">
+            {% endif %}
+            <p>Start Aria2 with: aria2c --enable-rpc --rpc-allow-origin-all --rpc-listen-all --rpc-listen-port=6800  --rpc-secret=premiumizer</p>
+            <label for="aria2_host">Aria2 host:</label>
+            <input type="text" class="form-control" name="aria2_host"
+                   aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'aria2_host') }}">
+            <label for="aria2_port">Aria2 port:</label>
+            <input type="number" class="form-control" name="aria2_port"
+                   aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'aria2_port') }}">
+            <label for="jd_password">Aria2 RPC secret:</label>
+            <input type="password" class="form-control" name="aria2_secret"
+                   aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'aria2_secret') }}">
 
             <p>&nbsp;</p>
         </div>

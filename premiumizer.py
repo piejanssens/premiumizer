@@ -12,6 +12,7 @@ import sys
 import time
 import unicodedata
 import uuid
+import xmlrpclib
 from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from logging.handlers import RotatingFileHandler
@@ -178,11 +179,15 @@ logger.info('Running at %s', runningdir)
 # noinspection PyAttributeOutsideInit
 class PremConfig:
     def __init__(self):
+        self.jd_update_available = 0
         self.jd_connected = 0
+        self.aria2_connected = 0
         self.check_config()
 
     def check_config(self):
         logger.debug('Initializing config')
+        self.jd_connected = 0
+        self.aria2_connected = 0
         self.bind_ip = prem_config.get('global', 'bind_ip')
         self.web_login_enabled = prem_config.getboolean('security', 'login_enabled')
         if self.web_login_enabled:
@@ -203,31 +208,26 @@ class PremConfig:
         self.download_all = prem_config.getboolean('downloads', 'download_all')
         self.download_enabled = prem_config.getboolean('downloads', 'download_enabled')
         if self.download_enabled:
-            self.download_builtin = 1
-        self.download_max = prem_config.getint('downloads', 'download_max')
-        self.download_speed = prem_config.get('downloads', 'download_speed')
-        if self.download_speed == '0':
-            self.download_enabled = 0
-        elif self.download_speed == '-1':
-            self.download_speed = int(self.download_speed)
-        else:
-            self.download_speed = float(self.download_speed)
-            self.download_speed = int(self.download_speed * 1048576)
-
-        self.download_location = prem_config.get('downloads', 'download_location')
-        if os.path.isfile(os.path.join(runningdir, 'nzbtomedia', 'NzbToMedia.py')):
-            self.nzbtomedia_location = (os.path.join(runningdir, 'nzbtomedia', 'NzbToMedia.py'))
-            self.nzbtomedia_builtin = 1
-        else:
-            self.nzbtomedia_location = prem_config.get('downloads', 'nzbtomedia_location')
-        self.jd_enabled = prem_config.getboolean('downloads', 'jd_enabled')
-        self.jd_username = prem_config.get('downloads', 'jd_username')
-        self.jd_password = prem_config.get('downloads', 'jd_password')
-        self.jd_device_name = prem_config.get('downloads', 'jd_device_name')
-        self.jd_update_available = 0
-        if self.jd_enabled and self.download_enabled:
             self.download_builtin = 0
-            if not self.jd_connected:
+            self.jd_enabled = prem_config.getboolean('downloads', 'jd_enabled')
+            self.aria2_enabled = prem_config.getboolean('downloads', 'aria2_enabled')
+            self.download_max = prem_config.getint('downloads', 'download_max')
+            self.download_speed = prem_config.get('downloads', 'download_speed')
+            if self.download_speed == '0':
+                self.download_enabled = 0
+            elif self.download_speed == '-1':
+                self.download_speed = int(self.download_speed)
+            else:
+                self.download_speed = float(self.download_speed)
+                self.download_speed = int(self.download_speed * 1048576)
+            self.download_location = prem_config.get('downloads', 'download_location')
+
+            if self.jd_enabled:
+                self.jd_username = prem_config.get('downloads', 'jd_username')
+                self.jd_password = prem_config.get('downloads', 'jd_password')
+                self.jd_device_name = prem_config.get('downloads', 'jd_device_name')
+                self.jd_update_available = 0
+                self.aria2_enabled = 0
                 try:
                     self.jd = myjdapi.Myjdapi()
                     self.jd.set_app_key('https://git.io/vaDti')
@@ -244,15 +244,42 @@ class PremConfig:
                     logger.error('myjdapi : ' + e.message)
                     logger.error('Could not get device name (%s) for My Jdownloader', self.jd_device_name)
                     self.jd_connected = 0
-            if self.jd_connected:
+                if self.jd_connected:
+                    try:
+                        if self.download_speed == -1:
+                            self.jd_device.toolbar.disable_downloadSpeedLimit()
+                        else:
+                            self.jd_device.toolbar.enable_downloadSpeedLimit()
+                            self.download_speed = self.jd_device.toolbar.get_status().get('limitspeed')
+                    except:
+                        logger.error('Could not enable Jdownloader speed limit')
+
+            if self.aria2_enabled:
+                self.jd_enabled = 0
+                self.aria2_host = prem_config.get('downloads', 'aria2_host')
+                self.aria2_port = prem_config.get('downloads', 'aria2_port')
+                self.aria2_token = "token:" + prem_config.get('downloads', 'aria2_secret')
                 try:
+                    uri = ('http://' + self.aria2_host + ':' + self.aria2_port + '/rpc')
+                    self.aria = xmlrpclib.ServerProxy(uri, allow_none=True)
                     if self.download_speed == -1:
-                        self.jd_device.toolbar.disable_downloadSpeedLimit()
+                        download_speed = 0
                     else:
-                        self.jd_device.toolbar.enable_downloadSpeedLimit()
-                        self.download_speed = self.jd_device.toolbar.get_status().get('limitspeed')
-                except:
-                    logger.error('Could not enable Jdownloader speed limit')
+                        download_speed = str(cfg.download_speed + 'M')
+                    self.aria.aria2.changeGlobalOption(self.aria2_token, {'max-download-limit': download_speed})
+                    self.aria2_connected = 1
+                except Exception as e:
+                    logger.error('Could not connect to Aria2 RPC: %s --- message: %s', uri, e)
+                    self.aria2_connected = 0
+
+            else:
+                self.download_builtin = 1
+
+        if os.path.isfile(os.path.join(runningdir, 'nzbtomedia', 'NzbToMedia.py')):
+            self.nzbtomedia_location = (os.path.join(runningdir, 'nzbtomedia', 'NzbToMedia.py'))
+            self.nzbtomedia_builtin = 1
+        else:
+            self.nzbtomedia_location = prem_config.get('downloads', 'nzbtomedia_location')
         self.watchdir_enabled = prem_config.getboolean('upload', 'watchdir_enabled')
         self.watchdir_location = prem_config.get('upload', 'watchdir_location')
         if self.watchdir_enabled:
@@ -324,6 +351,21 @@ def jd_connect():
         logger.error('myjdapi : ' + e.message)
         logger.error('Could not get device name (%s) for My Jdownloader', cfg.jd_device_name)
         cfg.jd_connected = 0
+
+
+def aria2_connect():
+    try:
+        uri = ('http://' + cfg.aria2_host + ':' + cfg.aria2_port + '/rpc')
+        cfg.aria = xmlrpclib.ServerProxy(uri, allow_none=True)
+        cfg.aria.aria2.getVersion(cfg.aria2_token)
+        cfg.aria2_connected = 1
+    except Exception as e:
+        logger.error('Could not connect to Aria2 RPC: %s --- message: %s', uri, e)
+        try:
+            greenlet.task.update(eta=' Could not connect to Aria2 RPC')
+        except:
+            pass
+        cfg.aria2_connected = 0
 
 
 # Automatic update checker
@@ -762,6 +804,7 @@ def get_download_stats_jd(package_name):
 
             if package['status'] == 'Failed':
                 logger.error('JD returned failed for: %s', greenlet.task.name)
+                greenlet.task.update(eta=' JD returned failed')
                 return 1
 
             try:
@@ -797,6 +840,24 @@ def get_download_stats(downloader, total_size_downloaded):
         logger.debug('Want to update stats, but downloader status is invalid.')
 
 
+def get_download_stats_aria2(aria2_download, total_size_downloaded):
+    logger.debug('def get_download_stats_aria2 started')
+    if aria2_download['status'] == 'active':
+        size_downloaded = total_size_downloaded + int(aria2_download['completedLength'])
+        progress = round(float(size_downloaded) * 100 / greenlet.task.size, 1)
+        speed = int(aria2_download['downloadSpeed'])
+        if speed == 0:
+            eta = ' '
+        else:
+            tmp = (greenlet.task.size - size_downloaded) / speed
+            eta = ' ' + utils.time_human(tmp, fmt_short=True)
+        greenlet.task.update(speed=utils.sizeof_human(speed) + '/s --- ',
+                             dlsize=utils.sizeof_human(size_downloaded) + ' / ' + utils.sizeof_human(
+                                 greenlet.task.size) + ' --- ', progress=progress, eta=eta)
+    else:
+        logger.debug('Want to update stats, but downloader status is invalid.')
+
+
 def download_file():
     logger.debug('def download_file started')
     count = 0
@@ -820,10 +881,16 @@ def download_file():
                     count = + 1
                     if count == 5:
                         logger.error('myjdapi : ' + e.message)
+                        greenlet.task.update(eta=' ' + e.message)
                         return 1
             else:
                 return 1
         package_name = str(re.sub('[^0-9a-zA-Z]+', ' ', greenlet.task.name).lower())
+    if cfg.aria2_enabled:
+        aria2_connect()
+        if not cfg.aria2_connected:
+            return 1
+
     for download in greenlet.task.download_list:
         if greenlet.task.type == 'Filehost':
             payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'src': download['url']}
@@ -836,9 +903,10 @@ def download_file():
         logger.debug('Downloading file: %s', download['path'])
         filename = os.path.basename(download['path'])
         if not os.path.isfile(download['path']) or not os.path.isfile(os.path.join(greenlet.task.dldir, filename)):
+            url = str(download['url'])
             files_downloaded = 1
             if cfg.download_builtin:
-                downloader = SmartDL(download['url'], download['path'], progress_bar=False, logger=logger,
+                downloader = SmartDL(url, download['path'], progress_bar=False, logger=logger,
                                      threads_count=1, fix_urls=False)
                 downloader.start(blocking=False)
                 while not downloader.isFinished():
@@ -870,17 +938,60 @@ def download_file():
                     for e in downloader.get_errors():
                         logger.error(str(greenlet.task.name + ": " + e))
                     returncode = 1
-            elif cfg.jd_connected:
-                url = str(download['url'])
-                if len(query_links):
-                    if any(link['name'] == filename for link in query_links):
-                        continue
-                try:
-                    cfg.jd_device.linkgrabber.add_links([{"autostart": True, "links": url, "packageName": package_name,
-                                                          "destinationFolder": greenlet.task.dldir,
-                                                          "overwritePackagizerRules": True}])
-                except BaseException as e:
-                    logger.error('myjdapi : ' + e.message)
+
+            elif cfg.jd_enabled:
+                if cfg.jd_connected:
+                    if len(query_links):
+                        if any(link['name'] == filename for link in query_links):
+                            continue
+                    try:
+                        cfg.jd_device.linkgrabber.add_links([{"autostart": True, "links": url,
+                                                              "packageName": package_name,
+                                                              "destinationFolder": greenlet.task.dldir,
+                                                              "overwritePackagizerRules": True}])
+                    except BaseException as e:
+                        logger.error('myjdapi error: ' + e.message)
+
+            elif cfg.aria2_enabled:
+                if cfg.aria2_connected:
+                    transfers = cfg.aria.aria2.tellActive(cfg.aria2_token) + cfg.aria.aria2.tellWaiting(cfg.aria2_token,
+                                                                                                        -1,
+                                                                                                        99) + cfg.aria.aria2.tellStopped(
+                        cfg.aria2_token, -1, 99)
+                    if len(transfers):
+                        if any(transfer['dir'] == download['path'] for transfer in transfers):
+                            continue
+                    try:
+                        options = {'dir': greenlet.task.dldir}
+                        start_time = time.time()
+                        gid = cfg.aria.aria2.addUri(cfg.aria2_token, [url], options)
+                    except BaseException as e:
+                        logger.error('aria2 error: %s --- for: %s', e.message, greenlet.task.name)
+                    aria2_download = cfg.aria.aria2.tellStatus(cfg.aria2_token, gid)
+                    while not aria2_download["status"] == 'complete':
+                        if aria2_download['status'] == 'error':
+                            logger.error('aria2 error for %s: while downloading file: %s', greenlet.task.name,
+                                         download['path'])
+                            greenlet.task.update(eta=' aria2 error')
+                            return 1
+                        elif greenlet.task.local_status == "paused":
+                            cfg.aria.aria2.pause(cfg.aria2_token, gid)
+                            while greenlet.task.local_status == "paused":
+                                gevent_sleep_time()
+                            cfg.aria.aria2.pause(cfg.aria2_token, gid)
+                        elif greenlet.task.local_status == "stopped":
+                            cfg.aria.aria2.remove(cfg.aria2_token, gid)
+                            return 1
+                        get_download_stats_aria2(aria2_download, total_size_downloaded)
+                        gevent_sleep_time()
+                        aria2_download = cfg.aria.aria2.tellStatus(cfg.aria2_token, gid)
+                    stop_time = time.time()
+                    dltime = int(stop_time - start_time)
+                    total_size_downloaded += int(aria2_download['totalLength'])
+                    cfg.aria.aria2.removeDownloadResult(cfg.aria2_token, gid)
+                    logger.debug('Finished downloading file: %s', download['path'])
+                    greenlet.task.update(dltime=greenlet.task.dltime + dltime)
+
         else:
             logger.info('File not downloaded it already exists at: %s', download['path'])
 
@@ -1164,7 +1275,7 @@ def parse_tasks(transfers):
                         task.update(category='default')
                     if task.category in cfg.download_categories:
                         if not task.local_status == ('queued' or 'downloading'):
-                            task.update(local_status='queued', folder_id=folder_id, file_id=file_id)
+                            task.update(local_status='queued', folder_id=folder_id, file_id=file_id, dlsize='')
                             gevent.sleep(3)
                             scheduler.scheduler.add_job(download_task, args=(task,), name=task.name,
                                                         misfire_grace_time=7200, coalesce=False, max_instances=1,
@@ -1489,6 +1600,8 @@ def watchdir():
 @login_required
 def home():
     if cfg.jd_enabled:
+        if not cfg.jd_connected:
+            jd_connect()
         try:
             download_speed = cfg.jd_device.toolbar.get_status().get('limitspeed')
             if download_speed == 0:
@@ -1497,13 +1610,14 @@ def home():
                 cfg.download_speed = download_speed
         except:
             pass
-
+    if cfg.aria2_enabled and not cfg.aria2_connected:
+        aria2_connect()
     if not cfg.download_speed == -1:
         download_speed = utils.sizeof_human(cfg.download_speed)
     else:
         download_speed = cfg.download_speed
-    return render_template('index.html', download_speed=download_speed, debug_enabled=debug_enabled,
-                           update_available=cfg.update_available, jd_update_available=cfg.jd_update_available)
+
+    return render_template('index.html', download_speed=download_speed, debug_enabled=debug_enabled, cfg=cfg)
 
 
 @app.route('/upload', methods=["POST"])
@@ -1662,8 +1776,14 @@ def settings():
                 prem_config.set('downloads', 'seed_torrent', '0')
             if request.form.get('jd_enabled'):
                 prem_config.set('downloads', 'jd_enabled', '1')
+                prem_config.set('downloads', 'aria2_enabled', '0')
             else:
                 prem_config.set('downloads', 'jd_enabled', '0')
+            if request.form.get('aria2_enabled'):
+                prem_config.set('downloads', 'aria2_enabled', '1')
+                prem_config.set('downloads', 'jd_enabled', '0')
+            else:
+                prem_config.set('downloads', 'aria2_enabled', '0')
             if request.form.get('watchdir_enabled'):
                 prem_config.set('upload', 'watchdir_enabled', '1')
                 if not cfg.watchdir_enabled:
@@ -1691,6 +1811,9 @@ def settings():
             prem_config.set('downloads', 'jd_username', request.form.get('jd_username'))
             prem_config.set('downloads', 'jd_password', request.form.get('jd_password'))
             prem_config.set('downloads', 'jd_device_name', request.form.get('jd_device_name'))
+            prem_config.set('downloads', 'aria2_host', request.form.get('aria2_host'))
+            prem_config.set('downloads', 'aria2_port', request.form.get('aria2_port'))
+            prem_config.set('downloads', 'aria2_secret', request.form.get('aria2_secret'))
             prem_config.set('notifications', 'email_from', request.form.get('email_from'))
             prem_config.set('notifications', 'email_to', request.form.get('email_to'))
             prem_config.set('notifications', 'email_server', request.form.get('email_server'))
@@ -1858,7 +1981,7 @@ def delete_task(message):
         else:
             logger.error('Download could not be removed from cloud: %s', task.name)
             socketio.emit('delete_failed', {'data': id})
-    scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
+    scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
 
 
 # @socketio.on('pause_task')

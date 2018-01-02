@@ -30,6 +30,10 @@ jd_enabled = 0
 jd_username =
 jd_password =
 jd_device_name =
+aria2_enabled = 0
+aria2_host = localhost
+aria2_port = 6800
+aria2_secret = premiumizer
 
 
 [categories]
@@ -87,5 +91,5 @@ email_password =
 updated = 1
 auto_update = 0
 update_date = Never
-config_version = 1.7
-req_version = 6.2
+config_version = 1.8
+req_version = 6.3
