@@ -207,12 +207,13 @@ class PremConfig:
         self.seed_torrent = prem_config.getboolean('downloads', 'seed_torrent')
         self.download_all = prem_config.getboolean('downloads', 'download_all')
         self.download_enabled = prem_config.getboolean('downloads', 'download_enabled')
+        self.download_location = prem_config.get('downloads', 'download_location')
+        self.download_max = prem_config.getint('downloads', 'download_max')
+        self.download_speed = prem_config.getfloat('downloads', 'download_speed')
+        self.jd_enabled = prem_config.getboolean('downloads', 'jd_enabled')
+        self.aria2_enabled = prem_config.getboolean('downloads', 'aria2_enabled')
         if self.download_enabled:
             self.download_builtin = 0
-            self.jd_enabled = prem_config.getboolean('downloads', 'jd_enabled')
-            self.aria2_enabled = prem_config.getboolean('downloads', 'aria2_enabled')
-            self.download_max = prem_config.getint('downloads', 'download_max')
-            self.download_speed = prem_config.get('downloads', 'download_speed')
             if self.download_speed == '0':
                 self.download_enabled = 0
             elif self.download_speed == '-1':
@@ -220,13 +221,11 @@ class PremConfig:
             else:
                 self.download_speed = float(self.download_speed)
                 self.download_speed = int(self.download_speed * 1048576)
-            self.download_location = prem_config.get('downloads', 'download_location')
 
             if self.jd_enabled:
                 self.jd_username = prem_config.get('downloads', 'jd_username')
                 self.jd_password = prem_config.get('downloads', 'jd_password')
                 self.jd_device_name = prem_config.get('downloads', 'jd_device_name')
-                self.jd_update_available = 0
                 self.aria2_enabled = 0
                 try:
                     self.jd = myjdapi.Myjdapi()
