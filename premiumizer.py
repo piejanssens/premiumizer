@@ -1295,7 +1295,7 @@ def parse_tasks(transfers):
                     elif task.category == '':
                         task.update(local_status='waiting', progress=100, folder_id=folder_id, file_id=file_id)
                 else:
-                    task.update(local_status='finished', speed=None, folder_id=folder_id, file_id=file_id)
+                    task.update(local_status='download_disabled', speed=None, folder_id=folder_id, file_id=file_id)
         else:
             if task.local_status == 'downloading':
                 if task.name not in str(scheduler.scheduler.get_jobs('check_downloads')):
