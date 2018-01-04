@@ -1412,6 +1412,8 @@ def upload_torrent(torrent):
         else:
             msg = 'Upload of torrent: %s failed, message: %s' % (torrent, response_content['message'])
             logger.error(msg)
+            if response_content['message'] == 'You already have this job added.':
+                return 'duplicate'
             if cfg.email_enabled:
                 email('Upload of torrent failed', msg)
             return 'failed'
@@ -1431,6 +1433,8 @@ def upload_magnet(magnet):
         else:
             msg = 'Upload of magnet: %s failed, message: %s' % (magnet, response_content['message'])
             logger.error(msg)
+            if response_content['message'] == 'You already have this job added.':
+                return 'duplicate'
             if cfg.email_enabled:
                 email('Upload of magnet failed', msg)
             return 'failed'
@@ -1499,6 +1503,8 @@ def upload_nzb(filename):
         else:
             msg = 'Upload of nzb: %s failed, message: %s' % (filename, response_content['message'])
             logger.error(msg)
+            if response_content['message'] == 'You already have this job added.':
+                return 'duplicate'
             if cfg.email_enabled:
                 email('Upload of nzb failed', msg)
             return 'failed'
@@ -1531,11 +1537,21 @@ class MyHandler(events.PatternMatchingEventHandler):
                 category = ''
             if watchdir_file.endswith('.torrent'):
                 id = upload_torrent(watchdir_file)
-                if id == 'failed':
+                if id == 'duplicate':
                     failed = 1
-                name = torrent_metainfo(watchdir_file)
-                type = 'Torrent'
-                add_task(id, 0, name, category, type=type)
+                    logger.debug('Deleting duplicate file from watchdir: %s', watchdir_file)
+                    try:
+                        gevent.sleep(3)
+                        os.remove(watchdir_file)
+                    except Exception as err:
+                        logger.error('Could not remove duplicate file from watchdir: %s --- error: %s', watchdir_file,
+                                     err)
+                elif id == 'failed':
+                    failed = 1
+                else:
+                    name = torrent_metainfo(watchdir_file)
+                    type = 'Torrent'
+                    add_task(id, 0, name, category, type=type)
             elif watchdir_file.endswith('.magnet'):
                 with open(watchdir_file) as f:
                     magnet = f.read()
@@ -1549,18 +1565,39 @@ class MyHandler(events.PatternMatchingEventHandler):
                             logger.error('Extracting id / name from .magnet failed for: %s', watchdir_file)
                             return
                         id = upload_magnet(magnet)
-                        type = 'Torrent'
-                        add_task(id, 0, name, category, type=type)
-                        if id == 'failed':
+                        if id == 'duplicate':
                             failed = 1
+                            logger.debug('Deleting duplicate file from watchdir: %s', watchdir_file)
+                            try:
+                                gevent.sleep(3)
+                                os.remove(watchdir_file)
+                            except Exception as err:
+                                logger.error('Could not remove duplicate file from watchdir: %s --- error: %s', watchdir_file,
+                                             err)
+                        elif id == 'failed':
+                            failed = 1
+                        else:
+                            type = 'Torrent'
+                            add_task(id, 0, name, category, type=type)
+
             elif watchdir_file.endswith('.nzb'):
                 id = upload_nzb(watchdir_file)
-                if id == 'failed':
+                if id == 'duplicate':
                     failed = 1
-                name = os.path.basename(watchdir_file)
-                name = os.path.splitext(name)[0]
-                type = 'NZB'
-                add_task(id, 0, name, category, type=type)
+                    logger.debug('Deleting duplicate file from watchdir: %s', watchdir_file)
+                    try:
+                        gevent.sleep(3)
+                        os.remove(watchdir_file)
+                    except Exception as err:
+                        logger.error('Could not remove duplicate file from watchdir: %s --- error: %s', watchdir_file,
+                                     err)
+                elif id == 'failed':
+                    failed = 1
+                else:
+                    name = os.path.basename(watchdir_file)
+                    name = os.path.splitext(name)[0]
+                    type = 'NZB'
+                    add_task(id, 0, name, category, type=type)
             if not failed:
                 gevent.sleep(3)
                 logger.debug('Deleting file from watchdir: %s', watchdir_file)
