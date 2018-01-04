@@ -209,7 +209,7 @@ class PremConfig:
         self.download_enabled = prem_config.getboolean('downloads', 'download_enabled')
         self.download_location = prem_config.get('downloads', 'download_location')
         self.download_max = prem_config.getint('downloads', 'download_max')
-        self.download_speed = prem_config.getfloat('downloads', 'download_speed')
+        self.download_speed = prem_config.get('downloads', 'download_speed')
         self.jd_enabled = prem_config.getboolean('downloads', 'jd_enabled')
         self.aria2_enabled = prem_config.getboolean('downloads', 'aria2_enabled')
         if self.download_enabled:
