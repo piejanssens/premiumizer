@@ -321,8 +321,12 @@ class PremConfig:
                         except Exception as e:
                             logger.error('Cannot Create watchdir directory: %s --- error:: %s', cat_dir, e)
                             self.watchdir_enabled = 0
-        self.download_categories = self.download_categories[:-1]
-        self.download_categories = self.download_categories.split(',')
+        try:
+            self.download_categories = self.download_categories[:-1]
+            self.download_categories = self.download_categories.split(',')
+        except Exception as e:
+            self.download_categories = ''
+            logger.error('Cannot set download_categories error: %s', e)
 
         self.email_enabled = prem_config.getboolean('notifications', 'email_enabled')
         if self.email_enabled:
