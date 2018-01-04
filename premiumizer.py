@@ -310,7 +310,7 @@ class PremConfig:
                         try:
                             os.makedirs(cat_dir)
                         except Exception as e:
-                            logger.error('Cannot Create download directory: %s --- error:: %s', cat_dir, e)
+                            logger.error('Cannot Create download directory: %s --- error: %s', cat_dir, e)
                             self.download_enabled = 0
                 if self.watchdir_enabled:
                     sub = os.path.join(self.watchdir_location, cat_name)
@@ -319,7 +319,7 @@ class PremConfig:
                         try:
                             os.makedirs(sub)
                         except Exception as e:
-                            logger.error('Cannot Create watchdir directory: %s --- error:: %s', cat_dir, e)
+                            logger.error('Cannot Create watchdir directory: %s --- error: %s', cat_dir, e)
                             self.watchdir_enabled = 0
         try:
             self.download_categories = self.download_categories[:-1]
