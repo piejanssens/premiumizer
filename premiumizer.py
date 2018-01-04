@@ -420,7 +420,7 @@ def check_update(auto_update=cfg.auto_update):
             else:
                 cfg.update_status = 'No update available --- last time checked: ' + datetime.now().strftime(
                     "%d-%m %H:%M:%S") + ' --- last time updated: ' + cfg.update_date
-        if cfg.jd_enabled:
+        if cfg.jd_enabled and cfg.download_enabled:
             try:
                 cfg.jd_update_available = cfg.jd_device.update.update_available()
             except:
@@ -1647,7 +1647,7 @@ def watchdir():
 @app.route('/')
 @login_required
 def home():
-    if cfg.jd_enabled:
+    if cfg.jd_enabled and cfg.download_enabled:
         if not cfg.jd_connected:
             jd_connect()
         try:
@@ -1658,7 +1658,7 @@ def home():
                 cfg.download_speed = download_speed
         except:
             pass
-    if cfg.aria2_enabled and not cfg.aria2_connected:
+    if cfg.aria2_enabled and cfg.download_enabled and not cfg.aria2_connected:
         aria2_connect()
     if not cfg.download_speed == -1:
         download_speed = utils.sizeof_human(cfg.download_speed)
