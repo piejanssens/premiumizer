@@ -1566,6 +1566,7 @@ class MyHandler(events.PatternMatchingEventHandler):
                             failed = 1
                             logger.debug('Deleting duplicate file from watchdir: %s', watchdir_file)
                             try:
+                                f.close()
                                 gevent.sleep(3)
                                 os.remove(watchdir_file)
                             except Exception as err:
