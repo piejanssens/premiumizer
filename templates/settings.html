@@ -151,7 +151,7 @@
             <input type="number" class="form-control" name="download_max"
                    aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_max') }}">
             <label for="download_speed">Speed limit in MegaBytes/s (-1 = no limit)</label>
-            <input type="number" class="form-control" name="download_speed"
+            <input type="text" class="form-control" name="download_speed"
                    aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_speed') }}">
             <label for="download_location">Download Location:</label>
             <input type="text" class="form-control" name="download_location"
