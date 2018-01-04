@@ -307,12 +307,20 @@ class PremConfig:
                 if self.download_enabled:
                     if not os.path.exists(cat_dir):
                         logger.info('Creating Download Path at: %s', cat_dir)
-                        os.makedirs(cat_dir)
+                        try:
+                            os.makedirs(cat_dir)
+                        except Exception as e:
+                            logger.error('Cannot Create download directory: %s --- error:: %s', cat_dir, e)
+                            self.download_enabled = 0
                 if self.watchdir_enabled:
                     sub = os.path.join(self.watchdir_location, cat_name)
                     if not os.path.exists(sub):
                         logger.info('Creating watchdir Path at %s', sub)
-                        os.makedirs(sub)
+                        try:
+                            os.makedirs(sub)
+                        except Exception as e:
+                            logger.error('Cannot Create watchdir directory: %s --- error:: %s', cat_dir, e)
+                            self.watchdir_enabled = 0
         self.download_categories = self.download_categories[:-1]
         self.download_categories = self.download_categories.split(',')
 
