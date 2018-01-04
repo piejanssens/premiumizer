@@ -607,7 +607,7 @@ def email(subject, text=None):
         text += '\nStatus: SUCCESS'
         text += '\n\nStatistics:'
         text += '\nDownloaded size: %s' % utils.sizeof_human(greenlet.task.size)
-        text += '\nDownload Time: %s' % utils.time_human(greenlet.task.dltime, fmt_short=True)
+        text += '\nDownload time: %s' % utils.time_human(greenlet.task.dltime, fmt_short=True)
         text += '\nAverage download speed: %s' % greenlet.avgspeed
         text += '\n\nFiles:'
         for download in greenlet.task.download_list:
