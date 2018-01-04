@@ -182,6 +182,7 @@ class PremConfig:
         self.jd_update_available = 0
         self.jd_connected = 0
         self.aria2_connected = 0
+        self.download_builtin = 0
         self.check_config()
 
     def check_config(self):
@@ -212,68 +213,64 @@ class PremConfig:
         self.download_speed = prem_config.get('downloads', 'download_speed')
         self.jd_enabled = prem_config.getboolean('downloads', 'jd_enabled')
         self.aria2_enabled = prem_config.getboolean('downloads', 'aria2_enabled')
-        if self.download_enabled:
-            self.download_builtin = 0
-            if self.download_speed == '0':
-                self.download_enabled = 0
-            elif self.download_speed == '-1':
-                self.download_speed = int(self.download_speed)
-            else:
-                self.download_speed = float(self.download_speed)
-                self.download_speed = int(self.download_speed * 1048576)
-
-            if self.jd_enabled:
-                self.jd_username = prem_config.get('downloads', 'jd_username')
-                self.jd_password = prem_config.get('downloads', 'jd_password')
-                self.jd_device_name = prem_config.get('downloads', 'jd_device_name')
-                self.aria2_enabled = 0
+        if self.download_speed == '0':
+            self.download_enabled = 0
+        elif self.download_speed == '-1':
+            self.download_speed = int(self.download_speed)
+        else:
+            self.download_speed = float(self.download_speed)
+            self.download_speed = int(self.download_speed * 1048576)
+        if self.jd_enabled:
+            self.jd_username = prem_config.get('downloads', 'jd_username')
+            self.jd_password = prem_config.get('downloads', 'jd_password')
+            self.jd_device_name = prem_config.get('downloads', 'jd_device_name')
+            self.aria2_enabled = 0
+            try:
+                self.jd = myjdapi.Myjdapi()
+                self.jd.set_app_key('https://git.io/vaDti')
+                self.jd.connect(self.jd_username, self.jd_password)
+                self.jd_connected = 1
+            except BaseException as e:
+                logger.error('myjdapi : ' + e.message)
+                logger.error('Could not connect to My Jdownloader')
+                self.jd_connected = 0
+            try:
+                self.jd_device = self.jd.get_device(self.jd_device_name)
+                self.jd_connected = 1
+            except BaseException as e:
+                logger.error('myjdapi : ' + e.message)
+                logger.error('Could not get device name (%s) for My Jdownloader', self.jd_device_name)
+                self.jd_connected = 0
+            if self.jd_connected:
                 try:
-                    self.jd = myjdapi.Myjdapi()
-                    self.jd.set_app_key('https://git.io/vaDti')
-                    self.jd.connect(self.jd_username, self.jd_password)
-                    self.jd_connected = 1
-                except BaseException as e:
-                    logger.error('myjdapi : ' + e.message)
-                    logger.error('Could not connect to My Jdownloader')
-                    self.jd_connected = 0
-                try:
-                    self.jd_device = self.jd.get_device(self.jd_device_name)
-                    self.jd_connected = 1
-                except BaseException as e:
-                    logger.error('myjdapi : ' + e.message)
-                    logger.error('Could not get device name (%s) for My Jdownloader', self.jd_device_name)
-                    self.jd_connected = 0
-                if self.jd_connected:
-                    try:
-                        if self.download_speed == -1:
-                            self.jd_device.toolbar.disable_downloadSpeedLimit()
-                        else:
-                            self.jd_device.toolbar.enable_downloadSpeedLimit()
-                            self.download_speed = self.jd_device.toolbar.get_status().get('limitspeed')
-                    except:
-                        logger.error('Could not enable Jdownloader speed limit')
-
-            if self.aria2_enabled:
-                self.jd_enabled = 0
-                self.aria2_host = prem_config.get('downloads', 'aria2_host')
-                self.aria2_port = prem_config.get('downloads', 'aria2_port')
-                self.aria2_token = "token:" + prem_config.get('downloads', 'aria2_secret')
-                try:
-                    uri = ('http://' + self.aria2_host + ':' + self.aria2_port + '/rpc')
-                    self.aria = xmlrpclib.ServerProxy(uri, allow_none=True)
                     if self.download_speed == -1:
-                        download_speed = 0
+                        self.jd_device.toolbar.disable_downloadSpeedLimit()
                     else:
-                        download_speed = str(cfg.download_speed + 'M')
-                    self.aria.aria2.changeGlobalOption(self.aria2_token, {'max-download-limit': download_speed})
-                    self.aria2_connected = 1
-                except Exception as e:
-                    logger.error('Could not connect to Aria2 RPC: %s --- message: %s', uri, e)
-                    self.aria2_connected = 0
+                        self.jd_device.toolbar.enable_downloadSpeedLimit()
+                        self.download_speed = self.jd_device.toolbar.get_status().get('limitspeed')
+                except:
+                    logger.error('Could not enable Jdownloader speed limit')
 
-            else:
-                self.download_builtin = 1
+        if self.aria2_enabled:
+            self.jd_enabled = 0
+            self.aria2_host = prem_config.get('downloads', 'aria2_host')
+            self.aria2_port = prem_config.get('downloads', 'aria2_port')
+            self.aria2_token = "token:" + prem_config.get('downloads', 'aria2_secret')
+            try:
+                uri = ('http://' + self.aria2_host + ':' + self.aria2_port + '/rpc')
+                self.aria = xmlrpclib.ServerProxy(uri, allow_none=True)
+                if self.download_speed == -1:
+                    download_speed = 0
+                else:
+                    download_speed = str(cfg.download_speed + 'M')
+                self.aria.aria2.changeGlobalOption(self.aria2_token, {'max-download-limit': download_speed})
+                self.aria2_connected = 1
+            except Exception as e:
+                logger.error('Could not connect to Aria2 RPC: %s --- message: %s', uri, e)
+                self.aria2_connected = 0
 
+        else:
+            self.download_builtin = 1
         if os.path.isfile(os.path.join(runningdir, 'nzbtomedia', 'NzbToMedia.py')):
             self.nzbtomedia_location = (os.path.join(runningdir, 'nzbtomedia', 'NzbToMedia.py'))
             self.nzbtomedia_builtin = 1
@@ -420,7 +417,7 @@ def check_update(auto_update=cfg.auto_update):
             else:
                 cfg.update_status = 'No update available --- last time checked: ' + datetime.now().strftime(
                     "%d-%m %H:%M:%S") + ' --- last time updated: ' + cfg.update_date
-        if cfg.jd_enabled and cfg.download_enabled:
+        if cfg.jd_enabled:
             try:
                 cfg.jd_update_available = cfg.jd_device.update.update_available()
             except:
@@ -1647,7 +1644,7 @@ def watchdir():
 @app.route('/')
 @login_required
 def home():
-    if cfg.jd_enabled and cfg.download_enabled:
+    if cfg.jd_enabled:
         if not cfg.jd_connected:
             jd_connect()
         try:
@@ -1658,7 +1655,7 @@ def home():
                 cfg.download_speed = download_speed
         except:
             pass
-    if cfg.aria2_enabled and cfg.download_enabled and not cfg.aria2_connected:
+    if cfg.aria2_enabled and not cfg.aria2_connected:
         aria2_connect()
     if not cfg.download_speed == -1:
         download_speed = utils.sizeof_human(cfg.download_speed)
