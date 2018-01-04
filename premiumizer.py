@@ -251,7 +251,7 @@ class PremConfig:
                 except:
                     logger.error('Could not enable Jdownloader speed limit')
 
-        if self.aria2_enabled:
+        elif self.aria2_enabled:
             self.jd_enabled = 0
             self.aria2_host = prem_config.get('downloads', 'aria2_host')
             self.aria2_port = prem_config.get('downloads', 'aria2_port')
