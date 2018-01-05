@@ -8,6 +8,14 @@
         <span class="sr-only">Error:</span>
         Cannot connect to premiumize.me. Check your premiumize account details in settings and if premiumize.me is up.
     </div>
+        {% if cfg.download_builtin == 1 %}
+        <p>&nbsp;</p>
+        <div id="cfg.download_builtin" class="alert alert-info" role="alert" style="display:inline;">
+            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+            <span class="sr-only">Warning:</span>
+            Consider Jdownloader or Aria2 for optimal performance
+        </div>
+    {% endif %}
     {% if cfg.jd_connected == 0 and cfg.jd_enabled %}
         <p>&nbsp;</p>
         <div id="cfg.jd_connected" class="alert alert-danger" role="alert" style="display:inline;">
@@ -132,5 +140,5 @@
 {% block js_footer %}
     {{ super() }}
     <script type="text/javascript" src="{{ url_for('static', filename='js/socket.io.slim.js') }}?v=1"></script>
-    <script type="text/javascript" src="{{ url_for('static', filename='js/control.js') }}?v=11"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/control.js') }}?v=12"></script>
 {% endblock %}

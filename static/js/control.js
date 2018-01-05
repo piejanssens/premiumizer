@@ -72,6 +72,11 @@ function update_task(task) {
         stateStr = 'Waiting on category';
         stateIcon = 'desktop';
         categoryState = '';
+    } else if (task.cloud_status == 'finished' && task.local_status == 'download_disabled') {
+        stateColor = 'info';
+        stateStr = 'Downloads are disabled';
+        stateIcon = 'desktop';
+        categoryState = '';
         /*
     } else if (task.cloud_status == 'finished' && task.local_status == 'paused') {
         stateColor = 'warning';
