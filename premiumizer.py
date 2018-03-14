@@ -1901,7 +1901,10 @@ def settings():
                 watchdir()
             flash('settings saved', 'info')
     check_update(0)
-    return render_template('settings.html', settings=prem_config, cfg=cfg, categories_amount=len(cfg.download_categories)+1)
+    categories_amount = len(cfg.download_categories) + 1
+    if categories_amount < 7:
+        categories_amount = 7
+    return render_template('settings.html', settings=prem_config, cfg=cfg, categories_amount=categories_amount)
 
 
 @app.route('/login', methods=["GET", "POST"])
