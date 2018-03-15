@@ -285,39 +285,42 @@ class PremConfig:
 
         self.categories = []
         self.download_categories = ''
-        for x in range(1, 6):
-            y = prem_config.get('categories', ('cat_name' + str([x])))
-            z = prem_config.get('categories', ('cat_dir' + str([x])))
-            if y != '':
-                cat_name = y
-                if z == '':
-                    cat_dir = os.path.join(self.download_location, y)
-                else:
-                    cat_dir = z
-                cat_ext = prem_config.get('categories', ('cat_ext' + str([x]))).split(',')
-                cat_delsample = prem_config.getboolean('categories', ('cat_delsample' + str([x])))
-                cat_nzbtomedia = prem_config.getboolean('categories', ('cat_nzbtomedia' + str([x])))
-                cat = {'name': cat_name, 'dir': cat_dir, 'ext': cat_ext, 'delsample': cat_delsample,
-                       'nzb': cat_nzbtomedia}
-                self.categories.append(cat)
-                self.download_categories += str(cat_name + ',')
-                if self.download_enabled:
-                    if not os.path.exists(cat_dir):
-                        logger.info('Creating Download Path at: %s', cat_dir)
-                        try:
-                            os.makedirs(cat_dir)
-                        except Exception as e:
-                            logger.error('Cannot Create download directory: %s --- error: %s', cat_dir, e)
-                            self.download_enabled = 0
-                if self.watchdir_enabled:
-                    sub = os.path.join(self.watchdir_location, cat_name)
-                    if not os.path.exists(sub):
-                        logger.info('Creating watchdir Path at %s', sub)
-                        try:
-                            os.makedirs(sub)
-                        except Exception as e:
-                            logger.error('Cannot Create watchdir directory: %s --- error: %s', cat_dir, e)
-                            self.watchdir_enabled = 0
+        try:
+            for x in range(1, 99):
+                y = prem_config.get('categories', ('cat_name' + str([x])))
+                z = prem_config.get('categories', ('cat_dir' + str([x])))
+                if y != '':
+                    cat_name = y
+                    if z == '':
+                        cat_dir = os.path.join(self.download_location, y)
+                    else:
+                        cat_dir = z
+                    cat_ext = prem_config.get('categories', ('cat_ext' + str([x]))).split(',')
+                    cat_delsample = prem_config.getboolean('categories', ('cat_delsample' + str([x])))
+                    cat_nzbtomedia = prem_config.getboolean('categories', ('cat_nzbtomedia' + str([x])))
+                    cat = {'name': cat_name, 'dir': cat_dir, 'ext': cat_ext, 'delsample': cat_delsample,
+                           'nzb': cat_nzbtomedia}
+                    self.categories.append(cat)
+                    self.download_categories += str(cat_name + ',')
+                    if self.download_enabled:
+                        if not os.path.exists(cat_dir):
+                            logger.info('Creating Download Path at: %s', cat_dir)
+                            try:
+                                os.makedirs(cat_dir)
+                            except Exception as e:
+                                logger.error('Cannot Create download directory: %s --- error: %s', cat_dir, e)
+                                self.download_enabled = 0
+                    if self.watchdir_enabled:
+                        sub = os.path.join(self.watchdir_location, cat_name)
+                        if not os.path.exists(sub):
+                            logger.info('Creating watchdir Path at %s', sub)
+                            try:
+                                os.makedirs(sub)
+                            except Exception as e:
+                                logger.error('Cannot Create watchdir directory: %s --- error: %s', cat_dir, e)
+                                self.watchdir_enabled = 0
+        except:
+            pass
         try:
             self.download_categories = self.download_categories[:-1]
             self.download_categories = self.download_categories.split(',')
@@ -1662,7 +1665,6 @@ def home():
         download_speed = utils.sizeof_human(cfg.download_speed)
     else:
         download_speed = cfg.download_speed
-
     return render_template('index.html', download_speed=download_speed, debug_enabled=debug_enabled, cfg=cfg)
 
 
@@ -1899,7 +1901,10 @@ def settings():
                 watchdir()
             flash('settings saved', 'info')
     check_update(0)
-    return render_template('settings.html', settings=prem_config, cfg=cfg)
+    categories_amount = len(cfg.download_categories) + 1
+    if categories_amount < 7:
+        categories_amount = 7
+    return render_template('settings.html', settings=prem_config, cfg=cfg, categories_amount=categories_amount)
 
 
 @app.route('/login', methods=["GET", "POST"])

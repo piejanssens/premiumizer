@@ -91,3 +91,12 @@
 
 .bootstrap-switch-container{ white-space:nowrap;
 }
+
+.panel-body
+{
+    overflow-x: hidden;
+}
+.dropdown-menu
+{
+    overflow-y: visible;
+}

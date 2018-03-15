@@ -220,7 +220,7 @@
         <h5>Delete samples: Will not download any media file < 150MB with sample or rarbg.com.mp4 in url</h5>
         <h5>Extensions: Only download the following files; example mkv,mp4,srt</h5>
         <p>&nbsp;</p>
-        {% for x in range(1,7) %}
+        {% for x in range(1,categories_amount) %}
             <div class="form-inline">
                 <input type="text" class="form-control" placeholder="Name" name="{{ "cat_name["+x|string+"]" }}"
                        aria-describedby="basic-addon1"
