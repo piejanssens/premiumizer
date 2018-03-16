@@ -94,9 +94,15 @@
 
 .panel-body
 {
-    overflow-x: hidden;
+    padding-left: 30px;
+    padding-right: 30px;
+    padding-top: 10px;
+    padding-bottom: 10px;
 }
 .dropdown-menu
 {
-    overflow-y: visible;
+    position: relative;
+}
+h4 {
+  word-wrap: break-word;
 }
