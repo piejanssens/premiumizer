@@ -23,7 +23,7 @@ tzlocal==1.5.1
 werkzeug==0.14.1
 itsdangerous==0.24
 six==1.11
-gevent==1.3a2
+gevent==1.3b1
 python-dateutil==2.7.0
 pycrypto==2.6.1
 urllib3==1.22
