@@ -1265,8 +1265,6 @@ def parse_tasks(transfers):
             id_local.append(task.id)
             task.update(progress=progress, cloud_status=transfer['status'], dlsize=size + ' --- ',
                         speed=speed + ' --- ', eta=eta, file_id=file_id)
-        if task.folder_id:
-            folder_id = task.folder_id
         if task.local_status is None:
             if task.cloud_status != 'finished':
                 if task.name is not None and task.name != 'Loading name':
