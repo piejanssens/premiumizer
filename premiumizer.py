@@ -1571,7 +1571,8 @@ class MyHandler(events.PatternMatchingEventHandler):
                                 gevent.sleep(3)
                                 os.remove(watchdir_file)
                             except Exception as err:
-                                logger.error('Could not remove duplicate file from watchdir: %s --- error: %s', watchdir_file,
+                                logger.error('Could not remove duplicate file from watchdir: %s --- error: %s',
+                                             watchdir_file,
                                              err)
                         elif id == 'failed':
                             failed = 1
@@ -1624,6 +1625,9 @@ def load_tasks():
         task = db[id.encode("utf-8")]
         task.callback = socketio.emit
         tasks.append(task)
+    for task in tasks:
+        if task.local_status == 'downloading' or task.local_status == 'queued':
+            task.update(local_status=None)
 
 
 def watchdir():
