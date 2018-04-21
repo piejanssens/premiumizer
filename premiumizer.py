@@ -1265,8 +1265,6 @@ def parse_tasks(transfers):
             id_local.append(task.id)
             task.update(progress=progress, cloud_status=transfer['status'], dlsize=size + ' --- ',
                         speed=speed + ' --- ', eta=eta, file_id=file_id)
-        if task.folder_id:
-            folder_id = task.folder_id
         if task.local_status is None:
             if task.cloud_status != 'finished':
                 if task.name is not None and task.name != 'Loading name':
@@ -1573,7 +1571,8 @@ class MyHandler(events.PatternMatchingEventHandler):
                                 gevent.sleep(3)
                                 os.remove(watchdir_file)
                             except Exception as err:
-                                logger.error('Could not remove duplicate file from watchdir: %s --- error: %s', watchdir_file,
+                                logger.error('Could not remove duplicate file from watchdir: %s --- error: %s',
+                                             watchdir_file,
                                              err)
                         elif id == 'failed':
                             failed = 1
@@ -1626,6 +1625,9 @@ def load_tasks():
         task = db[id.encode("utf-8")]
         task.callback = socketio.emit
         tasks.append(task)
+    for task in tasks:
+        if task.local_status == 'downloading' or task.local_status == 'queued':
+            task.update(local_status=None)
 
 
 def watchdir():
