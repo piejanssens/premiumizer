@@ -1423,7 +1423,10 @@ def upload_torrent(torrent):
 
 def upload_magnet(magnet):
     logger.debug('def upload_magnet started')
-    payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'src': magnet}
+    if cfg.seed_torrent:
+        payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'seed': '2or48h', 'src': magnet}
+    else:
+        payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'src': magnet}
     r = prem_connection("post", "https://www.premiumize.me/api/transfer/create", payload)
     if 'failed' not in r:
         response_content = json.loads(r.content)
