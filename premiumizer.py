@@ -441,6 +441,7 @@ def update_self():
     with open(os.path.join(runningdir, 'settings.cfg'), 'w') as configfile:  # save
         prem_config.write(configfile)
     scheduler.shutdown(wait=False)
+    db.close()
     socketio.stop()
     if os_arg == '--windows':
         subprocess.call(['python', os.path.join(runningdir, 'utils.py'), '--update', '--windows'])
@@ -454,8 +455,8 @@ def update_self():
 # noinspection PyProtectedMember
 def restart():
     logger.info('Restarting')
-    db.close()
     scheduler.shutdown(wait=False)
+    db.close()
     socketio.stop()
     if os_arg == '--windows':
         # windows service will automatically restart on 'failure'
@@ -469,8 +470,8 @@ def restart():
 # noinspection PyProtectedMember
 def shutdown():
     logger.info('Shutdown recieved')
-    db.close()
     scheduler.shutdown(wait=False)
+    db.close()
     socketio.stop()
     if os_arg == '--windows':
         subprocess.call([os.path.join(rootdir, 'Installer', 'nssm.exe'), 'stop', 'Premiumizer'])
