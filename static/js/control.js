@@ -62,59 +62,64 @@ function update_task(task) {
         stateStr = 'Finished';
         stateIcon = 'cloud';
         categoryState = '';
-    } else if (task.cloud_status == 'finished' && task.local_status == 'queued') {
+    } else if (task.cloud_status == 'seeding' && task.local_status == null) {
+        stateColor = 'success';
+        stateStr = 'Seeding';
+        stateIcon = 'cloud';
+        categoryState = '';
+    } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'queued') {
         stateColor = 'primary';
         stateStr = 'Download Queue';
         stateIcon = 'desktop';
         categoryState = '';
-    } else if (task.cloud_status == 'finished' && task.local_status == 'waiting') {
+    } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'waiting') {
         stateColor = 'info';
         stateStr = 'Waiting on category';
         stateIcon = 'desktop';
         categoryState = '';
-    } else if (task.cloud_status == 'finished' && task.local_status == 'download_disabled') {
+    } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'download_disabled') {
         stateColor = 'info';
         stateStr = 'Downloads are disabled';
         stateIcon = 'desktop';
         categoryState = '';
         /*
-    } else if (task.cloud_status == 'finished' && task.local_status == 'paused') {
+    } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'paused') {
         stateColor = 'warning';
         stateStr = 'Download paused';
         stateIcon = 'desktop';
         categoryState = '';
          */
-    } else if (task.cloud_status == 'finished' && task.local_status == 'downloading') {
+    } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'downloading') {
         stateColor = 'primary';
         stateStr = 'Downloading';
         stateIcon = 'desktop';
         categoryState = '';
-    } else if (task.cloud_status == 'finished' && task.local_status == 'finished') {
+    } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'finished') {
         stateColor = 'success';
         stateStr = 'Finished';
         stateIcon = 'desktop';
         categoryState = ' disabled';
-    } else if (task.cloud_status == 'finished' && task.local_status == 'stopped') {
+    } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'stopped') {
         stateColor = 'warning';
         stateStr = 'Download stopped';
         stateIcon = 'desktop';
         categoryState = '';
-    } else if (task.cloud_status == 'finished' && task.local_status == 'failed: download retrying') {
+    } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'failed: download retrying') {
         stateColor = 'warning';
         stateStr = 'Failed: download retrying soon';
         stateIcon = 'desktop';
         categoryState = '';
-    } else if (task.cloud_status == 'finished' && task.local_status == 'failed: download') {
+    } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'failed: download') {
         stateColor = 'danger';
         stateStr = 'Failed: download';
         stateIcon = 'desktop';
         categoryState = '';
-    } else if (task.cloud_status == 'finished' && task.local_status == 'failed: nzbToMedia') {
+    } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'failed: nzbToMedia') {
         stateColor = 'danger';
         stateStr = 'Failed: nzbToMedia';
         stateIcon = 'desktop';
         categoryState = '';
-    } else if (task.cloud_status == 'finished' && task.local_status == 'failed: Filehost') {
+    } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'failed: Filehost') {
         stateColor = 'danger';
         stateStr = 'Failed: Filehost';
         stateIcon = 'desktop';
