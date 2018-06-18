@@ -8,7 +8,7 @@
         <span class="sr-only">Error:</span>
         Cannot connect to premiumize.me. Check your premiumize account details in settings and if premiumize.me is up.
     </div>
-        {% if cfg.download_builtin == 1 %}
+    {% if cfg.download_builtin == 1 %}
         <p>&nbsp;</p>
         <div id="cfg.download_builtin" class="alert alert-info" role="alert" style="display:inline;">
             <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
@@ -76,11 +76,12 @@
             <div class="col-lg-6">
                 <div class="form-group">
                     <div class="icon-addon addon-fa pointer">
-                        <input type="text" placeholder="Drop or upload a .torrent / .nzb" class="form-control pointer"
-                               id="torrent-input" onclick="document.getElementById('torrent-file-upload').click();">
-                        <label for="torrent" class="fa fa-file" rel="tooltip" title="torrent"></label>
-                        <input type="file" id="torrent-file-upload" style="display:none"
-                               accept="application/x-bittorrent, application/x-nzb">
+                        <input type="text" placeholder="Drop or upload a .torrent - .nzb - .magnet"
+                               class="form-control pointer"
+                               id="file-input" onclick="document.getElementById('file-file-upload').click();">
+                        <label for="file" class="fa fa-file" rel="tooltip" title="file"></label>
+                        <input type="file" id="file-file-upload" style="display:none"
+                               accept=".torrent,.nzb,.magnet">
                     </div>
                 </div>
             </div><!-- /.col-lg-6 -->
@@ -106,7 +107,7 @@
         <div id="loading_upload" class="row" style="display:none">
             <div class="col-lg-12 text-center">
                 <i class="fa fa-cog fa-spin fa-5x"></i>
-                <p class="lead">Uploading Torrent</p>
+                <p class="lead">Uploading File</p>
             </div>
         </div>
         <hr>
@@ -140,5 +141,5 @@
 {% block js_footer %}
     {{ super() }}
     <script type="text/javascript" src="{{ url_for('static', filename='js/socket.io.slim.js') }}?v=3"></script>
-    <script type="text/javascript" src="{{ url_for('static', filename='js/control.js') }}?v=12"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/control.js') }}?v=13"></script>
 {% endblock %}

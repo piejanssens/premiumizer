@@ -1688,6 +1688,10 @@ def upload():
             failed = upload_torrent(upload_file)
         if upload_file.endswith('.nzb'):
             failed = upload_nzb(upload_file)
+        if upload_file.endswith('.magnet'):
+            with open(upload_file) as f:
+                magnet = f.read()
+                failed = upload_magnet(magnet)
         if failed != 'failed':
             try:
                 os.remove(upload_file)

@@ -176,13 +176,13 @@ function update_task(task) {
 
 +function ($) {
     'use strict';
-    var originalTorrentPlaceHolder;
-    var originalTorrentLabelClass;
+    var originalFilePlaceHolder;
+    var originalFileLabelClass;
 
-    var uploadTorrent = function (torrent) {
+    var uploadFile = function (file) {
         start_loading_upload();
         var data = new FormData();
-        data.append('file', torrent);
+        data.append('file', file);
         $.ajax({
             type: "POST",
             url: 'upload',
@@ -248,20 +248,20 @@ function update_task(task) {
         }, 100);
     });
 
-    $('#torrent-file-upload').on('change', function (e) {
+    $('#file-file-upload').on('change', function (e) {
         e.preventDefault();
         var files = $(this).prop('files');
         if (files.length > 0) {
             var file = files[0];
             var fileName = file.name;
             var fileExt = '.' + fileName.split('.').pop();
-            if (fileExt == '.torrent' || fileExt == '.nzb') {
-                uploadTorrent(file);
+            if (fileExt == '.torrent' || fileExt == '.nzb' || fileExt == '.magnet') {
+                uploadFile(file);
             } else {
-                alert('Nope, not a torrent or nzb file...');
+                alert('Nope, valid file...');
             }
         }
-        $('#torrent-file-upload[type="file"]').val(null);
+        $('#file-file-upload[type="file"]').val(null);
     });
 
     $('#magnet-input').on('paste', function (e) {
@@ -276,32 +276,32 @@ function update_task(task) {
         }, 100);
     });
 
-    $('#torrent-input').on('drop', function (e) {
+    $('#file-input').on('drop', function (e) {
         e.preventDefault();
         var file = e.originalEvent.dataTransfer.files[0];
         var fileName = file.name;
         var fileExt = '.' + fileName.split('.').pop();
-        if (fileExt == '.torrent' || fileExt == '.nzb') {
-            uploadTorrent(file);
+        if (fileExt == '.torrent' || fileExt == '.nzb' || fileExt == '.magnet') {
+            uploadFile(file);
         } else {
-            alert('Nope, not a torrent or nzb file...');
+            alert('Nope, not a valid file...');
         }
-        this.placeholder = originalTorrentPlaceHolder;
-        this.nextElementSibling.className = originalTorrentLabelClass;
+        this.placeholder = originalFilePlaceHolder;
+        this.nextElementSibling.className = originalFileLabelClass;
     });
 
-    $('#torrent-input').on('dragenter', function (e) {
-        originalTorrentPlaceHolder = this.placeholder;
-        var torrentLabel = this.nextElementSibling;
-        originalTorrentLabelClass = torrentLabel.className;
-        torrentLabel.className = "fa fa-check";
+    $('#file-input').on('dragenter', function (e) {
+        originalFilePlaceHolder = this.placeholder;
+        var fileLabel = this.nextElementSibling;
+        originalFileLabelClass = fileLabel.className;
+        fileLabel.className = "fa fa-check";
         this.placeholder = 'Drop it!';
         return false;
     });
 
-    $('#torrent-input').on('dragleave', function () {
-        this.placeholder = originalTorrentPlaceHolder;
-        this.nextElementSibling.className = originalTorrentLabelClass;
+    $('#file-input').on('dragleave', function () {
+        this.placeholder = originalFilePlaceHolder;
+        this.nextElementSibling.className = originalFileLabelClass;
         return false;
     });
 
