@@ -454,6 +454,7 @@ def update_self():
 # noinspection PyProtectedMember
 def restart():
     logger.info('Restarting')
+    db.close()
     scheduler.shutdown(wait=False)
     socketio.stop()
     if os_arg == '--windows':
@@ -468,6 +469,7 @@ def restart():
 # noinspection PyProtectedMember
 def shutdown():
     logger.info('Shutdown recieved')
+    db.close()
     scheduler.shutdown(wait=False)
     socketio.stop()
     if os_arg == '--windows':
