@@ -62,59 +62,64 @@ function update_task(task) {
         stateStr = 'Finished';
         stateIcon = 'cloud';
         categoryState = '';
-    } else if (task.cloud_status == 'finished' && task.local_status == 'queued') {
+    } else if (task.cloud_status == 'seeding' && task.local_status == null) {
+        stateColor = 'success';
+        stateStr = 'Seeding';
+        stateIcon = 'cloud';
+        categoryState = '';
+    } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'queued') {
         stateColor = 'primary';
         stateStr = 'Download Queue';
         stateIcon = 'desktop';
         categoryState = '';
-    } else if (task.cloud_status == 'finished' && task.local_status == 'waiting') {
+    } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'waiting') {
         stateColor = 'info';
         stateStr = 'Waiting on category';
         stateIcon = 'desktop';
         categoryState = '';
-    } else if (task.cloud_status == 'finished' && task.local_status == 'download_disabled') {
+    } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'download_disabled') {
         stateColor = 'info';
         stateStr = 'Downloads are disabled';
         stateIcon = 'desktop';
         categoryState = '';
         /*
-    } else if (task.cloud_status == 'finished' && task.local_status == 'paused') {
+    } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'paused') {
         stateColor = 'warning';
         stateStr = 'Download paused';
         stateIcon = 'desktop';
         categoryState = '';
          */
-    } else if (task.cloud_status == 'finished' && task.local_status == 'downloading') {
+    } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'downloading') {
         stateColor = 'primary';
         stateStr = 'Downloading';
         stateIcon = 'desktop';
         categoryState = '';
-    } else if (task.cloud_status == 'finished' && task.local_status == 'finished') {
+    } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'finished') {
         stateColor = 'success';
         stateStr = 'Finished';
         stateIcon = 'desktop';
         categoryState = ' disabled';
-    } else if (task.cloud_status == 'finished' && task.local_status == 'stopped') {
+    } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'stopped') {
         stateColor = 'warning';
         stateStr = 'Download stopped';
         stateIcon = 'desktop';
         categoryState = '';
-    } else if (task.cloud_status == 'finished' && task.local_status == 'failed: download retrying') {
+    } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'failed: download retrying') {
         stateColor = 'warning';
         stateStr = 'Failed: download retrying soon';
         stateIcon = 'desktop';
         categoryState = '';
-    } else if (task.cloud_status == 'finished' && task.local_status == 'failed: download') {
+    } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'failed: download') {
         stateColor = 'danger';
         stateStr = 'Failed: download';
         stateIcon = 'desktop';
         categoryState = '';
-    } else if (task.cloud_status == 'finished' && task.local_status == 'failed: nzbToMedia') {
+    } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'failed: nzbToMedia') {
         stateColor = 'danger';
         stateStr = 'Failed: nzbToMedia';
         stateIcon = 'desktop';
         categoryState = '';
-    } else if (task.cloud_status == 'finished' && task.local_status == 'failed: Filehost') {
+    } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'failed: Filehost') {
         stateColor = 'danger';
         stateStr = 'Failed: Filehost';
         stateIcon = 'desktop';
@@ -176,13 +181,13 @@ function update_task(task) {
 
 +function ($) {
     'use strict';
-    var originalTorrentPlaceHolder;
-    var originalTorrentLabelClass;
+    var originalFilePlaceHolder;
+    var originalFileLabelClass;
 
-    var uploadTorrent = function (torrent) {
+    var uploadFile = function (file) {
         start_loading_upload();
         var data = new FormData();
-        data.append('file', torrent);
+        data.append('file', file);
         $.ajax({
             type: "POST",
             url: 'upload',
@@ -248,20 +253,20 @@ function update_task(task) {
         }, 100);
     });
 
-    $('#torrent-file-upload').on('change', function (e) {
+    $('#file-file-upload').on('change', function (e) {
         e.preventDefault();
         var files = $(this).prop('files');
         if (files.length > 0) {
             var file = files[0];
             var fileName = file.name;
             var fileExt = '.' + fileName.split('.').pop();
-            if (fileExt == '.torrent' || fileExt == '.nzb') {
-                uploadTorrent(file);
+            if (fileExt == '.torrent' || fileExt == '.nzb' || fileExt == '.magnet') {
+                uploadFile(file);
             } else {
-                alert('Nope, not a torrent or nzb file...');
+                alert('Nope, valid file...');
             }
         }
-        $('#torrent-file-upload[type="file"]').val(null);
+        $('#file-file-upload[type="file"]').val(null);
     });
 
     $('#magnet-input').on('paste', function (e) {
@@ -276,32 +281,32 @@ function update_task(task) {
         }, 100);
     });
 
-    $('#torrent-input').on('drop', function (e) {
+    $('#file-input').on('drop', function (e) {
         e.preventDefault();
         var file = e.originalEvent.dataTransfer.files[0];
         var fileName = file.name;
         var fileExt = '.' + fileName.split('.').pop();
-        if (fileExt == '.torrent' || fileExt == '.nzb') {
-            uploadTorrent(file);
+        if (fileExt == '.torrent' || fileExt == '.nzb' || fileExt == '.magnet') {
+            uploadFile(file);
         } else {
-            alert('Nope, not a torrent or nzb file...');
+            alert('Nope, not a valid file...');
         }
-        this.placeholder = originalTorrentPlaceHolder;
-        this.nextElementSibling.className = originalTorrentLabelClass;
+        this.placeholder = originalFilePlaceHolder;
+        this.nextElementSibling.className = originalFileLabelClass;
     });
 
-    $('#torrent-input').on('dragenter', function (e) {
-        originalTorrentPlaceHolder = this.placeholder;
-        var torrentLabel = this.nextElementSibling;
-        originalTorrentLabelClass = torrentLabel.className;
-        torrentLabel.className = "fa fa-check";
+    $('#file-input').on('dragenter', function (e) {
+        originalFilePlaceHolder = this.placeholder;
+        var fileLabel = this.nextElementSibling;
+        originalFileLabelClass = fileLabel.className;
+        fileLabel.className = "fa fa-check";
         this.placeholder = 'Drop it!';
         return false;
     });
 
-    $('#torrent-input').on('dragleave', function () {
-        this.placeholder = originalTorrentPlaceHolder;
-        this.nextElementSibling.className = originalTorrentLabelClass;
+    $('#file-input').on('dragleave', function () {
+        this.placeholder = originalFilePlaceHolder;
+        this.nextElementSibling.className = originalFileLabelClass;
         return false;
     });
 

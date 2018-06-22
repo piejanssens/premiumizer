@@ -441,6 +441,7 @@ def update_self():
     with open(os.path.join(runningdir, 'settings.cfg'), 'w') as configfile:  # save
         prem_config.write(configfile)
     scheduler.shutdown(wait=False)
+    db.close()
     socketio.stop()
     if os_arg == '--windows':
         subprocess.call(['python', os.path.join(runningdir, 'utils.py'), '--update', '--windows'])
@@ -455,6 +456,7 @@ def update_self():
 def restart():
     logger.info('Restarting')
     scheduler.shutdown(wait=False)
+    db.close()
     socketio.stop()
     if os_arg == '--windows':
         # windows service will automatically restart on 'failure'
@@ -469,6 +471,7 @@ def restart():
 def shutdown():
     logger.info('Shutdown recieved')
     scheduler.shutdown(wait=False)
+    db.close()
     socketio.stop()
     if os_arg == '--windows':
         subprocess.call([os.path.join(rootdir, 'Installer', 'nssm.exe'), 'stop', 'Premiumizer'])
@@ -1266,7 +1269,7 @@ def parse_tasks(transfers):
             task.update(progress=progress, cloud_status=transfer['status'], dlsize=size + ' --- ',
                         speed=speed + ' --- ', eta=eta, file_id=file_id)
         if task.local_status is None:
-            if task.cloud_status != 'finished':
+            if task.cloud_status != 'finished' and task.cloud_status != 'seeding':
                 if task.name is not None and task.name != 'Loading name':
                     name = task.name
                 elif task.name == 'Loading name' and transfer['name'] is not None and transfer['name'] != 0:
@@ -1278,7 +1281,7 @@ def parse_tasks(transfers):
                 task.update(progress=progress, cloud_status=transfer['status'], name=name, dlsize=size + ' --- ',
                             speed=speed + ' --- ', eta=eta, folder_id=folder_id, file_id=file_id)
                 idle = False
-            elif task.cloud_status == 'finished':
+            elif task.cloud_status == 'finished' or task.cloud_status == 'seeding':
                 if cfg.download_enabled:
                     if task.category == '' and cfg.download_all:
                         task.update(category='default')
@@ -1421,7 +1424,10 @@ def upload_torrent(torrent):
 
 def upload_magnet(magnet):
     logger.debug('def upload_magnet started')
-    payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'src': magnet}
+    if cfg.seed_torrent:
+        payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'seed': '2or48h', 'src': magnet}
+    else:
+        payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'src': magnet}
     r = prem_connection("post", "https://www.premiumize.me/api/transfer/create", payload)
     if 'failed' not in r:
         response_content = json.loads(r.content)
@@ -1686,6 +1692,10 @@ def upload():
             failed = upload_torrent(upload_file)
         if upload_file.endswith('.nzb'):
             failed = upload_nzb(upload_file)
+        if upload_file.endswith('.magnet'):
+            with open(upload_file) as f:
+                magnet = f.read()
+                failed = upload_magnet(magnet)
         if failed != 'failed':
             try:
                 os.remove(upload_file)
