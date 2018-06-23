@@ -143,6 +143,9 @@
             {% else %}
                 <input type="checkbox" class="form-control bootstrap_switch" name="remove_cloud" data-size="small">
             {% endif %}
+            <label for="remove_cloud_delay">Delay in hours:</label>
+            <input type="number" class="form-control" name="remove_cloud_delay"
+                   aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'remove_cloud_delay') }}">
             <p>&nbsp;</p>
             <label for="seed_torrent">Seed private tracker torrents:</label>
             {% if settings.get('downloads', 'seed_torrent') == '1' %}
