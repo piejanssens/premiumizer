@@ -1145,7 +1145,7 @@ def download_task(task):
                                             next_run_time=(datetime.now() + timedelta(hours=cfg.remove_cloud_delay)))
                 time = (scheduler.scheduler.get_job(task.name).next_run_time.replace(tzinfo=None) - datetime.now())
                 time = str(time).split('.', 2)[0]
-                task.update(eta='Deleting from the cloud in'+time, local_status='finished_waiting', progress=99)
+                task.update(eta='Deleting from the cloud in'+time,speed='', dlsize='', local_status='finished_waiting', progress=99)
             else:
                 delete_task(task.id)
     else:
@@ -2050,6 +2050,8 @@ def delete_task(message):
     task = get_task(id)
     if not task:
         socketio.emit('delete_success', {'data': id})
+        scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
+        return
     try:
         if task.local_status != 'stopped':
             task.update(local_status='stopped')
