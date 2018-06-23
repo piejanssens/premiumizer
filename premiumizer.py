@@ -205,12 +205,14 @@ class PremConfig:
         self.prem_customer_id = prem_config.get('premiumize', 'customer_id')
         self.prem_pin = prem_config.get('premiumize', 'pin')
         self.remove_cloud = prem_config.getboolean('downloads', 'remove_cloud')
+        self.remove_cloud_delay = prem_config.getint('downloads', 'remove_cloud_delay')
         self.seed_torrent = prem_config.getboolean('downloads', 'seed_torrent')
         self.download_all = prem_config.getboolean('downloads', 'download_all')
         self.download_enabled = prem_config.getboolean('downloads', 'download_enabled')
         self.download_location = prem_config.get('downloads', 'download_location')
         self.download_max = prem_config.getint('downloads', 'download_max')
         self.download_speed = prem_config.get('downloads', 'download_speed')
+        self.download_rss = prem_config.getboolean('downloads', 'download_rss')
         self.jd_enabled = prem_config.getboolean('downloads', 'jd_enabled')
         self.aria2_enabled = prem_config.getboolean('downloads', 'aria2_enabled')
         if self.download_speed == '0':
@@ -1136,7 +1138,16 @@ def download_task(task):
 
     if cfg.remove_cloud:
         if not failed:
-            delete_task(task.id)
+            if cfg.remove_cloud_delay != 0:
+                scheduler.scheduler.add_job(delete_task, args=(task.id,), name=task.name, id=task.name,
+                                            misfire_grace_time=7200, coalesce=False, jobstore='remove_cloud',
+                                            replace_existing=True,
+                                            next_run_time=(datetime.now() + timedelta(hours=cfg.remove_cloud_delay)))
+                time = (scheduler.scheduler.get_job(task.name).next_run_time.replace(tzinfo=None) - datetime.now())
+                time = str(time).split('.', 2)[0]
+                task.update(eta='Deleting from the cloud in'+time,speed='', dlsize='', local_status='finished_waiting', progress=99)
+            else:
+                delete_task(task.id)
     else:
         task.update(local_status='finished')
 
@@ -1187,7 +1198,10 @@ def prem_connection(method, url, payload, files=None):
 def update():
     logger.debug('def update started')
     idle = True
-    update_interval = idle_interval
+    if client_connected:
+        update_interval = 10
+    else:
+        update_interval = idle_interval
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
     r = prem_connection("post", "https://www.premiumize.me/api/transfer/list", payload)
     if 'failed' not in r:
@@ -1283,8 +1297,24 @@ def parse_tasks(transfers):
                 idle = False
             elif task.cloud_status == 'finished' or task.cloud_status == 'seeding':
                 if cfg.download_enabled:
-                    if task.category == '' and cfg.download_all:
-                        task.update(category='default')
+                    if task.category == '':
+                        if cfg.download_rss and transfer['folder_id']:
+                            try:
+                                r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
+                                                    {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
+                                                     'id': transfer['folder_id'], 'includebreadcrumbs': 1})
+                                breadcrumbs = json.loads(r.content)['breadcrumbs']
+                                if breadcrumbs[1]['name'] == 'Feed Downloads' and breadcrumbs[2][
+                                    'name'] in cfg.download_categories:
+                                    dldir, dlext, delsample, dlnzbtomedia = get_cat_var(breadcrumbs[2]['name'])
+                                    task.update(local_status=None, process=None, speed=None,
+                                                category=breadcrumbs[2]['name'], dldir=dldir, dlext=dlext,
+                                                delsample=delsample, dlnzbtomedia=dlnzbtomedia, type='RSS')
+                            except BaseException as e:
+                                logger.error('download rss failed: ' + e.message)
+                                pass
+                        elif cfg.download_all:
+                            task.update(category='default')
                     if task.category in cfg.download_categories:
                         if not task.local_status == ('queued' or 'downloading'):
                             task.update(local_status='queued', folder_id=folder_id, file_id=file_id, dlsize='')
@@ -1304,6 +1334,13 @@ def parse_tasks(transfers):
                                                 name=(task.name + ' check_downloads'), misfire_grace_time=7200,
                                                 jobstore='check_downloads', replace_existing=True, max_instances=1,
                                                 coalesce=True, next_run_time=(datetime.now() + timedelta(minutes=1)))
+            elif task.local_status == 'finished_waiting':
+                try:
+                    time = (scheduler.scheduler.get_job(task.name).next_run_time.replace(tzinfo=None) - datetime.now())
+                    time = str(time).split('.', 2)[0]
+                    task.update(eta='Deleting from cloud in: ' + time)
+                except:
+                    delete_task(task.id)
             task.update(cloud_status=transfer['status'], folder_id=folder_id, file_id=file_id)
         id_online.append(task.id)
         task.callback = None
@@ -1826,6 +1863,10 @@ def settings():
                 prem_config.set('downloads', 'download_all', '1')
             else:
                 prem_config.set('downloads', 'download_all', '0')
+            if request.form.get('download_rss'):
+                prem_config.set('downloads', 'download_rss', '1')
+            else:
+                prem_config.set('downloads', 'download_rss', '0')
             if request.form.get('remove_cloud'):
                 prem_config.set('downloads', 'remove_cloud', '1')
             else:
@@ -1890,6 +1931,8 @@ def settings():
             prem_config.set('downloads', 'download_location', request.form.get('download_location'))
             prem_config.set('downloads', 'download_max', request.form.get('download_max'))
             prem_config.set('downloads', 'download_speed', request.form.get('download_speed'))
+            prem_config.set('downloads', 'download_speed', request.form.get('download_speed'))
+            prem_config.set('downloads', 'remove_cloud_delay', request.form.get('remove_cloud_delay'))
             prem_config.set('upload', 'watchdir_location', request.form.get('watchdir_location'))
             prem_config.set('downloads', 'nzbtomedia_location', request.form.get('nzbtomedia_location'))
             for x in range(1, 6):
@@ -2005,6 +2048,10 @@ def delete_task(message):
     except:
         id = message
     task = get_task(id)
+    if not task:
+        socketio.emit('delete_success', {'data': id})
+        scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
+        return
     try:
         if task.local_status != 'stopped':
             task.update(local_status='stopped')
@@ -2128,6 +2175,7 @@ if __name__ == '__main__':
         scheduler.init_app(app)
         scheduler.scheduler.add_jobstore('memory', alias='downloads')
         scheduler.scheduler.add_jobstore('memory', alias='check_downloads')
+        scheduler.scheduler.add_jobstore('memory', alias='remove_cloud')
         scheduler.scheduler.add_executor('threadpool', alias='downloads', max_workers=cfg.download_max)
         scheduler.start()
         scheduler.scheduler.add_job(update, 'interval', id='update',

@@ -99,6 +99,11 @@ function update_task(task) {
         stateStr = 'Finished';
         stateIcon = 'desktop';
         categoryState = ' disabled';
+    } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'finished_waiting') {
+        stateColor = 'success';
+        stateStr = 'Waiting to delete';
+        stateIcon = 'desktop';
+        categoryState = ' disabled';
     } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'stopped') {
         stateColor = 'warning';
         stateStr = 'Download stopped';
@@ -279,6 +284,35 @@ function update_task(task) {
                 alert('Nope, not a valid magnet...');
             }
         }, 100);
+    });
+
+    $('#magnet-input').on('drop', function (e) {
+        e.preventDefault();
+        var magnet = e.originalEvent.dataTransfer.getData('Text')
+        setTimeout(function () {
+            if (magnet.match(/magnet:\?xt=urn:btih:[a-z0-9]{20,50}.+/i) != null) {
+                uploadMagnet(magnet);
+            } else {
+                alert('Nope, not a valid magnet...');
+            }
+        }, 100);
+        this.placeholder = originalFilePlaceHolder;
+        this.nextElementSibling.className = originalFileLabelClass;
+    });
+
+    $('#magnet-input').on('dragenter', function (e) {
+        originalFilePlaceHolder = this.placeholder;
+        var fileLabel = this.nextElementSibling;
+        originalFileLabelClass = fileLabel.className;
+        fileLabel.className = "fa fa-check";
+        this.placeholder = 'Drop it!';
+        return false;
+    });
+
+    $('#magnet-input').on('dragleave', function () {
+        this.placeholder = originalFilePlaceHolder;
+        this.nextElementSibling.className = originalFileLabelClass;
+        return false;
     });
 
     $('#file-input').on('drop', function (e) {
