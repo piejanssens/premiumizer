@@ -281,6 +281,35 @@ function update_task(task) {
         }, 100);
     });
 
+    $('#magnet-input').on('drop', function (e) {
+        e.preventDefault();
+        var magnet = e.originalEvent.dataTransfer.getData('Text')
+        setTimeout(function () {
+            if (magnet.match(/magnet:\?xt=urn:btih:[a-z0-9]{20,50}.+/i) != null) {
+                uploadMagnet(magnet);
+            } else {
+                alert('Nope, not a valid magnet...');
+            }
+        }, 100);
+        this.placeholder = originalFilePlaceHolder;
+        this.nextElementSibling.className = originalFileLabelClass;
+    });
+
+    $('#magnet-input').on('dragenter', function (e) {
+        originalFilePlaceHolder = this.placeholder;
+        var fileLabel = this.nextElementSibling;
+        originalFileLabelClass = fileLabel.className;
+        fileLabel.className = "fa fa-check";
+        this.placeholder = 'Drop it!';
+        return false;
+    });
+
+    $('#magnet-input').on('dragleave', function () {
+        this.placeholder = originalFilePlaceHolder;
+        this.nextElementSibling.className = originalFileLabelClass;
+        return false;
+    });
+
     $('#file-input').on('drop', function (e) {
         e.preventDefault();
         var file = e.originalEvent.dataTransfer.files[0];
