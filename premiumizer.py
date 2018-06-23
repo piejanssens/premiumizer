@@ -2048,6 +2048,8 @@ def delete_task(message):
     except:
         id = message
     task = get_task(id)
+    if not task:
+        socketio.emit('delete_success', {'data': id})
     try:
         if task.local_status != 'stopped':
             task.update(local_status='stopped')
