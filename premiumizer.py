@@ -1198,7 +1198,10 @@ def prem_connection(method, url, payload, files=None):
 def update():
     logger.debug('def update started')
     idle = True
-    update_interval = idle_interval
+    if client_connected:
+        update_interval = 10
+    else:
+        update_interval = idle_interval
     payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
     r = prem_connection("post", "https://www.premiumize.me/api/transfer/list", payload)
     if 'failed' not in r:
