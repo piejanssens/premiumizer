@@ -211,6 +211,7 @@ class PremConfig:
         self.download_location = prem_config.get('downloads', 'download_location')
         self.download_max = prem_config.getint('downloads', 'download_max')
         self.download_speed = prem_config.get('downloads', 'download_speed')
+        self.download_rss = prem_config.getboolean('downloads', 'download_rss')
         self.jd_enabled = prem_config.getboolean('downloads', 'jd_enabled')
         self.aria2_enabled = prem_config.getboolean('downloads', 'aria2_enabled')
         if self.download_speed == '0':
@@ -1283,8 +1284,19 @@ def parse_tasks(transfers):
                 idle = False
             elif task.cloud_status == 'finished' or task.cloud_status == 'seeding':
                 if cfg.download_enabled:
-                    if task.category == '' and cfg.download_all:
-                        task.update(category='default')
+                    if task.category == '':
+                        if cfg.download_rss and transfer['folder_id']:
+                            try:
+                                r = prem_connection("post", "https://www.premiumize.me/api/folder/list", {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'id': transfer['folder_id'], 'includebreadcrumbs': 1})
+                                breadcrumbs = json.loads(r.content)['breadcrumbs']
+                                if breadcrumbs[1]['name'] == 'Feed Downloads' and breadcrumbs[2]['name'] in cfg.download_categories:
+                                    dldir, dlext, delsample, dlnzbtomedia = get_cat_var(breadcrumbs[2]['name'])
+                                    task.update(local_status=None, process=None, speed=None,category=breadcrumbs[2]['name'], dldir=dldir,dlext=dlext, delsample=delsample, dlnzbtomedia=dlnzbtomedia, type='RSS')
+                            except BaseException as e:
+                                logger.error('download rss failed: ' + e.message)
+                                pass
+                        elif cfg.download_all:
+                            task.update(category='default')
                     if task.category in cfg.download_categories:
                         if not task.local_status == ('queued' or 'downloading'):
                             task.update(local_status='queued', folder_id=folder_id, file_id=file_id, dlsize='')
@@ -1826,6 +1838,10 @@ def settings():
                 prem_config.set('downloads', 'download_all', '1')
             else:
                 prem_config.set('downloads', 'download_all', '0')
+            if request.form.get('download_rss'):
+                prem_config.set('downloads', 'download_rss', '1')
+            else:
+                prem_config.set('downloads', 'download_rss', '0')
             if request.form.get('remove_cloud'):
                 prem_config.set('downloads', 'remove_cloud', '1')
             else:

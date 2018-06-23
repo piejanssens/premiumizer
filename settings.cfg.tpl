@@ -20,6 +20,7 @@ pin =
 [downloads]
 download_enabled = 0
 download_all = 0
+download_rss = 0
 download_max = 1
 download_speed = -1
 remove_cloud = 0
@@ -91,5 +92,5 @@ email_password =
 updated = 1
 auto_update = 0
 update_date = Never
-config_version = 1.8
+config_version = 1.9
 req_version = 7.1

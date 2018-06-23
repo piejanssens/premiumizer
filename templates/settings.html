@@ -128,6 +128,14 @@
                 <input type="checkbox" class="form-control bootstrap_switch" name="download_all" data-size="small">
             {% endif %}
             <p>&nbsp;</p>
+            <label for="download_rss">Download RSS feeds:</label>
+            {% if settings.get('downloads', 'seed_torrent') == '1' %}
+                <input type="checkbox" class="form-control bootstrap_switch" name="download_rss" data-size="small"
+                       checked>
+            {% else %}
+                <input type="checkbox" class="form-control bootstrap_switch" name="download_rss" data-size="small">
+            {% endif %}
+            <p>&nbsp;</p>
             <label for="remove_cloud">Remove torrents from cloud after downloading:</label>
             {% if settings.get('downloads', 'remove_cloud') == '1' %}
                 <input type="checkbox" class="form-control bootstrap_switch" name="remove_cloud" data-size="small"
@@ -199,7 +207,8 @@
                 <input type="checkbox" class="form-control bootstrap_switch" name="aria2_enabled"
                        data-size="small">
             {% endif %}
-            <p>Start Aria2 with: aria2c --enable-rpc --rpc-allow-origin-all --rpc-listen-all --rpc-listen-port=6800  --rpc-secret=premiumizer</p>
+            <p>Start Aria2 with: aria2c --enable-rpc --rpc-allow-origin-all --rpc-listen-all --rpc-listen-port=6800
+                --rpc-secret=premiumizer</p>
             <label for="aria2_host">Aria2 host:</label>
             <input type="text" class="form-control" name="aria2_host"
                    aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'aria2_host') }}">
