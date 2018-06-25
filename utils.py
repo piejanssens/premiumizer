@@ -24,13 +24,16 @@ logging.debug('runningdir = %s', runningdir)
 
 
 def restart():
+    logging.debug('def restart')
     time.sleep(4)
     execfile(os.path.join(runningdir, 'premiumizer.py'), globals(), globals())
 
 
 def update():
+    logging.debug('def restart')
     del sys.argv[1:]
     time.sleep(2)
+    logging.info('Git pull nzbtomedia & premiumizer')
     subprocess.call(['git', '-C', os.path.join(runningdir, 'nzbtomedia'), 'pull'])
     subprocess.call(['git', '-C', runningdir, 'pull'])
 
@@ -43,12 +46,14 @@ def update():
     with open(os.path.join(runningdir, 'settings.cfg'), 'w') as configfile:
         prem_config.write(configfile)
     if prem_config.getfloat('update', 'req_version') < default_config.getfloat('update', 'req_version'):
+        logging.info('updating pip requirements')
         import pip
         pip.main(['install', '-r', os.path.join(runningdir, 'requirements.txt')])
         prem_config.set('update', 'req_version', (default_config.getfloat('update', 'req_version')))
         with open(os.path.join(runningdir, 'settings.cfg'), 'w') as configfile:
             prem_config.write(configfile)
     if prem_config.getfloat('update', 'config_version') < default_config.getfloat('update', 'config_version'):
+        logging.info('updating config file')
         import shutil
         shutil.copy(os.path.join(runningdir, 'settings.cfg'), os.path.join(runningdir, 'settings.cfg.old2'))
         shutil.copy(os.path.join(runningdir, 'settings.cfg.tpl'), os.path.join(runningdir, 'settings.cfg'))
