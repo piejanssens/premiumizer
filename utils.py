@@ -1,10 +1,26 @@
 import ConfigParser
+import logging
 import os
 import subprocess
 import sys
 import time
 
+# logging
+log_format = '%(asctime)-20s %(name)-41s: %(levelname)-8s : %(message)s'
+logging.basicConfig(filename='update.log', level=logging.DEBUG, format=log_format, datefmt='%m-%d %H:%M:%S')
+
+
+def uncaught_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, (SystemExit, KeyboardInterrupt)):
+        return
+    logging.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+    pass
+
+
+sys.excepthook = uncaught_exception
+
 runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0]
+logging.debug('runningdir = %s', runningdir)
 
 
 def restart():
