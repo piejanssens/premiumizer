@@ -14,6 +14,7 @@ import unicodedata
 import uuid
 import xmlrpclib
 from datetime import datetime, timedelta
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from logging.handlers import RotatingFileHandler
 from string import ascii_letters, digits
@@ -649,13 +650,13 @@ def email(subject, text=None):
     last_email['subject'] = subject
 
     # Create message
-    msg = MIMEText(text)
+    msg = MIMEMultipart()
     msg['Subject'] = subject
     msg['From'] = cfg.email_from
     msg['To'] = cfg.email_to
     msg['Date'] = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
     msg['X-Application'] = 'Premiumizer'
-
+    msg.attach(MIMEText(text, 'plain'))
     # Send message
     try:
         smtp = smtplib.SMTP(cfg.email_server, cfg.email_port)
@@ -1145,7 +1146,8 @@ def download_task(task):
                                             next_run_time=(datetime.now() + timedelta(hours=cfg.remove_cloud_delay)))
                 time = (scheduler.scheduler.get_job(task.name).next_run_time.replace(tzinfo=None) - datetime.now())
                 time = str(time).split('.', 2)[0]
-                task.update(eta='Deleting from the cloud in'+time,speed='', dlsize='', local_status='finished_waiting', progress=99)
+                task.update(eta='Deleting from the cloud in' + time, speed='', dlsize='',
+                            local_status='finished_waiting', progress=99)
             else:
                 delete_task(task.id)
     else:
