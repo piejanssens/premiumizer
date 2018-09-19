@@ -170,7 +170,7 @@ function update_task(task) {
         '<div class="row"><h6>' + (task.progress != 100 ? "Speed: " + task.speed + "Size: " + task.dlsize + " ETA: " + task.eta : '') + '</h6></div>' +
         '</span>' +
         '<span class="col-md-3">' +
-        '<div class="btn-toolbar text-center"><a class="btn btn-danger delete_btn" href="#" onclick="delete_task(event)"><i class="fa fa-trash-o fa-lg"></i> Delete</a>' + (task.cloud_status == "finished" ? (!task.file_id ? '<a class="btn btn-success" href="https://www.premiumize.me/files?folder_id=' + task.folder_id + '" target="_blank"><i class="fa fa-folder-open-o fa-lg"></i> Browse</a>' : "") + (task.file_id ? '<a class="btn btn-success" href="https://www.premiumize.me/files?file_id=' + task.file_id + '" target="_blank"><i class="fa fa-folder-open-o fa-lg"></i> Browse</a>' : "") : "") + (task.local_status == "downloading" ? '<a class="btn btn-warning"href="#" onclick="stop_task(event)"><i class="fa fa-trash-o fa-lg"></i> Stop DL</a>' : "") + '</div>' +
+        '<div class="btn-toolbar text-center"><a class="btn btn-danger delete_btn pointer" onclick="delete_task(event)"><i class="fa fa-trash-o fa-lg"></i> Delete</a>' + (task.cloud_status == "finished" ? (!task.file_id ? '<a class="btn btn-success" href="https://www.premiumize.me/files?folder_id=' + task.folder_id + '" target="_blank"><i class="fa fa-folder-open-o fa-lg"></i> Browse</a>' : "") + (task.file_id ? '<a class="btn btn-success" href="https://www.premiumize.me/files?file_id=' + task.file_id + '" target="_blank"><i class="fa fa-folder-open-o fa-lg"></i> Browse</a>' : "") : "") + (task.local_status == "downloading" ? '<a class="btn btn-warning pointer" onclick="stop_task(event)"><i class="fa fa-trash-o fa-lg"></i> Stop DL</a>' : "") + '</div>' +
         '</span>' +
         '</div>' +
         '</div>' +
@@ -435,8 +435,3 @@ function check_empty() {
     else
         hide_no_downloads();
 }
-
-// prevents scroll to top on button click (delete / stop download)
-$(document).on('click', 'a[href="#"]', function(e) {
-    e.preventDefault();
-});
