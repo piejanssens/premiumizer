@@ -435,3 +435,8 @@ function check_empty() {
     else
         hide_no_downloads();
 }
+
+// prevents scroll to top on button click (delete / stop download)
+$(document).on('click', 'a[href="#"]', function(e) {
+    e.preventDefault();
+});
