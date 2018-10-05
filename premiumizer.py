@@ -265,8 +265,8 @@ class PremConfig:
                 if self.download_speed == -1:
                     download_speed = 0
                 else:
-                    download_speed = str(cfg.download_speed + 'M')
-                self.aria.aria2.changeGlobalOption(self.aria2_token, {'max-download-limit': download_speed})
+                    download_speed = str(self.download_speed // 1048576) + 'M'
+                self.aria.aria2.changeGlobalOption(self.aria2_token, {'max-overall-download-limit': download_speed})
                 self.aria2_connected = 1
             except Exception as e:
                 logger.error('Could not connect to Aria2 RPC: %s --- message: %s', uri, e)
