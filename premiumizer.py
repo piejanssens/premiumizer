@@ -1414,7 +1414,7 @@ def add_task(id, size, name, category, type='', folder_id=None):
     if not exists:
         dldir, dlext, delsample, dlnzbtomedia = get_cat_var(category)
         try:
-            name = name.replace('%5B', '[').replace('%5D', ']').replace('%20', ' ')
+            name = clean_name(name)
             if 'download.php?id=' in name:
                 name = name.split("&f=", 1)[1]
             if name.endswith('.torrent'):
