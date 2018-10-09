@@ -11,6 +11,7 @@ import subprocess
 import sys
 import time
 import unicodedata
+import urllib
 import uuid
 import xmlrpclib
 from datetime import datetime, timedelta
@@ -1414,6 +1415,7 @@ def add_task(id, size, name, category, type='', folder_id=None):
     if not exists:
         dldir, dlext, delsample, dlnzbtomedia = get_cat_var(category)
         try:
+            name = urllib.unquote(name).decode('ASCII')
             name = clean_name(name)
             if 'download.php?id=' in name:
                 name = name.split("&f=", 1)[1]
