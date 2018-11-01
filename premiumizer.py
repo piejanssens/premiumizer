@@ -59,7 +59,7 @@ else:
     try:
         with open('/proc/1/cgroup', 'rt') as ifh:
             if 'docker' in ifh.read():
-                os_arg = 'docker'
+                os_arg = '--docker'
     except:
         pass
 
@@ -209,7 +209,7 @@ class PremConfig:
         self.update_available = 0
         self.update_localcommit = ''
         self.update_diffcommit = ''
-        if os_arg == 'docker':
+        if os_arg == '--docker':
             self.update_status = 'UI updates are not supported in docker'
         else:
             self.update_status = ''
@@ -1970,7 +1970,7 @@ def settings():
             if enable_watchdir:
                 watchdir()
             flash('settings saved', 'info')
-    if not os_arg == 'docker':
+    if not os_arg == '--docker':
         check_update(0)
     categories_amount = len(cfg.download_categories) + 1
     if categories_amount < 7:
@@ -2196,7 +2196,7 @@ if __name__ == '__main__':
         scheduler.start()
         scheduler.scheduler.add_job(update, 'interval', id='update',
                                     seconds=active_interval, replace_existing=True, max_instances=1, coalesce=True)
-        if not os_arg == 'docker':
+        if not os_arg == '--docker':
             scheduler.scheduler.add_job(check_update, 'interval', id='check_update', seconds=1, replace_existing=True, max_instances=1, coalesce=True)
         if cfg.watchdir_enabled:
             gevent.spawn_later(2, watchdir)
