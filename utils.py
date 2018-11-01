@@ -5,6 +5,11 @@ import subprocess
 import sys
 import time
 
+try:
+    from pip import main as pipmain
+except:
+    from pip._internal import main as pipmain
+
 # logging
 log_format = '%(asctime)-20s %(name)-41s: %(levelname)-8s : %(message)s'
 logging.basicConfig(filename='update.log', level=logging.DEBUG, format=log_format, datefmt='%m-%d %H:%M:%S')
@@ -47,8 +52,7 @@ def update():
         prem_config.write(configfile)
     if prem_config.getfloat('update', 'req_version') < default_config.getfloat('update', 'req_version'):
         logging.info('updating pip requirements')
-        import pip
-        pip.main(['install', '-r', os.path.join(runningdir, 'requirements.txt')])
+        pipmain(['install', '-r', os.path.join(runningdir, 'requirements.txt')])
         prem_config.set('update', 'req_version', (default_config.getfloat('update', 'req_version')))
         with open(os.path.join(runningdir, 'settings.cfg'), 'w') as configfile:
             prem_config.write(configfile)
