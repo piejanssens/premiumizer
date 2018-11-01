@@ -2197,7 +2197,8 @@ if __name__ == '__main__':
         scheduler.scheduler.add_job(update, 'interval', id='update',
                                     seconds=active_interval, replace_existing=True, max_instances=1, coalesce=True)
         if not os_arg == '--docker':
-            scheduler.scheduler.add_job(check_update, 'interval', id='check_update', seconds=1, replace_existing=True, max_instances=1, coalesce=True)
+            scheduler.scheduler.add_job(check_update, 'interval', id='check_update', seconds=1, replace_existing=True,
+                                        max_instances=1, coalesce=True)
         if cfg.watchdir_enabled:
             gevent.spawn_later(2, watchdir)
         socketio.run(app, host=prem_config.get('global', 'bind_ip'), port=prem_config.getint('global', 'server_port'),
