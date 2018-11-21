@@ -246,14 +246,14 @@ class PremConfig:
                 self.jd.connect(self.jd_username, self.jd_password)
                 self.jd_connected = 1
             except BaseException as e:
-                logger.error('myjdapi : ' + e.message)
+                logger.error('myjdapi : ' + str(e.message))
                 logger.error('Could not connect to My Jdownloader')
                 self.jd_connected = 0
             try:
                 self.jd_device = self.jd.get_device(self.jd_device_name)
                 self.jd_connected = 1
             except BaseException as e:
-                logger.error('myjdapi : ' + e.message)
+                logger.error('myjdapi : ' + str(e.message))
                 logger.error('Could not get device name (%s) for My Jdownloader', self.jd_device_name)
                 self.jd_connected = 0
             if self.jd_connected:
@@ -281,6 +281,7 @@ class PremConfig:
                 self.aria.aria2.changeGlobalOption(self.aria2_token, {'max-overall-download-limit': download_speed})
                 self.aria2_connected = 1
             except Exception as e:
+                uri = ' '
                 logger.error('Could not connect to Aria2 RPC: %s --- message: %s', uri, e)
                 self.aria2_connected = 0
 
@@ -367,14 +368,14 @@ def jd_connect():
         cfg.jd.connect(cfg.jd_username, cfg.jd_password)
         cfg.jd_connected = 1
     except BaseException as e:
-        logger.error('myjdapi : ' + e.message)
+        logger.error('myjdapi : ' + str(e.message))
         logger.error('Could not connect to My Jdownloader')
         cfg.jd_connected = 0
     try:
         cfg.jd_device = cfg.jd.get_device(cfg.jd_device_name)
         cfg.jd_connected = 1
     except BaseException as e:
-        logger.error('myjdapi : ' + e.message)
+        logger.error('myjdapi : ' + str(e.message))
         logger.error('Could not get device name (%s) for My Jdownloader', cfg.jd_device_name)
         cfg.jd_connected = 0
 
@@ -386,6 +387,7 @@ def aria2_connect():
         cfg.aria.aria2.getVersion(cfg.aria2_token)
         cfg.aria2_connected = 1
     except Exception as e:
+        uri = ' '
         logger.error('Could not connect to Aria2 RPC: %s --- message: %s', uri, e)
         try:
             greenlet.task.update(eta=' Could not connect to Aria2 RPC')
@@ -713,7 +715,7 @@ def jd_query_packages(id=None):
                 response = cfg.jd_device.downloads.query_packages()
             except:
                 response = None
-                logger.error('myjdapi : ' + e.message)
+                logger.error('myjdapi : ' + str(e.message))
         while not response:
             gevent.sleep(5)
             if not jd_packages['time'] < (datetime.now() - timedelta(seconds=seconds)):
@@ -722,7 +724,7 @@ def jd_query_packages(id=None):
                 try:
                     response = cfg.jd_device.downloads.query_packages()
                 except BaseException as e:
-                    logger.error('myjdapi : ' + e.message)
+                    logger.error('myjdapi : ' + str(e.message))
             count += 1
             if count == 6:
                 logger.error('JD did not return package status for: %s', greenlet.task.name)
@@ -735,7 +737,7 @@ def jd_query_packages(id=None):
                 try:
                     response = cfg.jd_device.downloads.query_packages()
                 except BaseException as e:
-                    logger.error('myjdapi : ' + e.message)
+                    logger.error('myjdapi : ' + str(e.message))
             count += 1
             if count == 12:
                 logger.error('Could not find package in JD for: %s', greenlet.task.name)
@@ -758,7 +760,7 @@ def jd_query_packages(id=None):
                         try:
                             package = cfg.jd_device.downloads.query_packages([{"packageUUIDs": [id]}])
                         except BaseException as e:
-                            logger.error('myjdapi : ' + e.message)
+                            logger.error('myjdapi : ' + str(e.message))
                         count += 1
                         if count == 24:
                             package = {'status': 'Failed'}
@@ -791,7 +793,7 @@ def get_download_stats_jd(package_name):
                         cfg.jd_device.downloads.cleanup("DELETE_ALL", "REMOVE_LINKS_AND_DELETE_FILES", "SELECTED",
                                                         packages_ids=[package_id])
                     except BaseException as e:
-                        logger.error('myjdapi : ' + e.message)
+                        logger.error('myjdapi : ' + str(e.message))
                         logger.error('Could not delete package in JD for : %s', greenlet.task.name)
                         pass
                     return 1
@@ -840,7 +842,7 @@ def get_download_stats_jd(package_name):
                 cfg.jd_device.downloads.cleanup("DELETE_FINISHED", "REMOVE_LINKS_ONLY", "ALL",
                                                 packages_ids=[package_id])
             except BaseException as e:
-                logger.error('myjdapi : ' + e.message)
+                logger.error('myjdapi : ' + str(e.message))
                 logger.error('Could not delete package in JD for: %s', greenlet.task.name)
                 pass
             return 0
@@ -909,8 +911,8 @@ def download_file():
                     query_links = cfg.jd_device.downloads.query_links()
                     count = + 1
                     if count == 5:
-                        logger.error('myjdapi : ' + e.message)
-                        greenlet.task.update(eta=' ' + e.message)
+                        logger.error('myjdapi : ' + str(e.message))
+                        greenlet.task.update(eta=' ' + str(e.message))
                         return 1
             else:
                 return 1
@@ -979,7 +981,7 @@ def download_file():
                                                               "destinationFolder": greenlet.task.dldir,
                                                               "overwritePackagizerRules": True}])
                     except BaseException as e:
-                        logger.error('myjdapi error: ' + e.message)
+                        logger.error('myjdapi error: ' + str(e.message))
 
             elif cfg.aria2_enabled:
                 if cfg.aria2_connected:
@@ -992,10 +994,11 @@ def download_file():
                             continue
                     try:
                         options = {'dir': greenlet.task.dldir}
-                        start_time = time.time()
                         gid = cfg.aria.aria2.addUri(cfg.aria2_token, [url], options)
                     except BaseException as e:
-                        logger.error('aria2 error: %s --- for: %s', e.message, greenlet.task.name)
+                        start_time = time.time()
+                        gid = 0
+                        logger.error('aria2 error: %s --- for: %s', str(e.message), greenlet.task.name)
                     aria2_download = cfg.aria.aria2.tellStatus(cfg.aria2_token, gid)
                     while not aria2_download["status"] == 'complete':
                         if aria2_download['status'] == 'error':
@@ -1250,6 +1253,9 @@ def parse_tasks(transfers):
                 task.callback = socketio.emit
             task.update()
     for transfer in reversed(transfers):
+        eta = ' '
+        speed = ' '
+        size = ' '
         task = get_task(transfer['id'].encode("utf-8"))
         try:
             if 'ETA is' in transfer['message']:
@@ -1257,23 +1263,19 @@ def parse_tasks(transfers):
             elif transfer['message']:
                 eta = transfer['message']
         except:
-            eta = ' '
+            pass
         try:
             if 'Downloading at' in transfer['message']:
                 speed = transfer['message'].split("Downloading at", 1)[1].split(". ", 1)[0]
-            else:
-                speed = ' '
         except:
-            speed = ' '
+            pass
         try:
             if '% of' in transfer['message']:
                 size = transfer['message'].split("of ", 1)[1].split(" finished", 1)[0]
                 progress = int(transfer['message'].split("s.", 1)[1].split("% of", 1)[0])
             else:
-                size = ' '
                 progress = int(round(float(transfer['progress']) * 100))
         except:
-            size = ' '
             progress = int(round(float(transfer['progress']) * 100))
         try:
             folder_id = transfer['folder_id'].encode("utf-8")
@@ -1325,7 +1327,7 @@ def parse_tasks(transfers):
                                                 category=breadcrumbs[2]['name'], dldir=dldir, dlext=dlext,
                                                 delsample=delsample, dlnzbtomedia=dlnzbtomedia, type='RSS')
                             except BaseException as e:
-                                logger.error('download rss failed: ' + e.message)
+                                logger.error('download rss failed: ' + str(e.message))
                                 pass
                         elif cfg.download_all:
                             task.update(category='default')
