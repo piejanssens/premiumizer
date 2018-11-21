@@ -281,6 +281,7 @@ class PremConfig:
                 self.aria.aria2.changeGlobalOption(self.aria2_token, {'max-overall-download-limit': download_speed})
                 self.aria2_connected = 1
             except Exception as e:
+                uri = ' '
                 logger.error('Could not connect to Aria2 RPC: %s --- message: %s', uri, e)
                 self.aria2_connected = 0
 
@@ -386,6 +387,7 @@ def aria2_connect():
         cfg.aria.aria2.getVersion(cfg.aria2_token)
         cfg.aria2_connected = 1
     except Exception as e:
+        uri = ' '
         logger.error('Could not connect to Aria2 RPC: %s --- message: %s', uri, e)
         try:
             greenlet.task.update(eta=' Could not connect to Aria2 RPC')
@@ -992,9 +994,10 @@ def download_file():
                             continue
                     try:
                         options = {'dir': greenlet.task.dldir}
-                        start_time = time.time()
                         gid = cfg.aria.aria2.addUri(cfg.aria2_token, [url], options)
                     except BaseException as e:
+                        start_time = time.time()
+                        gid = 0
                         logger.error('aria2 error: %s --- for: %s', str(e.message), greenlet.task.name)
                     aria2_download = cfg.aria.aria2.tellStatus(cfg.aria2_token, gid)
                     while not aria2_download["status"] == 'complete':
@@ -1250,6 +1253,9 @@ def parse_tasks(transfers):
                 task.callback = socketio.emit
             task.update()
     for transfer in reversed(transfers):
+        eta = ' '
+        speed = ' '
+        size = ' '
         task = get_task(transfer['id'].encode("utf-8"))
         try:
             if 'ETA is' in transfer['message']:
@@ -1257,23 +1263,19 @@ def parse_tasks(transfers):
             elif transfer['message']:
                 eta = transfer['message']
         except:
-            eta = ' '
+            pass
         try:
             if 'Downloading at' in transfer['message']:
                 speed = transfer['message'].split("Downloading at", 1)[1].split(". ", 1)[0]
-            else:
-                speed = ' '
         except:
-            speed = ' '
+            pass
         try:
             if '% of' in transfer['message']:
                 size = transfer['message'].split("of ", 1)[1].split(" finished", 1)[0]
                 progress = int(transfer['message'].split("s.", 1)[1].split("% of", 1)[0])
             else:
-                size = ' '
                 progress = int(round(float(transfer['progress']) * 100))
         except:
-            size = ' '
             progress = int(round(float(transfer['progress']) * 100))
         try:
             folder_id = transfer['folder_id'].encode("utf-8")
