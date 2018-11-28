@@ -992,11 +992,11 @@ def download_file():
                     if len(transfers):
                         if any(transfer['dir'] == download['path'] for transfer in transfers):
                             continue
+                    start_time = time.time()
                     try:
                         options = {'dir': greenlet.task.dldir}
                         gid = cfg.aria.aria2.addUri(cfg.aria2_token, [url], options)
                     except BaseException as e:
-                        start_time = time.time()
                         gid = 0
                         logger.error('aria2 error: %s --- for: %s', str(e.message), greenlet.task.name)
                     aria2_download = cfg.aria.aria2.tellStatus(cfg.aria2_token, gid)
