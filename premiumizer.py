@@ -1090,7 +1090,9 @@ def download_process():
     logger.debug('def download_process started')
     returncode = 0
     greenlet.task.update(local_status='downloading', progress=0, speed=' ', eta=' ')
-    greenlet.task.dldir = os.path.join(greenlet.task.dldir, clean_name(greenlet.task.name))
+    name = clean_name(greenlet.task.name)
+    if not greenlet.task.dldir.endswith(name):
+        greenlet.task.dldir = os.path.join(greenlet.task.dldir, name)
     if not greenlet.task.type == 'Filehost':
         if greenlet.task.file_id:
             r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
