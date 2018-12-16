@@ -1047,7 +1047,6 @@ def is_sample(dir_content):
 
 def process_dir(dir_content, path):
     logger.debug('def processing_dir started')
-    total_size = greenlet.task.size
     download_list = greenlet.task.download_list
     if not dir_content:
         return None
@@ -1080,6 +1079,7 @@ def process_dir(dir_content, path):
                         os.makedirs(path)
                     download = {'path': os.path.join(path, clean_name(x['name'])), 'url': x['link']}
                     download_list.append(download)
+                    total_size = greenlet.task.size
                     total_size += x['size']
                     greenlet.task.update(download_list=download_list, size=total_size)
 
