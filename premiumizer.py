@@ -1063,7 +1063,8 @@ def process_dir(dir_content, path):
                                     {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
                                      'id': new_dir_content[0]['id']})
                 new_dir_content = json.loads(r.content)['content']
-                new_path = os.path.join(new_path, clean_name(new_dir_content[0]['name']))
+                if new_dir_content[0]['type'] == 'folder':
+                    new_path = os.path.join(new_path, clean_name(new_dir_content[0]['name']))
             if os.path.basename(os.path.normpath(path)) == os.path.basename(os.path.normpath(new_path)):
                 process_dir(new_dir_content, path)
             else:
