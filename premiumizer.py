@@ -1047,8 +1047,10 @@ def is_sample(dir_content):
 
 def process_dir(dir_content, path):
     logger.debug('def processing_dir started')
-    total_size = 0
-    download_list = []
+    total_size = greenlet.task.size
+    if isinstance(total_size, basestring):
+        total_size = 0
+    download_list = greenlet.task.download_list
     if not dir_content:
         return None
     for x in dir_content:
