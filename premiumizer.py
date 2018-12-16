@@ -100,6 +100,7 @@ else:
     syslog.setFormatter(formatter)
     logger.addHandler(syslog)
     logging.getLogger('apscheduler.executors').addHandler(logging.NullHandler())
+    logging.getLogger('apscheduler.scheduler').addHandler(logging.NullHandler())
     logger.debug('-------------------------------------------------------------------------------------')
     logger.debug('-------------------------------------------------------------------------------------')
     logger.debug('-------------------------------------------------------------------------------------')
@@ -1053,8 +1054,8 @@ def process_dir(dir_content, path):
         return None
     for x in dir_content:
         type = x['type']
-        if type == 'dir':
-            new_path = os.path.join(path, clean_name(x))
+        if type == 'folder':
+            new_path = os.path.join(path, clean_name(x['name']))
             if os.path.basename(os.path.normpath(path)) == os.path.basename(os.path.normpath(new_path)):
                 process_dir(dir_content[x]['children'], path)
             else:
