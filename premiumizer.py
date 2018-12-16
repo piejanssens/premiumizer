@@ -1048,8 +1048,6 @@ def is_sample(dir_content):
 def process_dir(dir_content, path):
     logger.debug('def processing_dir started')
     total_size = greenlet.task.size
-    if isinstance(total_size, basestring):
-        total_size = 0
     download_list = greenlet.task.download_list
     if not dir_content:
         return None
@@ -1089,7 +1087,7 @@ def process_dir(dir_content, path):
 def download_process():
     logger.debug('def download_process started')
     returncode = 0
-    greenlet.task.update(local_status='downloading', progress=0, speed=' ', eta=' ')
+    greenlet.task.update(local_status='downloading', progress=0, speed=' ', eta=' ', size=0, download_list=[])
     name = clean_name(greenlet.task.name)
     if not greenlet.task.dldir.endswith(name):
         greenlet.task.dldir = os.path.join(greenlet.task.dldir, name)
