@@ -100,7 +100,6 @@ else:
     syslog.setFormatter(formatter)
     logger.addHandler(syslog)
     logging.getLogger('apscheduler.executors').addHandler(logging.NullHandler())
-    logging.getLogger('apscheduler.scheduler').addHandler(logging.NullHandler())
     logger.debug('-------------------------------------------------------------------------------------')
     logger.debug('-------------------------------------------------------------------------------------')
     logger.debug('-------------------------------------------------------------------------------------')
@@ -1055,11 +1054,20 @@ def process_dir(dir_content, path):
     for x in dir_content:
         type = x['type']
         if type == 'folder':
+            r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
+                                {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'id': x['id']})
+            new_dir_content = json.loads(r.content)['content']
             new_path = os.path.join(path, clean_name(x['name']))
+            while new_dir_content[0]['type'] == 'folder':
+                r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
+                                    {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
+                                     'id': new_dir_content[0]['id']})
+                new_dir_content = json.loads(r.content)['content']
+                new_path = os.path.join(new_path, clean_name(new_dir_content[0]['name']))
             if os.path.basename(os.path.normpath(path)) == os.path.basename(os.path.normpath(new_path)):
-                process_dir(dir_content[x]['children'], path)
+                process_dir(new_dir_content, path)
             else:
-                process_dir(dir_content[x]['children'], new_path)
+                process_dir(new_dir_content, new_path)
         elif type == 'file':
             if x['link'].lower().endswith(tuple(greenlet.task.dlext)):
                 if greenlet.task.delsample:
