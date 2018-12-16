@@ -994,7 +994,7 @@ def download_file():
                             continue
                     start_time = time.time()
                     try:
-                        options = {'dir': greenlet.task.dldir}
+                        options = {'dir': os.path.dirname(download['path'])}
                         gid = cfg.aria.aria2.addUri(cfg.aria2_token, [url], options)
                     except BaseException as e:
                         gid = 0
