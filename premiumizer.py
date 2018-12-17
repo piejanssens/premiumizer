@@ -994,7 +994,7 @@ def download_file():
                             continue
                     start_time = time.time()
                     try:
-                        options = {'dir': greenlet.task.dldir}
+                        options = {'dir': os.path.dirname(download['path'])}
                         gid = cfg.aria.aria2.addUri(cfg.aria2_token, [url], options)
                     except BaseException as e:
                         gid = 0
@@ -1047,18 +1047,27 @@ def is_sample(dir_content):
 
 def process_dir(dir_content, path):
     logger.debug('def processing_dir started')
-    total_size = 0
-    download_list = []
+    download_list = greenlet.task.download_list
     if not dir_content:
         return None
     for x in dir_content:
         type = x['type']
-        if type == 'dir':
-            new_path = os.path.join(path, clean_name(x))
+        if type == 'folder':
+            r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
+                                {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'id': x['id']})
+            new_dir_content = json.loads(r.content)['content']
+            new_path = os.path.join(path, clean_name(x['name']))
+            while new_dir_content[0]['type'] == 'folder':
+                r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
+                                    {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
+                                     'id': new_dir_content[0]['id']})
+                new_dir_content = json.loads(r.content)['content']
+                if new_dir_content[0]['type'] == 'folder':
+                    new_path = os.path.join(new_path, clean_name(new_dir_content[0]['name']))
             if os.path.basename(os.path.normpath(path)) == os.path.basename(os.path.normpath(new_path)):
-                process_dir(dir_content[x]['children'], path)
+                process_dir(new_dir_content, path)
             else:
-                process_dir(dir_content[x]['children'], new_path)
+                process_dir(new_dir_content, new_path)
         elif type == 'file':
             if x['link'].lower().endswith(tuple(greenlet.task.dlext)):
                 if greenlet.task.delsample:
@@ -1070,6 +1079,7 @@ def process_dir(dir_content, path):
                         os.makedirs(path)
                     download = {'path': os.path.join(path, clean_name(x['name'])), 'url': x['link']}
                     download_list.append(download)
+                    total_size = greenlet.task.size
                     total_size += x['size']
                     greenlet.task.update(download_list=download_list, size=total_size)
 
@@ -1077,8 +1087,10 @@ def process_dir(dir_content, path):
 def download_process():
     logger.debug('def download_process started')
     returncode = 0
-    greenlet.task.update(local_status='downloading', progress=0, speed=' ', eta=' ')
-    greenlet.task.dldir = os.path.join(greenlet.task.dldir, clean_name(greenlet.task.name))
+    greenlet.task.update(local_status='downloading', progress=0, speed=' ', eta=' ', size=0, download_list=[])
+    name = clean_name(greenlet.task.name)
+    if not greenlet.task.dldir.endswith(name):
+        greenlet.task.dldir = os.path.join(greenlet.task.dldir, name)
     if not greenlet.task.type == 'Filehost':
         if greenlet.task.file_id:
             r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
