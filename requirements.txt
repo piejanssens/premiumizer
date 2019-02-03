@@ -5,10 +5,10 @@ bencode==1.0
 chardet==3.0.4
 click==7.0
 futures==3.2.0
-python-engineio==3.2.3
+python-engineio==3.3.0
 flask==1.0.2
 flask_apscheduler==1.11.0
-flask_socketio==3.1.2
+flask_socketio==3.2.1
 flask-login==0.4.1
 flask-compress==1.4.0
 flask-reverse-proxy==0.2.0.2
@@ -18,7 +18,7 @@ MarkupSafe==1.1.0
 pathtools==0.1.2
 https://github.com/neox387/pySmartDL/archive/1.2.7.zip#egg=PySmartDL==1.2.7
 requests==2.21.0
-python-socketio==3.1.1
+python-socketio==3.1.2
 tzlocal==1.5.1
 werkzeug==0.14.1
 itsdangerous==1.1.0
@@ -27,4 +27,4 @@ gevent==1.4.0
 python-dateutil==2.7.5
 pycrypto==2.6.1
 urllib3==1.24.1
-https://github.com/neox387/myjdapi/archive/1.0.6.zip#egg=myjdapi==1.0.6
+https://github.com/neox387/myjdapi/archive/1.0.7.zip#egg=myjdapi==1.0.7
