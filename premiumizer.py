@@ -1179,7 +1179,7 @@ def download_task(task):
             if failed:
                 task.update(local_status='failed: nzbToMedia')
 
-    if cfg.email_enabled and task.local_status != 'stopped' and task.local_status != 'waiting':
+    if cfg.email_enabled and task.local_status != 'stopped' and task.local_status != 'waiting' and task.local_status != 'paused':
         if not failed:
             if not cfg.email_on_failure:
                 email('download success')
