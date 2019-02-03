@@ -800,6 +800,7 @@ def get_download_stats_jd(package_name):
                 if greenlet.task.local_status == 'paused':
                     try:
                         cfg.jd_device.downloads.set_enabled(0, packages_ids=[package_id])
+                        logger.warning('Download paused for: %s', greenlet.task.name)
                     except BaseException as e:
                         logger.error('myjdapi : ' + str(e.message))
                         logger.error('Could not pause/disable package in JD for : %s', greenlet.task.name)
@@ -810,6 +811,7 @@ def get_download_stats_jd(package_name):
                         continue
                     try:
                         cfg.jd_device.downloads.force_download(packages_ids=[package_id])
+                        logger.info('Download resumed for: %s', greenlet.task.name)
                     except BaseException as e:
                         logger.error('myjdapi : ' + str(e.message))
                         logger.error('Could not unpause/enable package in JD for : %s', greenlet.task.name)
@@ -1024,9 +1026,11 @@ def download_file():
                             return 1
                         elif greenlet.task.local_status == "paused":
                             cfg.aria.aria2.pause(cfg.aria2_token, gid)
+                            logger.warning('Download paused for: %s', greenlet.task.name)
                             while greenlet.task.local_status == "paused":
                                 gevent_sleep_time()
                             cfg.aria.aria2.unpause(cfg.aria2_token, gid)
+                            logger.info('Download resumed for: %s', greenlet.task.name)
                         elif greenlet.task.local_status == "stopped":
                             cfg.aria.aria2.remove(cfg.aria2_token, gid)
                             return 1
