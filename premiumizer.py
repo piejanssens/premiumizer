@@ -797,6 +797,24 @@ def get_download_stats_jd(package_name):
                         logger.error('Could not delete package in JD for : %s', greenlet.task.name)
                         pass
                     return 1
+                if greenlet.task.local_status == 'paused':
+                    try:
+                        cfg.jd_device.downloads.set_enabled(0, packages_ids=[package_id])
+                        logger.warning('Download paused for: %s', greenlet.task.name)
+                    except BaseException as e:
+                        logger.error('myjdapi : ' + str(e.message))
+                        logger.error('Could not pause/disable package in JD for : %s', greenlet.task.name)
+                        break
+                    while greenlet.task.local_status == 'paused':
+                        gevent_sleep_time()
+                    if greenlet.task.local_status != 'downloading':
+                        continue
+                    try:
+                        cfg.jd_device.downloads.force_download(packages_ids=[package_id])
+                        logger.info('Download resumed for: %s', greenlet.task.name)
+                    except BaseException as e:
+                        logger.error('myjdapi : ' + str(e.message))
+                        logger.error('Could not unpause/enable package in JD for : %s', greenlet.task.name)
                 try:
                     speed = package['speed']
                 except:
@@ -1008,9 +1026,11 @@ def download_file():
                             return 1
                         elif greenlet.task.local_status == "paused":
                             cfg.aria.aria2.pause(cfg.aria2_token, gid)
+                            logger.warning('Download paused for: %s', greenlet.task.name)
                             while greenlet.task.local_status == "paused":
                                 gevent_sleep_time()
-                            cfg.aria.aria2.pause(cfg.aria2_token, gid)
+                            cfg.aria.aria2.unpause(cfg.aria2_token, gid)
+                            logger.info('Download resumed for: %s', greenlet.task.name)
                         elif greenlet.task.local_status == "stopped":
                             cfg.aria.aria2.remove(cfg.aria2_token, gid)
                             return 1
@@ -1144,6 +1164,8 @@ def download_task(task):
                 logger.warning('Could not delete folder for: %s', greenlet.task.name)
         if task.progress == 100:
             task.update(category='', local_status='waiting')
+            scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
+            return
     if not failed:
         try:
             greenlet.avgspeed = str(utils.sizeof_human((task.size / task.dltime)) + '/s')
@@ -1157,7 +1179,7 @@ def download_task(task):
             if failed:
                 task.update(local_status='failed: nzbToMedia')
 
-    if cfg.email_enabled and task.local_status != 'stopped' and task.local_status != 'waiting':
+    if cfg.email_enabled and task.local_status != 'stopped' and task.local_status != 'waiting' and task.local_status != 'paused':
         if not failed:
             if not cfg.email_on_failure:
                 email('download success')
@@ -1397,15 +1419,16 @@ def check_downloads(dlsize, id):
         task = get_task(id)
     except:
         return
-    if dlsize == task.dlsize:
-        dldir = get_cat_var(task.category)
-        dldir = dldir[0]
-        task.update(local_status=None, dldir=dldir)
-        msg = 'Download: %s stuck restarting task' % task.name
-        logger.warning(msg)
-        if cfg.email_enabled:
-            email('Download stuck', msg)
-        scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
+    if task.local_status == 'downloading':
+        if dlsize == task.dlsize:
+            dldir = get_cat_var(task.category)
+            dldir = dldir[0]
+            task.update(local_status=None, dldir=dldir)
+            msg = 'Download: %s stuck restarting task' % task.name
+            logger.warning(msg)
+            if cfg.email_enabled:
+                email('Download stuck', msg)
+            scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
 
 
 def get_task(id):
@@ -2124,13 +2147,13 @@ def delete_task(message):
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=3)
 
 
-# @socketio.on('pause_task')
-# def pause_task(message):
-#    task = get_task(message['data'])
-#    if task.local_status != 'paused':
-#        task.update(local_status='paused')
-#    elif task.local_status == 'paused':
-#        task.update(local_status='downloading')
+@socketio.on('pause_resume_task')
+def pause_task(message):
+    task = get_task(message['data'])
+    if task.local_status != 'paused':
+        task.update(local_status='paused', speed='--- ', eta='')
+    elif task.local_status == 'paused':
+        task.update(local_status='downloading')
 
 
 @socketio.on('stop_task')

@@ -82,13 +82,11 @@ function update_task(task) {
         stateStr = 'Downloads are disabled';
         stateIcon = 'desktop';
         categoryState = '';
-        /*
     } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'paused') {
         stateColor = 'warning';
         stateStr = 'Download paused';
         stateIcon = 'desktop';
         categoryState = '';
-         */
     } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'downloading') {
         stateColor = 'primary';
         stateStr = 'Downloading';
@@ -170,7 +168,7 @@ function update_task(task) {
         '<div class="row"><h6>' + (task.progress != 100 ? "Speed: " + task.speed + "Size: " + task.dlsize + " ETA: " + task.eta : '') + '</h6></div>' +
         '</span>' +
         '<span class="col-md-3">' +
-        '<div class="btn-toolbar text-center"><a class="btn btn-danger delete_btn pointer" onclick="delete_task(event)"><i class="fa fa-trash-o fa-lg"></i> Delete</a>' + (task.cloud_status == "finished" ? (!task.file_id ? '<a class="btn btn-success" href="https://www.premiumize.me/files?folder_id=' + task.folder_id + '" target="_blank"><i class="fa fa-folder-open-o fa-lg"></i> Browse</a>' : "") + (task.file_id ? '<a class="btn btn-success" href="https://www.premiumize.me/files?file_id=' + task.file_id + '" target="_blank"><i class="fa fa-folder-open-o fa-lg"></i> Browse</a>' : "") : "") + (task.local_status == "downloading" ? '<a class="btn btn-warning pointer" onclick="stop_task(event)"><i class="fa fa-trash-o fa-lg"></i> Stop DL</a>' : "") + '</div>' +
+        '<div class="btn-toolbar text-center"><a class="btn btn-danger delete_btn pointer" onclick="delete_task(event)"><i class="fa fa-trash-o fa-lg"></i> Delete</a>' + (task.cloud_status == "finished" ? (!task.file_id ? '<a class="btn btn-success" href="https://www.premiumize.me/files?folder_id=' + task.folder_id + '" target="_blank"><i class="fa fa-folder-open-o fa-lg"></i> Browse</a>' : "") + (task.file_id ? '<a class="btn btn-success" href="https://www.premiumize.me/files?file_id=' + task.file_id + '" target="_blank"><i class="fa fa-folder-open-o fa-lg"></i>Browse</a>' : "") : "") + (task.local_status == "downloading" || (task.local_status == 'paused') ? '<a class="btn btn-warning pointer" onclick="stop_task(event)"><i class="fa fa-stop fa-lg"></i> Stop</a>' : "") + (task.local_status == "downloading" ? '<a class="btn btn-warning pointer" onclick="pause_resume_task(event)"><i class="fa fa-pause fa-lg"></i> Pause</a>' : "") + (task.local_status == "paused" ? '<a class="btn btn-warning pointer" onclick="pause_resume_task(event)"><i class="fa fa-play fa-lg"></i> Resume</a>' : "") + '</div>' +
         '</span>' +
         '</div>' +
         '</div>' +
@@ -288,7 +286,7 @@ function update_task(task) {
 
     $('#magnet-input').on('drop', function (e) {
         e.preventDefault();
-        var magnet = e.originalEvent.dataTransfer.getData('Text')
+        var magnet = e.originalEvent.dataTransfer.getData('Text');
         setTimeout(function () {
             if (magnet.match(/magnet:\?xt=urn:btih:[a-z0-9]{20,50}.+/i) != null) {
                 uploadMagnet(magnet);
@@ -412,15 +410,13 @@ function delete_task(e) {
     });
 }
 
-/*
- function pause_task(e) {
+function pause_resume_task(e) {
  var elem = $(e.target);
  var id = elem.closest('.panel').attr('id');
- socket.emit('pause_task', {
+    socket.emit('pause_resume_task', {
  data: id
  });
  }
- */
 function stop_task(e) {
     var elem = $(e.target);
     var id = elem.closest('.panel').attr('id');
