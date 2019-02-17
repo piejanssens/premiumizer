@@ -2068,13 +2068,13 @@ def log():
                 pass
             logger.info('Logfile Cleared')
     try:
-        with open(os.path.join(rootdir, 'logs' 'premiumizer.log'), "r") as f:
+        with open(os.path.join(rootdir, 'logs', 'premiumizer.log'), "r") as f:
             log = unicode(f.read(), "utf-8")
     except:
         log = 'Error opening logfile'
 
     try:
-        with open(os.path.join(rootdir, 'logs' 'premiumizerDEBUG.log'), "r") as f:
+        with open(os.path.join(rootdir, 'logs', 'premiumizerDEBUG.log'), "r") as f:
             debuglog = unicode(f.read(), "utf-8")
     except:
         debuglog = 'no debug log file or corrupted'
