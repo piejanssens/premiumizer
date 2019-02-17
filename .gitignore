@@ -1,8 +1,8 @@
 #Premiumizer Specific
-settings.cfg
-settings.cfg.old
-premiumizer*log*
+conf/*
+!conf/settings.cfg.tpl
 premiumizer.db
+logs/
 tmp/
 
 #PyCharm
