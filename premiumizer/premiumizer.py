@@ -50,7 +50,7 @@ print ('------------------------------------------------------------------------
 # Initialize config values
 prem_config = ConfigParser.RawConfigParser()
 runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0]
-rootdir = os.path.split(runningdir)
+rootdir = os.path.split(runningdir)[0]
 os_arg = ''
 
 if len(sys.argv) > 1:
@@ -63,9 +63,18 @@ else:
     except:
         pass
 
-if not os.path.isfile(os.path.join(runningdir, 'settings.cfg')):
-    shutil.copy(os.path.join(runningdir, 'settings.cfg.tpl'), os.path.join(runningdir, 'settings.cfg'))
-prem_config.read(os.path.join(runningdir, 'settings.cfg'))
+# Remove later, migration for update
+try:
+    if os.path.isfile(os.path.join(rootdir, 'settings.cfg')):
+        shutil.move(os.path.join(rootdir, 'settings.cfg'), os.path.join(rootdir, 'conf', 'settings.cfg'))
+except:
+    pass
+# Remove later, migration for update
+
+
+if not os.path.isfile(os.path.join(rootdir, 'conf', 'settings.cfg')):
+    shutil.copy(os.path.join(rootdir, 'conf', 'settings.cfg.tpl'), os.path.join(rootdir, 'conf', 'settings.cfg'))
+prem_config.read(os.path.join(rootdir, 'conf', 'settings.cfg'))
 active_interval = prem_config.getint('global', 'active_interval')
 idle_interval = prem_config.getint('global', 'idle_interval')
 debug_enabled = prem_config.getboolean('global', 'debug_enabled')
@@ -88,7 +97,7 @@ if debug_enabled:
     logger.debug('----------------------------------')
     logger.debug('----------------------------------')
     logger.debug('DEBUG Logger Initialized')
-    handler = logging.handlers.RotatingFileHandler(os.path.join(runningdir, 'premiumizerDEBUG.log'),
+    handler = logging.handlers.RotatingFileHandler(os.path.join(rootdir, 'logs', 'premiumizerDEBUG.log'),
                                                    maxBytes=(500 * 1024))
     handler.setFormatter(formatterdebug)
     logger.addHandler(handler)
@@ -104,7 +113,8 @@ else:
     logger.debug('-------------------------------------------------------------------------------------')
     logger.debug('-------------------------------------------------------------------------------------')
     logger.debug('Logger Initialized')
-    handler = logging.handlers.RotatingFileHandler(os.path.join(runningdir, 'premiumizer.log'), maxBytes=(500 * 1024))
+    handler = logging.handlers.RotatingFileHandler(os.path.join(rootdir, 'logs', 'premiumizer.log'),
+                                                   maxBytes=(500 * 1024))
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.debug('Logfile Initialized')
@@ -142,48 +152,49 @@ if not log_flask:
 
 # Check if premiumizer has been updated
 if prem_config.getboolean('update', 'updated'):
-    if os.path.isfile(os.path.join(runningdir, 'premiumizer.log')):
+    if os.path.isfile(os.path.join(rootdir, 'logs', 'premiumizer.log')):
         try:
-            with open(os.path.join(runningdir, 'premiumizer.log'), 'w'):
+            with open(os.path.join(rootdir, 'logs', 'premiumizer.log'), 'w'):
                 pass
             logger.info('*************************************************************************************')
             logger.info('----------------Premiumizer.log file has been deleted as a precaution----------------')
             logger.info('*************************************************************************************')
         except:
             logger.error('Could not delete old premiumizer.log file')
-    if os.path.isfile(os.path.join(runningdir, 'premiumizerDEBUG.log')):
+    if os.path.isfile(os.path.join(rootdir, 'logs', 'premiumizerDEBUG.log')):
         try:
-            with open(os.path.join(runningdir, 'premiumizerDEBUG.log'), 'w'):
+            with open(os.path.join(rootdir, 'logs', 'premiumizerDEBUG.log'), 'w'):
                 pass
             logger.info('*************************************************************************************')
             logger.info('---------------PremiumizerDEBUG file has been deleted as a precaution----------------')
             logger.info('*************************************************************************************')
         except:
             logger.error('Could not delete old premiumizerDEBUG.log file')
-    if os.path.isfile(os.path.join(runningdir, 'premiumizer.db')):
+    if os.path.isfile(os.path.join(rootdir, 'premiumizer', 'premiumizer.db')):
         try:
-            os.remove(os.path.join(runningdir, 'premiumizer.db'))
+            os.remove(os.path.join(rootdir, 'premiumizer', 'premiumizer.db'))
             logger.info('*************************************************************************************')
             logger.info('---------------Premiumizer.db file has been deleted as a precaution----------------')
             logger.info('*************************************************************************************')
         except:
             logger.error('Could not delete old premiumizer.db file')
-    if os.path.isfile(os.path.join(runningdir, 'settings.cfg.old2')):
+    if os.path.isfile(os.path.join(rootdir, 'conf', 'settings.cfg.old2')):
         try:
-            shutil.move(os.path.join(runningdir, 'settings.cfg.old2'), os.path.join(runningdir, 'settings.cfg.old'))
+            shutil.move(os.path.join(rootdir, 'conf', 'settings.cfg.old2'),
+                        os.path.join(rootdir, 'conf', 'settings.cfg.old'))
             logger.info('*************************************************************************************')
             logger.info('-------Settings file has been updated, old settings file renamed to .old-------')
             logger.info('*************************************************************************************')
         except:
             logger.error('Could not rename old settings file')
     prem_config.set('update', 'updated', '0')
-    with open(os.path.join(runningdir, 'settings.cfg'), 'w') as configfile:
+    with open(os.path.join(rootdir, 'conf', 'settings.cfg'), 'w') as configfile:
         prem_config.write(configfile)
     logger.info('*************************************************************************************')
     logger.info('---------------------------Premiumizer has been updated!!----------------------------')
     logger.info('*************************************************************************************')
 #
-logger.info('Running at %s', runningdir)
+logger.info('Running at %s', rootdir)
 
 
 # noinspection PyAttributeOutsideInit
@@ -287,8 +298,8 @@ class PremConfig:
 
         else:
             self.download_builtin = 1
-        if os.path.isfile(os.path.join(runningdir, 'nzbtomedia', 'NzbToMedia.py')):
-            self.nzbtomedia_location = (os.path.join(runningdir, 'nzbtomedia', 'NzbToMedia.py'))
+        if os.path.isfile(os.path.join(rootdir, 'nzbtomedia', 'NzbToMedia.py')):
+            self.nzbtomedia_location = (os.path.join(rootdir, 'nzbtomedia', 'NzbToMedia.py'))
             self.nzbtomedia_builtin = 1
         else:
             self.nzbtomedia_location = prem_config.get('downloads', 'nzbtomedia_location')
@@ -405,21 +416,21 @@ def check_update(auto_update=cfg.auto_update):
     diff = 21600 - diff.total_seconds()
     if (diff > 120) or (cfg.update_status == ''):
         try:
-            subprocess.check_call(['git', '-C', runningdir, 'fetch'])
+            subprocess.check_call(['git', '-C', rootdir, 'fetch'])
         except:
             cfg.update_status = 'failed'
-            logger.error('Update failed: could not git fetch: %s', runningdir)
+            logger.error('Update failed: could not git fetch: %s', rootdir)
         if cfg.update_status != 'failed':
             cfg.update_localcommit = subprocess.check_output(
-                ['git', '-C', runningdir, 'log', '-n', '1', '--pretty=format:%h'])
+                ['git', '-C', rootdir, 'log', '-n', '1', '--pretty=format:%h'])
             local_branch = str(
-                subprocess.check_output(['git', '-C', runningdir, 'rev-parse', '--abbrev-ref', 'HEAD'])).rstrip('\n')
+                subprocess.check_output(['git', '-C', rootdir, 'rev-parse', '--abbrev-ref', 'HEAD'])).rstrip('\n')
             remote_commit = subprocess.check_output(
-                ['git', '-C', runningdir, 'log', '-n', '1', 'origin/' + local_branch, '--pretty=format:%h'])
+                ['git', '-C', rootdir, 'log', '-n', '1', 'origin/' + local_branch, '--pretty=format:%h'])
 
             if cfg.update_localcommit != remote_commit:
                 cfg.update_diffcommit = subprocess.check_output(
-                    ['git', '-C', runningdir, 'log', '--oneline', local_branch + '..origin/' + local_branch])
+                    ['git', '-C', rootdir, 'log', '--oneline', local_branch + '..origin/' + local_branch])
 
                 cfg.update_available = 1
                 cfg.update_status = 'Update Available !!'
@@ -455,16 +466,17 @@ def update_self():
     logger.info('Update - will restart')
     cfg.update_date = datetime.now().strftime("%d-%m %H:%M:%S")
     prem_config.set('update', 'update_date', cfg.update_date)
-    with open(os.path.join(runningdir, 'settings.cfg'), 'w') as configfile:  # save
+    with open(os.path.join(rootdir, 'conf', 'settings.cfg'), 'w') as configfile:  # save
         prem_config.write(configfile)
     scheduler.shutdown(wait=False)
     db.close()
     socketio.stop()
     if os_arg == '--windows':
-        subprocess.call(['python', os.path.join(runningdir, 'utils.py'), '--update', '--windows'])
+        subprocess.call(['python', os.path.join(rootdir, 'premiumizer', 'utils.py'), '--update', '--windows'])
         os._exit(1)
     else:
-        subprocess.Popen(['python', os.path.join(runningdir, 'utils.py'), '--update', '--none'], shell=False,
+        subprocess.Popen(['python', os.path.join(rootdir, 'premiumizer', 'utils.py'), '--update', '--none'],
+                         shell=False,
                          close_fds=True)
         os._exit(1)
 
@@ -479,7 +491,8 @@ def restart():
         # windows service will automatically restart on 'failure'
         os._exit(1)
     else:
-        subprocess.Popen(['python', os.path.join(runningdir, 'utils.py'), '--restart', '--none'], shell=False,
+        subprocess.Popen(['python', os.path.join(rootdir, 'premiumizer', 'utils.py'), '--restart', '--none'],
+                         shell=False,
                          close_fds=True)
         os._exit(1)
 
@@ -515,15 +528,15 @@ logger.debug('Initializing Flask complete')
 
 # Initialise Database
 logger.debug('Initializing Database')
-if os.path.isfile(os.path.join(runningdir, 'premiumizer.db')):
-    db = shelve.open(os.path.join(runningdir, 'premiumizer.db'))
+if os.path.isfile(os.path.join(rootdir, 'premiumizer', 'premiumizer.db')):
+    db = shelve.open(os.path.join(rootdir, 'premiumizer', 'premiumizer.db'))
     if not db.keys():
         db.close()
-        os.remove(os.path.join(runningdir, 'premiumizer.db'))
-        db = shelve.open(os.path.join(runningdir, 'premiumizer.db'))
+        os.remove(os.path.join(rootdir, 'premiumizer', 'premiumizer.db'))
+        db = shelve.open(os.path.join(rootdir, 'premiumizer', 'premiumizer.db'))
         logger.debug('Database cleared')
 else:
-    db = shelve.open(os.path.join(runningdir, 'premiumizer.db'))
+    db = shelve.open(os.path.join(rootdir, 'premiumizer', 'premiumizer.db'))
 logger.debug('Initializing Database complete')
 
 # Initialise Globals
@@ -647,7 +660,7 @@ def email(subject, text=None):
                 log = 'premiumizerDEBUG.log'
             else:
                 log = 'premiumizer.log'
-            with open(os.path.join(runningdir, log), 'r') as f:
+            with open(os.path.join(rootdir, 'logs', log), 'r') as f:
                 for line in f:
                     if greenlet.task.name in line:
                         text += line
@@ -1772,7 +1785,7 @@ def upload():
     if request.files:
         upload_file = request.files['file']
         filename = secure_filename(upload_file.filename)
-        tmp = os.path.join(runningdir, 'tmp')
+        tmp = os.path.join(rootdir, 'tmp')
         if not os.path.isdir(tmp):
             os.makedirs(tmp)
         upload_file.save(os.path.join(tmp, filename))
@@ -1828,7 +1841,7 @@ def history():
             log = 'premiumizerDEBUG.log'
         else:
             log = 'premiumizer.log'
-        with open(os.path.join(runningdir, log), 'r') as f:
+        with open(os.path.join(rootdir, 'logs', log), 'r') as f:
             for line in f:
                 if 'Added:' in line:
                     taskname = line.split("Added: ", 1)[1].splitlines()[0].split(" --", 1)[0]
@@ -2000,7 +2013,7 @@ def settings():
                 else:
                     prem_config.set('categories', ('cat_nzbtomedia' + str([x])), '0')
 
-            with open(os.path.join(runningdir, 'settings.cfg'), 'w') as configfile:
+            with open(os.path.join(rootdir, 'conf', 'settings.cfg'), 'w') as configfile:
                 prem_config.write(configfile)
             logger.info('Settings saved, reloading configuration')
             cfg.check_config()
@@ -2041,24 +2054,24 @@ def log():
     if request.method == 'POST':
         if 'Clear' in request.form.values():
             try:
-                with open(os.path.join(runningdir, 'premiumizer.log'), 'w'):
+                with open(os.path.join(rootdir, 'conf', 'premiumizer.log'), 'w'):
                     pass
             except:
                 pass
             try:
-                with open(os.path.join(runningdir, 'premiumizerDEBUG.log'), 'w'):
+                with open(os.path.join(rootdir, 'logs', 'premiumizerDEBUG.log'), 'w'):
                     pass
             except:
                 pass
             logger.info('Logfile Cleared')
     try:
-        with open(os.path.join(runningdir, 'premiumizer.log'), "r") as f:
+        with open(os.path.join(rootdir, 'logs' 'premiumizer.log'), "r") as f:
             log = unicode(f.read(), "utf-8")
     except:
         log = 'Error opening logfile'
 
     try:
-        with open(os.path.join(runningdir, 'premiumizerDEBUG.log'), "r") as f:
+        with open(os.path.join(rootdir, 'logs' 'premiumizerDEBUG.log'), "r") as f:
             debuglog = unicode(f.read(), "utf-8")
     except:
         debuglog = 'no debug log file or corrupted'
