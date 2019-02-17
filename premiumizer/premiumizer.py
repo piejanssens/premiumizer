@@ -2057,7 +2057,7 @@ def log():
     if request.method == 'POST':
         if 'Clear' in request.form.values():
             try:
-                with open(os.path.join(rootdir, 'conf', 'premiumizer.log'), 'w'):
+                with open(os.path.join(rootdir, 'logs', 'premiumizer.log'), 'w'):
                     pass
             except:
                 pass
