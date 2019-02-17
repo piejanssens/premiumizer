@@ -80,6 +80,9 @@ idle_interval = prem_config.getint('global', 'idle_interval')
 debug_enabled = prem_config.getboolean('global', 'debug_enabled')
 
 # Initialize logging
+logs = os.path.join(rootdir, 'logs')
+if not os.path.isdir(logs):
+    os.makedirs(logs)
 syslog = logging.StreamHandler()
 if debug_enabled:
     logger = logging.getLogger('')
