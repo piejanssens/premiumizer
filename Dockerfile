@@ -15,4 +15,4 @@ COPY . /premiumizer/
 RUN chmod -R 777 /premiumizer && sed -i "s/127.0.0.1/0.0.0.0/g" premiumizer/conf/settings.cfg.tpl
 WORKDIR /premiumizer
 EXPOSE 5000
-ENTRYPOINT ["./docker-entrypoint.sh"]
+ENTRYPOINT ["./premiumizer/docker-entrypoint.sh"]
