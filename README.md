@@ -101,7 +101,7 @@ Install NzbToMedia & pywin32 & Microsoft Visual c++ python compiler:
 ### OS X
 Install [brew](http://brew.sh/), use brew to install python
 
-1. ```git clonehttps://github.com/piejanssens/premiumizer.git```
+1. ```git clone https://github.com/piejanssens/premiumizer.git```
 2. ```cd premiumizer```
 3. ```virtualenv virtualenv```
 4. ```source virtualenv/bin/activate```
@@ -111,6 +111,14 @@ Install [brew](http://brew.sh/), use brew to install python
 Now use your browser to access [http://127.0.0.1:5000/](http://127.0.0.1:5000/)
 
 Extra: Google how you can turn it into a service and run it in background
+
+### Docker
+Build the image and run the container:
+1. ```git clone https://github.com/piejanssens/premiumizer.git```
+2. ```cd premiumizer```
+3. ```docker build -t REPO/TAG . ```
+4. ```docker run -d -p 5000:5000 -e TZ=Europe/London -e PUID=1000 -e PGID=1000 -v <host_path>:/premiumizer/conf -v <host_path>:/blackhole -v <host_path>:/downloads REPO/TAG```
+Manually setting PUID and PGID might be necessary for the bind-mounts (depends on your permission setup).
 
 ## Updating
 Update from the settings page / enable automatic updates
