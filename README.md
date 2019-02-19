@@ -118,6 +118,7 @@ Build the image and run the container:
 2. ```cd premiumizer```
 3. ```docker build -t REPO/TAG . ```
 4. ```docker run -d -p 5000:5000 -e TZ=Europe/London -e PUID=1000 -e PGID=1000 -v <host_path>:/premiumizer/conf -v <host_path>:/blackhole -v <host_path>:/downloads REPO/TAG```
+
 Manually setting PUID and PGID might be necessary for the bind-mounts (depends on your permission setup).
 
 ## Updating
