@@ -4,10 +4,10 @@ greenlet==0.4.15
 bencode-python3==1.0.2
 chardet==3.0.4
 click==7.0
-python-engineio==3.3.0
+python-engineio==3.4.3
 flask==1.0.2
 flask_apscheduler==1.11.0
-flask_socketio==3.2.1
+flask_socketio==3.3.1
 flask-login==0.4.1
 flask-compress==1.4.0
 flask-reverse-proxy==0.2.0.2
@@ -23,7 +23,7 @@ werkzeug==0.14.1
 itsdangerous==1.1.0
 six==1.12
 gevent==1.4.0
-python-dateutil==2.7.5
+python-dateutil==2.8.0
 pycryptodome==3.7.3
 urllib3==1.24.1
 https://github.com/neox387/myjdapi/archive/1.0.7.zip#egg=myjdapi==1.0.7
