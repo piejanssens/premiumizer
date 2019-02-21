@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-import ConfigParser
+from configparser import ConfigParser
 import json
 import logging
 import os
@@ -11,9 +11,9 @@ import subprocess
 import sys
 import time
 import unicodedata
-import urllib
+import urllib.request, urllib.parse, urllib.error
 import uuid
-import xmlrpclib
+import xmlrpc.client
 from datetime import datetime, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -39,7 +39,7 @@ from watchdog import events
 from watchdog.observers import Observer
 from werkzeug.utils import secure_filename
 
-from DownloadTask import DownloadTask
+import DownloadTask
 
 # "https://www.premiumize.me/api"
 print ('------------------------------------------------------------------------------------------------------------')
@@ -48,7 +48,7 @@ print ('-------------------------------------------WELCOME TO PREMIUMIZER-------
 print ('|                                                                                                           |')
 print ('------------------------------------------------------------------------------------------------------------')
 # Initialize config values
-prem_config = ConfigParser.RawConfigParser()
+prem_config = ConfigParser()
 runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0]
 rootdir = os.path.split(runningdir)[0]
 os_arg = ''
@@ -287,7 +287,7 @@ class PremConfig:
             self.aria2_token = "token:" + prem_config.get('downloads', 'aria2_secret')
             try:
                 uri = ('http://' + self.aria2_host + ':' + self.aria2_port + '/rpc')
-                self.aria = xmlrpclib.ServerProxy(uri, allow_none=True)
+                self.aria = xmlrpc.client.ServerProxy(uri, allow_none=True)
                 if self.download_speed == -1:
                     download_speed = 0
                 else:
@@ -397,7 +397,7 @@ def jd_connect():
 def aria2_connect():
     try:
         uri = ('http://' + cfg.aria2_host + ':' + cfg.aria2_port + '/rpc')
-        cfg.aria = xmlrpclib.ServerProxy(uri, allow_none=True)
+        cfg.aria = xmlrpc.client.ServerProxy(uri, allow_none=True)
         cfg.aria.aria2.getVersion(cfg.aria2_token)
         cfg.aria2_connected = 1
     except Exception as e:
@@ -425,15 +425,14 @@ def check_update(auto_update=cfg.auto_update):
             logger.error('Update failed: could not git fetch: %s', rootdir)
         if cfg.update_status != 'failed':
             cfg.update_localcommit = subprocess.check_output(
-                ['git', '-C', rootdir, 'log', '-n', '1', '--pretty=format:%h'])
-            local_branch = str(
-                subprocess.check_output(['git', '-C', rootdir, 'rev-parse', '--abbrev-ref', 'HEAD'])).rstrip('\n')
+                ['git', '-C', rootdir, 'log', '-n', '1', '--pretty=format:%h'], encoding='utf8').rstrip('\n')
+            local_branch = subprocess.check_output(['git', '-C', rootdir, 'rev-parse', '--abbrev-ref', 'HEAD'], encoding='utf8').rstrip('\n')
             remote_commit = subprocess.check_output(
-                ['git', '-C', rootdir, 'log', '-n', '1', 'origin/' + local_branch, '--pretty=format:%h'])
+                ['git', '-C', rootdir, 'log', '-n', '1', 'origin/' + local_branch, '--pretty=format:%h'], encoding='utf8').rstrip('\n')
 
             if cfg.update_localcommit != remote_commit:
                 cfg.update_diffcommit = subprocess.check_output(
-                    ['git', '-C', rootdir, 'log', '--oneline', local_branch + '..origin/' + local_branch])
+                    ['git', '-C', rootdir, 'log', '--oneline', local_branch + '..origin/' + local_branch], encoding='utf8').rstrip('\n')
 
                 cfg.update_available = 1
                 cfg.update_status = 'Update Available !!'
@@ -533,7 +532,7 @@ logger.debug('Initializing Flask complete')
 logger.debug('Initializing Database')
 if os.path.isfile(os.path.join(rootdir, 'premiumizer', 'premiumizer.db')):
     db = shelve.open(os.path.join(rootdir, 'premiumizer', 'premiumizer.db'))
-    if not db.keys():
+    if not list(db.keys()):
         db.close()
         os.remove(os.path.join(rootdir, 'premiumizer', 'premiumizer.db'))
         db = shelve.open(os.path.join(rootdir, 'premiumizer', 'premiumizer.db'))
@@ -570,7 +569,7 @@ class User(UserMixin):
 def to_unicode(original, *args):
     logger.debug('def to_unicode started')
     try:
-        if isinstance(original, unicode):
+        if isinstance(original, str):
             return original
         else:
             try:
@@ -595,7 +594,7 @@ def to_unicode(original, *args):
 
 def ek(original, *args):
     logger.debug('def ek started')
-    if isinstance(original, (str, unicode)):
+    if isinstance(original, str):
         try:
             return original.decode('UTF-8', 'ignore')
         except UnicodeDecodeError:
@@ -619,7 +618,7 @@ def notify_nzbtomedia():
             subprocess.check_output(
                 ['python', cfg.nzbtomedia_location, greenlet.task.dldir, greenlet.task.name, greenlet.task.category,
                  greenlet.task.id, 'generic'],
-                stderr=subprocess.STDOUT, shell=False)
+                stderr=subprocess.STDOUT, shell=False, encoding='utf8').rstrip('\n')
             returncode = 0
             logger.info('Send to nzbToMedia: %s', greenlet.task.name)
         except subprocess.CalledProcessError as e:
@@ -1479,7 +1478,7 @@ def add_task(id, size, name, category, type='', folder_id=None):
     if not exists:
         dldir, dlext, delsample, dlnzbtomedia = get_cat_var(category)
         try:
-            name = urllib.unquote(name).decode('ASCII')
+            name = urllib.parse.unquote(name).decode('ASCII')
             name = clean_name(name)
             if 'download.php?id=' in name:
                 name = name.split("&f=", 1)[1]
@@ -1891,16 +1890,16 @@ def history():
 @login_required
 def settings():
     if request.method == 'POST':
-        if 'Restart' in request.form.values():
+        if 'Restart' in list(request.form.values()):
             gevent.spawn_later(1, restart)
             return 'Restarting, please try and refresh the page in a few seconds...'
-        elif 'Shutdown' in request.form.values():
+        elif 'Shutdown' in list(request.form.values()):
             gevent.spawn_later(1, shutdown)
             return 'Shutting down...'
-        elif 'Update Premiumizer' in request.form.values():
+        elif 'Update Premiumizer' in list(request.form.values()):
             gevent.spawn_later(1, update_self)
             return 'Updating, please try and refresh the page in a few seconds...'
-        elif 'Update Jdownloader' in request.form.values():
+        elif 'Update Jdownloader' in list(request.form.values()):
             try:
                 cfg.jd_device.update.restart_and_update()
                 flash('Jdownloader update started', 'info')
@@ -1909,7 +1908,7 @@ def settings():
                 logger.error('Jdownloader update failed')
                 flash('Jdownloader update failed', 'info')
                 cfg.jd_update_available = 1
-        elif 'Send Test Email' in request.form.values():
+        elif 'Send Test Email' in list(request.form.values()):
             email('Test Email from premiumizer !')
             flash('Email send!', 'info')
         else:
@@ -2055,7 +2054,7 @@ def logout():
 @login_required
 def log():
     if request.method == 'POST':
-        if 'Clear' in request.form.values():
+        if 'Clear' in list(request.form.values()):
             try:
                 with open(os.path.join(rootdir, 'logs', 'premiumizer.log'), 'w'):
                     pass
@@ -2069,13 +2068,13 @@ def log():
             logger.info('Logfile Cleared')
     try:
         with open(os.path.join(rootdir, 'logs', 'premiumizer.log'), "r") as f:
-            log = unicode(f.read(), "utf-8")
+            log = str(f.read(), "utf-8")
     except:
         log = 'Error opening logfile'
 
     try:
         with open(os.path.join(rootdir, 'logs', 'premiumizerDEBUG.log'), "r") as f:
-            debuglog = unicode(f.read(), "utf-8")
+            debuglog = str(f.read(), "utf-8")
     except:
         debuglog = 'no debug log file or corrupted'
     return render_template("log.html", log=log, debuglog=debuglog)
@@ -2197,17 +2196,17 @@ def test_disconnect():
 def hello_server(message):
     send_categories()
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
-    print(message['data'])
+    print((message['data']))
 
 
 @socketio.on('message')
 def handle_message(message):
-    print('received message: ' + message)
+    print(('received message: ' + message))
 
 
 @socketio.on('json')
 def handle_json(json):
-    print('received json: ' + str(json))
+    print(('received json: ' + str(json)))
 
 
 @socketio.on('change_category')

@@ -1,4 +1,4 @@
-import ConfigParser
+import configparser
 import logging
 import os
 import subprocess
@@ -34,7 +34,7 @@ logging.debug('runningdir = %s', runningdir)
 def restart():
     logging.debug('def restart')
     time.sleep(4)
-    execfile(os.path.join(rootdir, 'premiumizer', 'premiumizer.py'), globals(), globals())
+    exec(compile(open(os.path.join(rootdir, 'premiumizer', 'premiumizer.py'), "rb").read(), os.path.join(rootdir, 'premiumizer', 'premiumizer.py'), 'exec'), globals(), globals())
 
 
 def update():
@@ -45,8 +45,8 @@ def update():
     subprocess.call(['git', '-C', os.path.join(rootdir, 'nzbtomedia'), 'pull'])
     subprocess.call(['git', '-C', rootdir, 'pull'])
 
-    prem_config = ConfigParser.RawConfigParser()
-    default_config = ConfigParser.RawConfigParser()
+    prem_config = configparser.RawConfigParser()
+    default_config = configparser.RawConfigParser()
     prem_config.read(os.path.join(rootdir, 'conf', 'settings.cfg'))
     default_config.read(os.path.join(rootdir, 'conf', 'settings.cfg.tpl'))
 
@@ -78,7 +78,7 @@ def update():
         pass
     else:
         time.sleep(3)
-        execfile(os.path.join(rootdir, 'premiumizer', 'premiumizer.py'), globals(), globals())
+        exec(compile(open(os.path.join(rootdir, 'premiumizer', 'premiumizer.py'), "rb").read(), os.path.join(rootdir, 'premiumizer', 'premiumizer.py'), 'exec'), globals(), globals())
 
 
 if len(sys.argv) == 3:

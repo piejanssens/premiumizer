@@ -1,10 +1,9 @@
 watchdog==0.9.0
 APScheduler==3.5.3
 greenlet==0.4.15
-bencode==1.0
+bencode-python3==1.0.2
 chardet==3.0.4
 click==7.0
-futures==3.2.0
 python-engineio==3.3.0
 flask==1.0.2
 flask_apscheduler==1.11.0
@@ -25,6 +24,6 @@ itsdangerous==1.1.0
 six==1.12
 gevent==1.4.0
 python-dateutil==2.7.5
-pycrypto==2.6.1
+pycryptodome==3.7.3
 urllib3==1.24.1
 https://github.com/neox387/myjdapi/archive/1.0.7.zip#egg=myjdapi==1.0.7
