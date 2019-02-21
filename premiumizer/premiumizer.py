@@ -533,7 +533,7 @@ logger.debug('Initializing Flask complete')
 logger.debug('Initializing Database')
 if os.path.isfile(os.path.join(rootdir, 'premiumizer', 'premiumizer.db')):
     db = shelve.open(os.path.join(rootdir, 'premiumizer', 'premiumizer.db'))
-    if not list(db.keys()):
+    if not db.keys():
         db.close()
         os.remove(os.path.join(rootdir, 'premiumizer', 'premiumizer.db'))
         db = shelve.open(os.path.join(rootdir, 'premiumizer', 'premiumizer.db'))
@@ -607,7 +607,7 @@ def ek(original, *args):
 def clean_name(original):
     logger.debug('def clean_name started')
     valid_chars = "-_.,()[]{}&!@ %s%s" % (ascii_letters, digits)
-    cleaned_filename = unicodedata.normalize('NFKD', to_unicode(original)).encode('ASCII', 'ignore')
+    cleaned_filename = unicodedata.normalize('NFKD', to_unicode(original)).encode('ASCII', 'ignore').decode('utf8')
     valid_string = ''.join(c for c in cleaned_filename if c in valid_chars)
     return ' '.join(valid_string.split())
 
@@ -972,25 +972,23 @@ def download_file():
             files_downloaded = 1
             if cfg.download_builtin:
                 downloader = SmartDL(url, download['path'], progress_bar=False, logger=logger,
-                                     threads_count=1, fix_urls=False)
+                                     threads=20, fix_urls=False)
                 downloader.start(blocking=False)
                 while not downloader.isFinished():
                     if cfg.download_speed != -1:
                         jobs = len(scheduler.scheduler._lookup_executor('downloads')._instances)
                         if jobs != 0:
-                            downloader.limit_speed(kbytes=((cfg.download_speed / 1000) / jobs))
+                            downloader.limit_speed(cfg.download_speed / jobs)
                         else:
-                            downloader.limit_speed(kbytes=cfg.download_speed / 1000)
+                            downloader.limit_speed(cfg.download_speed)
                     get_download_stats(downloader, total_size_downloaded)
-                    # if greenlet.task.local_status == "paused":            #   When paused to long
-                    #   downloader.pause()                                  #   PysmartDl fails with WARNING :
-                    #   while greenlet.task.local_status == "paused":       #   Diff between downloaded files and expected
-                    #       gevent_sleep_time()                               #   filesizes is .... Retrying...
-                    #   downloader.unpause()
+                    if greenlet.task.local_status == "paused":
+                       downloader.pause()
+                       while greenlet.task.local_status == "paused":
+                           gevent_sleep_time()
+                       downloader.unpause()
                     if greenlet.task.local_status == "stopped":
-                        while not downloader.isFinished():
-                            downloader.stop()
-                            gevent.sleep(0.5)
+                        downloader.stop()
                         return 1
                     gevent_sleep_time()
                 if downloader.isSuccessful():
@@ -1891,16 +1889,16 @@ def history():
 @login_required
 def settings():
     if request.method == 'POST':
-        if 'Restart' in list(request.form.values()):
+        if 'Restart' in request.form.values():
             gevent.spawn_later(1, restart)
             return 'Restarting, please try and refresh the page in a few seconds...'
-        elif 'Shutdown' in list(request.form.values()):
+        elif 'Shutdown' in request.form.values():
             gevent.spawn_later(1, shutdown)
             return 'Shutting down...'
-        elif 'Update Premiumizer' in list(request.form.values()):
+        elif 'Update Premiumizer' in request.form.values():
             gevent.spawn_later(1, update_self)
             return 'Updating, please try and refresh the page in a few seconds...'
-        elif 'Update Jdownloader' in list(request.form.values()):
+        elif 'Update Jdownloader' in request.form.values():
             try:
                 cfg.jd_device.update.restart_and_update()
                 flash('Jdownloader update started', 'info')
@@ -1909,7 +1907,7 @@ def settings():
                 logger.error('Jdownloader update failed')
                 flash('Jdownloader update failed', 'info')
                 cfg.jd_update_available = 1
-        elif 'Send Test Email' in list(request.form.values()):
+        elif 'Send Test Email' in request.form.values():
             email('Test Email from premiumizer !')
             flash('Email send!', 'info')
         else:
@@ -2031,6 +2029,15 @@ def settings():
     return render_template('settings.html', settings=prem_config, cfg=cfg, categories_amount=categories_amount)
 
 
+def redirect_dest(fallback):
+    dest = request.args.get('next')[1:]
+    try:
+        dest_url = url_for(dest)
+    except:
+        return redirect(fallback)
+    return redirect(dest_url)
+
+
 @app.route('/login', methods=["GET", "POST"])
 def login():
     if request.method == 'GET':
@@ -2039,7 +2046,7 @@ def login():
     password = request.form['password']
     if username == cfg.web_username and password == cfg.web_password:
         login_user(User(username, password))
-        return redirect(url_for('home'))
+        return redirect_dest(fallback=url_for('home'))
     else:
         flash('Username or password incorrect', 'error')
         return render_template('login.html')
@@ -2055,7 +2062,7 @@ def logout():
 @login_required
 def log():
     if request.method == 'POST':
-        if 'Clear' in list(request.form.values()):
+        if 'Clear' in request.form.values():
             try:
                 with open(os.path.join(rootdir, 'logs', 'premiumizer.log'), 'w'):
                     pass
@@ -2069,13 +2076,13 @@ def log():
             logger.info('Logfile Cleared')
     try:
         with open(os.path.join(rootdir, 'logs', 'premiumizer.log'), "r") as f:
-            log = str(f.read(), "utf-8")
+            log = str(f.read())
     except:
         log = 'Error opening logfile'
 
     try:
         with open(os.path.join(rootdir, 'logs', 'premiumizerDEBUG.log'), "r") as f:
-            debuglog = str(f.read(), "utf-8")
+            debuglog = str(f.read())
     except:
         debuglog = 'no debug log file or corrupted'
     return render_template("log.html", log=log, debuglog=debuglog)
