@@ -40,6 +40,7 @@ from watchdog.observers import Observer
 from werkzeug.utils import secure_filename
 
 import DownloadTask
+from DownloadTask import DownloadTask
 
 # "https://www.premiumize.me/api"
 print ('------------------------------------------------------------------------------------------------------------')
@@ -1305,7 +1306,7 @@ def parse_tasks(transfers):
         eta = ' '
         speed = ' '
         size = ' '
-        task = get_task(transfer['id'].encode("utf-8"))
+        task = get_task(transfer['id'])
         try:
             if 'ETA is' in transfer['message']:
                 eta = transfer['message'].split("ETA is", 1)[1]
@@ -1327,11 +1328,11 @@ def parse_tasks(transfers):
         except:
             progress = int(round(float(transfer['progress']) * 100))
         try:
-            folder_id = transfer['folder_id'].encode("utf-8")
+            folder_id = transfer['folder_id']
         except:
             folder_id = None
         try:
-            file_id = transfer['file_id'].encode("utf-8")
+            file_id = transfer['file_id']
         except:
             file_id = None
         if not task:
@@ -1340,10 +1341,10 @@ def parse_tasks(transfers):
             else:
                 name = transfer['name']
             if cfg.download_all:
-                add_task(transfer['id'].encode("utf-8"), size, name, 'default', folder_id=folder_id)
+                add_task(transfer['id'], size, name, 'default', folder_id=folder_id)
             else:
-                add_task(transfer['id'].encode("utf-8"), size, name, '', folder_id=folder_id)
-            task = get_task(transfer['id'].encode("utf-8"))
+                add_task(transfer['id'], size, name, '', folder_id=folder_id)
+            task = get_task(transfer['id'])
             id_local.append(task.id)
             task.update(progress=progress, cloud_status=transfer['status'], dlsize=size + ' --- ',
                         speed=speed + ' --- ', eta=eta, file_id=file_id)
@@ -1490,7 +1491,7 @@ def add_task(id, size, name, category, type='', folder_id=None):
                 type = 'NZB'
         except:
             pass
-        task = DownloadTask(socketio.emit, id.encode("utf-8"), folder_id, size, name, category, dldir, dlext,
+        task = DownloadTask(socketio.emit, id, folder_id, size, name, category, dldir, dlext,
                             delsample, dlnzbtomedia, type)
         tasks.append(task)
         if not task.type == 'Filehost':
@@ -1732,7 +1733,7 @@ def torrent_metainfo(torrent):
 def load_tasks():
     logger.debug('def load_tasks started')
     for id in db.keys():
-        task = db[id.encode("utf-8")]
+        task = db[id]
         task.callback = socketio.emit
         tasks.append(task)
     for task in tasks:
