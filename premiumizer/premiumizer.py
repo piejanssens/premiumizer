@@ -1572,11 +1572,12 @@ def upload_filehost(urls):
             response_content = json.loads(r.content)
             if response_content['status'] == 'success':
                 full_name = response_content['filename']
-                name = os.path.splitext(full_name)[0]
-                if full_name.endswith('.part1'):
-                    name = name.split('.part1', 1)[0]
-                elif full_name.endswith('.part01'):
-                    name = name.split('.part01', 1)[0]
+                if name == '':
+                    name = os.path.splitext(full_name)[0]
+                    if full_name.endswith('.part1'):
+                        name = name.split('.part1', 1)[0]
+                    elif full_name.endswith('.part01'):
+                        name = name.split('.part01', 1)[0]
                 download = {'path': clean_name(full_name), 'url': url}
                 download_list.append(download)
                 try:
@@ -2141,7 +2142,7 @@ def delete_task(message):
     try:
         if task.local_status != 'stopped':
             task.update(local_status='stopped')
-            if cfg.download_builtin:
+            if cfg.download_builtin and task.local_status == 'downloading':
                 gevent.sleep(8)
     except:
         pass
