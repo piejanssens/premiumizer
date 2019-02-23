@@ -961,9 +961,10 @@ def download_file():
     for download in greenlet.task.download_list:
         if greenlet.task.type == 'Filehost':
             payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'src': download['url']}
-            r = prem_connection("post", "https://www.premiumize.me/api/transfer/create", payload)
+            r = prem_connection("post", "https://www.premiumize.me/api/transfer/directdl", payload)
+            response_content = json.loads(r.content)
             try:
-                download['url'] = r.text.split('"location":"', 1)[1].splitlines()[0].split('",', 1)[0].replace('\\', '')
+                download['url'] = response_content['location']
             except:
                 return 1
             download['path'] = os.path.join(greenlet.task.dldir, download['path'])
@@ -1123,7 +1124,10 @@ def process_dir(dir_content, path):
 def download_process():
     logger.debug('def download_process started')
     returncode = 0
-    greenlet.task.update(local_status='downloading', progress=0, speed=' ', eta=' ', size=0, download_list=[])
+    if greenlet.task.type != 'Filehost':
+        greenlet.task.update(local_status='downloading', progress=0, speed=' ', eta=' ', size=0, download_list=[])
+    else:
+        greenlet.task.update(local_status='downloading', progress=0, speed=' ', eta=' ')
     name = clean_name(greenlet.task.name)
     if not greenlet.task.dldir.endswith(name):
         greenlet.task.dldir = os.path.join(greenlet.task.dldir, name)
@@ -1563,22 +1567,26 @@ def upload_filehost(urls):
         return
     for url in urls.splitlines():
         payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'src': url}
-        r = prem_connection("post", "https://www.premiumize.me/api/transfer/create", payload)
+        r = prem_connection("post", "https://www.premiumize.me/api/transfer/directdl", payload)
         try:
-            full_name = r.text.split('"name":"', 1)[1].splitlines()[0].split('",', 1)[0]
-            if name == '':
+            response_content = json.loads(r.content)
+            if response_content['status'] == 'success':
+                full_name = response_content['filename']
                 name = os.path.splitext(full_name)[0]
-                if name.endswith('.part1'):
+                if full_name.endswith('.part1'):
                     name = name.split('.part1', 1)[0]
-                elif name.endswith('.part01'):
+                elif full_name.endswith('.part01'):
                     name = name.split('.part01', 1)[0]
-            download = {'path': clean_name(full_name), 'url': url}
-            download_list.append(download)
-            try:
-                filesize = int(r.text.split('"filesize":"', 1)[1].splitlines()[0].split('",', 1)[0])
-                total_filesize += filesize
-            except:
-                pass
+                download = {'path': clean_name(full_name), 'url': url}
+                download_list.append(download)
+                try:
+                    filesize = response_content['filesize']
+                    total_filesize += filesize
+                except:
+                    pass
+            else:
+                failed = 1
+                logger.error('Filehost error: %s for %s', response_content['message'], urls)
         except:
             failed = 1
             try:
