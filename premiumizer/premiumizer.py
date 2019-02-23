@@ -304,7 +304,6 @@ class PremConfig:
             self.download_builtin = 1
         if os.path.isfile(os.path.join(rootdir, 'nzbtomedia', 'NzbToMedia.py')):
             self.nzbtomedia_location = (os.path.join(rootdir, 'nzbtomedia', 'NzbToMedia.py'))
-            self.nzbtomedia_builtin = 1
         else:
             self.nzbtomedia_location = prem_config.get('downloads', 'nzbtomedia_location')
         self.watchdir_enabled = prem_config.getboolean('upload', 'watchdir_enabled')
