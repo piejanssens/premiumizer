@@ -1565,7 +1565,7 @@ def upload_filehost(urls):
         payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'src': url}
         r = prem_connection("post", "https://www.premiumize.me/api/transfer/create", payload)
         try:
-            full_name = r.text.split('"filename":"', 1)[1].splitlines()[0].split('",', 1)[0].encode("utf-8")
+            full_name = r.text.split('"name":"', 1)[1].splitlines()[0].split('",', 1)[0]
             if name == '':
                 name = os.path.splitext(full_name)[0]
                 if name.endswith('.part1'):
@@ -1575,7 +1575,7 @@ def upload_filehost(urls):
             download = {'path': clean_name(full_name), 'url': url}
             download_list.append(download)
             try:
-                filesize = int(r.text.split('"filesize":"', 1)[1].splitlines()[0].split('",', 1)[0].encode("utf-8"))
+                filesize = int(r.text.split('"filesize":"', 1)[1].splitlines()[0].split('",', 1)[0])
                 total_filesize += filesize
             except:
                 pass
