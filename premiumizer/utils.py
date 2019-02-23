@@ -1,4 +1,4 @@
-import configparser
+from configparser import ConfigParser
 import logging
 import os
 import subprocess
@@ -45,8 +45,8 @@ def update():
     subprocess.call(['git', '-C', os.path.join(rootdir, 'nzbtomedia'), 'pull'])
     subprocess.call(['git', '-C', rootdir, 'pull'])
 
-    prem_config = configparser.RawConfigParser()
-    default_config = configparser.RawConfigParser()
+    prem_config = ConfigParser()
+    default_config = ConfigParser()
     prem_config.read(os.path.join(rootdir, 'conf', 'settings.cfg'))
     default_config.read(os.path.join(rootdir, 'conf', 'settings.cfg.tpl'))
 
@@ -56,15 +56,15 @@ def update():
     if prem_config.getfloat('update', 'req_version') < default_config.getfloat('update', 'req_version'):
         logging.info('updating pip requirements')
         pipmain(['install', '-r', os.path.join(rootdir, 'requirements.txt')])
-        prem_config.set('update', 'req_version', (default_config.getfloat('update', 'req_version')))
+        prem_config.set('update', 'req_version', str(default_config.getfloat('update', 'req_version')))
         with open(os.path.join(rootdir, 'conf', 'settings.cfg'), 'w') as configfile:
             prem_config.write(configfile)
     if prem_config.getfloat('update', 'config_version') < default_config.getfloat('update', 'config_version'):
         logging.info('updating config file')
         import shutil
-        shutil.copy(os.path.join(rootdir, 'conf', 'settings.cfg'), os.path.join(rootdir, 'conf', 'settings.cfg.old2'))
+        shutil.copy(os.path.join(rootdir, 'conf', 'settings.cfg'), os.path.join(rootdir, 'conf', 'settings.cfg.old'))
         shutil.copy(os.path.join(rootdir, 'conf', 'settings.cfg.tpl'), os.path.join(rootdir, 'conf', 'settings.cfg'))
-        prem_config.read(os.path.join(rootdir, 'conf', 'settings.cfg.old2'))
+        prem_config.read(os.path.join(rootdir, 'conf', 'settings.cfg.old'))
         default_config.read(os.path.join(rootdir, 'conf', 'settings.cfg'))
         for section in prem_config.sections():
             if section in default_config.sections() and section != 'update':

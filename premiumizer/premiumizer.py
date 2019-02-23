@@ -182,15 +182,10 @@ if prem_config.getboolean('update', 'updated'):
             logger.info('*************************************************************************************')
         except:
             logger.error('Could not delete old premiumizer.db file')
-    if os.path.isfile(os.path.join(rootdir, 'conf', 'settings.cfg.old2')):
-        try:
-            shutil.move(os.path.join(rootdir, 'conf', 'settings.cfg.old2'),
-                        os.path.join(rootdir, 'conf', 'settings.cfg.old'))
-            logger.info('*************************************************************************************')
-            logger.info('-------Settings file has been updated, old settings file renamed to .old-------')
-            logger.info('*************************************************************************************')
-        except:
-            logger.error('Could not rename old settings file')
+    if os.path.isfile(os.path.join(rootdir, 'conf', 'settings.cfg.old')):
+        logger.info('*************************************************************************************')
+        logger.info('-------Settings file has been updated, old settings file renamed to .old-------')
+        logger.info('*************************************************************************************')
     prem_config.set('update', 'updated', '0')
     with open(os.path.join(rootdir, 'conf', 'settings.cfg'), 'w') as configfile:
         prem_config.write(configfile)
@@ -212,6 +207,38 @@ class PremConfig:
 
     def check_config(self):
         logger.debug('Initializing config')
+        default_config = ConfigParser()
+        default_config.read(os.path.join(rootdir, 'conf', 'settings.cfg.tpl'))
+        if prem_config.getfloat('update', 'req_version') < default_config.getfloat('update', 'req_version'):
+            try:
+                logging.info('updating pip requirements')
+                from pip._internal import main as pipmain
+                pipmain(['install', '-r', os.path.join(rootdir, 'requirements.txt')])
+                prem_config.set('update', 'req_version', str(default_config.getfloat('update', 'req_version')))
+                with open(os.path.join(rootdir, 'conf', 'settings.cfg'), 'w') as configfile:
+                    prem_config.write(configfile)
+                prem_config.read(os.path.join(rootdir, 'conf', 'settings.cfg'))
+            except:
+                logger.error('Could not update requirements')
+                pass
+        if prem_config.getfloat('update', 'config_version') < default_config.getfloat('update', 'config_version'):
+            logging.info('updating config file')
+            try:
+                shutil.copy(os.path.join(rootdir, 'conf', 'settings.cfg'), os.path.join(rootdir, 'conf', 'settings.cfg.old'))
+                shutil.copy(os.path.join(rootdir, 'conf', 'settings.cfg.tpl'), os.path.join(rootdir, 'conf', 'settings.cfg'))
+                prem_config.read(os.path.join(rootdir, 'conf', 'settings.cfg.old'))
+                default_config.read(os.path.join(rootdir, 'conf', 'settings.cfg'))
+                for section in prem_config.sections():
+                    if section in default_config.sections() and section != 'update':
+                        for key in prem_config.options(section):
+                            if key in default_config.options(section):
+                                default_config.set(section, key, (prem_config.get(section, key)))
+                with open(os.path.join(rootdir, 'conf', 'settings.cfg'), 'w') as configfile:
+                    default_config.write(configfile)
+                prem_config.read(os.path.join(rootdir, 'conf', 'settings.cfg'))
+            except:
+                logger.error('Could not update settings file')
+                pass
         self.jd_connected = 0
         self.aria2_connected = 0
         self.bind_ip = prem_config.get('global', 'bind_ip')
@@ -239,6 +266,7 @@ class PremConfig:
         self.download_enabled = prem_config.getboolean('downloads', 'download_enabled')
         self.download_location = prem_config.get('downloads', 'download_location')
         self.download_max = prem_config.getint('downloads', 'download_max')
+        self.download_threads = prem_config.getint('downloads', 'download_threads')
         self.download_speed = prem_config.get('downloads', 'download_speed')
         self.download_rss = prem_config.getboolean('downloads', 'download_rss')
         self.jd_enabled = prem_config.getboolean('downloads', 'jd_enabled')
@@ -975,7 +1003,7 @@ def download_file():
             files_downloaded = 1
             if cfg.download_builtin:
                 downloader = SmartDL(url, download['path'], progress_bar=False, logger=logger,
-                                     threads=20, fix_urls=False)
+                                     threads=cfg.download_threads, fix_urls=False)
                 downloader.start(blocking=False)
                 while not downloader.isFinished():
                     if cfg.download_speed != -1:
@@ -2007,6 +2035,7 @@ def settings():
             prem_config.set('premiumize', 'pin', request.form.get('pin'))
             prem_config.set('downloads', 'download_location', request.form.get('download_location'))
             prem_config.set('downloads', 'download_max', request.form.get('download_max'))
+            prem_config.set('downloads', 'threads', request.form.get('threads'))
             prem_config.set('downloads', 'download_speed', request.form.get('download_speed'))
             prem_config.set('downloads', 'download_speed', request.form.get('download_speed'))
             prem_config.set('downloads', 'remove_cloud_delay', request.form.get('remove_cloud_delay'))
