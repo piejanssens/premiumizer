@@ -1851,10 +1851,10 @@ def upload():
             except Exception as err:
                 logger.error('Could not remove file from watchdir: %s --- error: %s', upload_file, err)
     elif request.data:
-        if str(request.data).startswith('magnet:'):
-            upload_magnet(request.data)
+        if request.data.decode('utf-8').startswith('magnet:'):
+            upload_magnet(request.data.decode('utf-8'))
         else:
-            upload_filehost(request.data)
+            upload_filehost(request.data.decode('utf-8'))
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
     return 'OK'
 
