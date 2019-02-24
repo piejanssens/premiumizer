@@ -1245,7 +1245,7 @@ def download_task(task):
 
     if cfg.remove_cloud:
         if not failed:
-            if cfg.remove_cloud_delay != 0:
+            if cfg.remove_cloud_delay != 0 and task.type != 'Filehost':
                 scheduler.scheduler.add_job(delete_task, args=(task.id,), name=task.name, id=task.name,
                                             misfire_grace_time=7200, coalesce=False, jobstore='remove_cloud',
                                             replace_existing=True,
