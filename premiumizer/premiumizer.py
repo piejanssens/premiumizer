@@ -176,14 +176,29 @@ if prem_config.getboolean('update', 'updated'):
             logger.info('*************************************************************************************')
         except:
             logger.error('Could not delete old premiumizerDEBUG.log file')
-    if os.path.isfile(os.path.join(rootdir, 'premiumizer', 'premiumizer.db')):
+    if os.path.isfile(os.path.join(rootdir, 'premiumizer', 'database.db')) or os.path.isfile(os.path.join(rootdir, 'premiumizer', 'database.db.dat')):
+        sucess = 0
         try:
-            os.remove(os.path.join(rootdir, 'premiumizer', 'premiumizer.db'))
-            logger.info('*************************************************************************************')
-            logger.info('---------------Premiumizer.db file has been deleted as a precaution----------------')
-            logger.info('*************************************************************************************')
+            os.remove(os.path.join(rootdir, 'premiumizer', 'database.db'))
+            success = 1
         except:
-            logger.error('Could not delete old premiumizer.db file')
+            try:
+                os.remove(os.path.join(rootdir, 'premiumizer', 'database.db.dat'))
+                success = 1
+            except:
+                pass
+            try:
+                os.remove(os.path.join(rootdir, 'premiumizer', 'database.db.bak'))
+            except:
+                pass
+            try:
+                os.remove(os.path.join(rootdir, 'premiumizer', 'database.db.dir'))
+            except:
+                pass
+        if success:
+            logger.info('*************************************************************************************')
+            logger.info('---------------Database file has been deleted as a precaution----------------')
+            logger.info('*************************************************************************************')
     if os.path.isfile(os.path.join(rootdir, 'conf', 'settings.cfg.old')):
         logger.info('*************************************************************************************')
         logger.info('-------Settings file has been updated, old settings file renamed to .old-------')
@@ -570,15 +585,29 @@ logger.debug('Initializing Flask complete')
 
 # Initialise Database
 logger.debug('Initializing Database')
-if os.path.isfile(os.path.join(rootdir, 'premiumizer', 'premiumizer.db')):
-    db = shelve.open(os.path.join(rootdir, 'premiumizer', 'premiumizer.db'))
+if os.path.isfile(os.path.join(rootdir, 'premiumizer', 'database.db')) or os.path.isfile(os.path.join(rootdir, 'premiumizer', 'database.db.dat')):
+    db = shelve.open(os.path.join(rootdir, 'premiumizer', 'database.db'))
     if not db.keys():
         db.close()
-        os.remove(os.path.join(rootdir, 'premiumizer', 'premiumizer.db'))
-        db = shelve.open(os.path.join(rootdir, 'premiumizer', 'premiumizer.db'))
+        try:
+            os.remove(os.path.join(rootdir, 'premiumizer', 'database.db'))
+        except:
+            try:
+                os.remove(os.path.join(rootdir, 'premiumizer', 'database.db.dat'))
+            except:
+                pass
+            try:
+                os.remove(os.path.join(rootdir, 'premiumizer', 'database.db.bak'))
+            except:
+                pass
+            try:
+                os.remove(os.path.join(rootdir, 'premiumizer', 'database.db.dir'))
+            except:
+                pass
+        db = shelve.open(os.path.join(rootdir, 'premiumizer', 'database.db'))
         logger.debug('Database cleared')
 else:
-    db = shelve.open(os.path.join(rootdir, 'premiumizer', 'premiumizer.db'))
+    db = shelve.open(os.path.join(rootdir, 'premiumizer', 'database.db'))
 logger.debug('Initializing Database complete')
 
 # Initialise Globals
