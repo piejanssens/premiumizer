@@ -1,5 +1,4 @@
 #! /usr/bin/env python
-from configparser import ConfigParser
 import json
 import logging
 import os
@@ -11,9 +10,12 @@ import subprocess
 import sys
 import time
 import unicodedata
-import urllib.request, urllib.parse, urllib.error
+import urllib.error
+import urllib.parse
+import urllib.request
 import uuid
 import xmlrpc.client
+from configparser import ConfigParser
 from datetime import datetime, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -43,11 +45,11 @@ import DownloadTask
 from DownloadTask import DownloadTask
 
 # "https://www.premiumize.me/api"
-print ('------------------------------------------------------------------------------------------------------------')
-print ('|                                                                                                           |')
-print ('-------------------------------------------WELCOME TO PREMIUMIZER-------------------------------------------')
-print ('|                                                                                                           |')
-print ('------------------------------------------------------------------------------------------------------------')
+print('------------------------------------------------------------------------------------------------------------')
+print('|                                                                                                           |')
+print('-------------------------------------------WELCOME TO PREMIUMIZER-------------------------------------------')
+print('|                                                                                                           |')
+print('------------------------------------------------------------------------------------------------------------')
 # Initialize config values
 prem_config = ConfigParser()
 runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0]
@@ -92,11 +94,11 @@ if debug_enabled:
                                        datefmt='%m-%d %H:%M:%S')
     syslog.setFormatter(formatterdebug)
     logger.addHandler(syslog)
-    print ('---------------------------------------------------------------------------------------------------------')
-    print ('|                                                                                                        |')
-    print ('------------------------PREMIUMIZER IS RUNNING IN DEBUG MODE, THIS IS NOT RECOMMENDED--------------------')
-    print ('|                                                                                                        |')
-    print ('---------------------------------------------------------------------------------------------------------')
+    print('---------------------------------------------------------------------------------------------------------')
+    print('|                                                                                                        |')
+    print('------------------------PREMIUMIZER IS RUNNING IN DEBUG MODE, THIS IS NOT RECOMMENDED--------------------')
+    print('|                                                                                                        |')
+    print('---------------------------------------------------------------------------------------------------------')
     logger.debug('----------------------------------')
     logger.debug('----------------------------------')
     logger.debug('----------------------------------')
@@ -224,8 +226,10 @@ class PremConfig:
         if prem_config.getfloat('update', 'config_version') < default_config.getfloat('update', 'config_version'):
             logging.info('updating config file')
             try:
-                shutil.copy(os.path.join(rootdir, 'conf', 'settings.cfg'), os.path.join(rootdir, 'conf', 'settings.cfg.old'))
-                shutil.copy(os.path.join(rootdir, 'conf', 'settings.cfg.tpl'), os.path.join(rootdir, 'conf', 'settings.cfg'))
+                shutil.copy(os.path.join(rootdir, 'conf', 'settings.cfg'),
+                            os.path.join(rootdir, 'conf', 'settings.cfg.old'))
+                shutil.copy(os.path.join(rootdir, 'conf', 'settings.cfg.tpl'),
+                            os.path.join(rootdir, 'conf', 'settings.cfg'))
                 prem_config.read(os.path.join(rootdir, 'conf', 'settings.cfg.old'))
                 default_config.read(os.path.join(rootdir, 'conf', 'settings.cfg'))
                 for section in prem_config.sections():
@@ -457,13 +461,16 @@ def check_update(auto_update=cfg.auto_update):
         if cfg.update_status != 'failed':
             cfg.update_localcommit = subprocess.check_output(
                 ['git', '-C', rootdir, 'log', '-n', '1', '--pretty=format:%h'], encoding='utf8').rstrip('\n')
-            local_branch = subprocess.check_output(['git', '-C', rootdir, 'rev-parse', '--abbrev-ref', 'HEAD'], encoding='utf8').rstrip('\n')
+            local_branch = subprocess.check_output(['git', '-C', rootdir, 'rev-parse', '--abbrev-ref', 'HEAD'],
+                                                   encoding='utf8').rstrip('\n')
             remote_commit = subprocess.check_output(
-                ['git', '-C', rootdir, 'log', '-n', '1', 'origin/' + local_branch, '--pretty=format:%h'], encoding='utf8').rstrip('\n')
+                ['git', '-C', rootdir, 'log', '-n', '1', 'origin/' + local_branch, '--pretty=format:%h'],
+                encoding='utf8').rstrip('\n')
 
             if cfg.update_localcommit != remote_commit:
                 cfg.update_diffcommit = subprocess.check_output(
-                    ['git', '-C', rootdir, 'log', '--oneline', local_branch + '..origin/' + local_branch], encoding='utf8').rstrip('\n')
+                    ['git', '-C', rootdir, 'log', '--oneline', local_branch + '..origin/' + local_branch],
+                    encoding='utf8').rstrip('\n')
 
                 cfg.update_available = 1
                 cfg.update_status = 'Update Available !!'
@@ -1014,10 +1021,10 @@ def download_file():
                             downloader.limit_speed(cfg.download_speed)
                     get_download_stats(downloader, total_size_downloaded)
                     if greenlet.task.local_status == "paused":
-                       downloader.pause()
-                       while greenlet.task.local_status == "paused":
-                           gevent_sleep_time()
-                       downloader.unpause()
+                        downloader.pause()
+                        while greenlet.task.local_status == "paused":
+                            gevent_sleep_time()
+                        downloader.unpause()
                     if greenlet.task.local_status == "stopped":
                         downloader.stop()
                         return 1

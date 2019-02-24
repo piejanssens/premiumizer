@@ -1,9 +1,9 @@
-from configparser import ConfigParser
 import logging
 import os
 import subprocess
 import sys
 import time
+from configparser import ConfigParser
 
 try:
     from pip import main as pipmain
@@ -34,7 +34,8 @@ logging.debug('runningdir = %s', runningdir)
 def restart():
     logging.debug('def restart')
     time.sleep(4)
-    exec(compile(open(os.path.join(rootdir, 'premiumizer', 'premiumizer.py'), "rb").read(), os.path.join(rootdir, 'premiumizer', 'premiumizer.py'), 'exec'), globals(), globals())
+    exec(compile(open(os.path.join(rootdir, 'premiumizer', 'premiumizer.py'), "rb").read(),
+                 os.path.join(rootdir, 'premiumizer', 'premiumizer.py'), 'exec'), globals(), globals())
 
 
 def update():
@@ -78,7 +79,8 @@ def update():
         pass
     else:
         time.sleep(3)
-        exec(compile(open(os.path.join(rootdir, 'premiumizer', 'premiumizer.py'), "rb").read(), os.path.join(rootdir, 'premiumizer', 'premiumizer.py'), 'exec'), globals(), globals())
+        exec(compile(open(os.path.join(rootdir, 'premiumizer', 'premiumizer.py'), "rb").read(),
+                     os.path.join(rootdir, 'premiumizer', 'premiumizer.py'), 'exec'), globals(), globals())
 
 
 if len(sys.argv) == 3:
