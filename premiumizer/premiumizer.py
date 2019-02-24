@@ -1799,7 +1799,7 @@ class MyHandler(events.PatternMatchingEventHandler):
 
 def torrent_metainfo(torrent):
     logger.debug('def torrent_metainfo started')
-    metainfo = bencode.bdecode(open(torrent, 'rb').read())
+    metainfo = bencode.bdecode(open(torrent, 'rb').read().decode('latin-1'))
     info = metainfo['info']
     name = info['name']
     return name
