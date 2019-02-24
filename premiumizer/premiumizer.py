@@ -844,7 +844,7 @@ def get_download_stats_jd(package_name):
                 if greenlet.task.local_status == 'stopped':
                     try:
                         cfg.jd_device.downloads.cleanup("DELETE_ALL", "REMOVE_LINKS_AND_DELETE_FILES", "SELECTED",
-                                                        packages_ids=[package_id])
+                                                        package_ids=[package_id])
                     except BaseException as e:
                         logger.error('myjdapi : ' + str(e.message))
                         logger.error('Could not delete package in JD for : %s', greenlet.task.name)
@@ -852,7 +852,7 @@ def get_download_stats_jd(package_name):
                     return 1
                 if greenlet.task.local_status == 'paused':
                     try:
-                        cfg.jd_device.downloads.set_enabled(0, packages_ids=[package_id])
+                        cfg.jd_device.downloads.set_enabled(0, package_ids=[package_id])
                         logger.warning('Download paused for: %s', greenlet.task.name)
                     except BaseException as e:
                         logger.error('myjdapi : ' + str(e.message))
@@ -863,7 +863,7 @@ def get_download_stats_jd(package_name):
                     if greenlet.task.local_status != 'downloading':
                         continue
                     try:
-                        cfg.jd_device.downloads.force_download(packages_ids=[package_id])
+                        cfg.jd_device.downloads.force_download(package_ids=[package_id])
                         logger.info('Download resumed for: %s', greenlet.task.name)
                     except BaseException as e:
                         logger.error('myjdapi : ' + str(e.message))
@@ -911,7 +911,7 @@ def get_download_stats_jd(package_name):
 
             try:
                 cfg.jd_device.downloads.cleanup("DELETE_FINISHED", "REMOVE_LINKS_ONLY", "ALL",
-                                                packages_ids=[package_id])
+                                                package_ids=[package_id])
             except BaseException as e:
                 logger.error('myjdapi : ' + str(e.message))
                 logger.error('Could not delete package in JD for: %s', greenlet.task.name)
