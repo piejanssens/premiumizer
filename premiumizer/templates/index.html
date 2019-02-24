@@ -80,7 +80,8 @@
             <div class="col-lg-6">
                 <div class="form-group">
                     <div class="icon-addon addon-fa">
-                        <input type="text" placeholder="Drop or Paste a magnet URI" class="form-control" id="magnet-input">
+                        <input type="text" placeholder="Drop or Paste a magnet URI" class="form-control"
+                               id="magnet-input">
                         <label for="magnet" class="fa fa-magnet" rel="tooltip" title="magnet"></label>
                     </div>
                 </div>
@@ -93,7 +94,7 @@
                               placeholder="Paste filehosts links"></textarea>
                     <i class="fa fa-external-link"></i>
                 </div>
-                <span class="input-group-addon btn btn-primary" id="filehost_urls">Start</span>
+                <span class="input-group-addon btn btn-primary" id="filehost_urls">Add</span>
             </div>
         </div>
         <div id="loading_upload" class="row" style="display:none">
@@ -133,5 +134,5 @@
 {% block js_footer %}
     {{ super() }}
     <script type="text/javascript" src="{{ url_for('static', filename='js/socket.io.slim.js') }}?v=4"></script>
-    <script type="text/javascript" src="{{ url_for('static', filename='js/control.js') }}?v=17"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/control.js') }}?v=18"></script>
 {% endblock %}
