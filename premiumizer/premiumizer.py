@@ -2042,7 +2042,7 @@ def settings():
             prem_config.set('premiumize', 'pin', request.form.get('pin'))
             prem_config.set('downloads', 'download_location', request.form.get('download_location'))
             prem_config.set('downloads', 'download_max', request.form.get('download_max'))
-            prem_config.set('downloads', 'threads', request.form.get('threads'))
+            prem_config.set('downloads', 'download_threads', request.form.get('download_threads'))
             prem_config.set('downloads', 'download_speed', request.form.get('download_speed'))
             prem_config.set('downloads', 'download_speed', request.form.get('download_speed'))
             prem_config.set('downloads', 'remove_cloud_delay', request.form.get('remove_cloud_delay'))
