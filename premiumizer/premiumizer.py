@@ -286,7 +286,6 @@ class PremConfig:
             self.jd_username = prem_config.get('downloads', 'jd_username')
             self.jd_password = prem_config.get('downloads', 'jd_password')
             self.jd_device_name = prem_config.get('downloads', 'jd_device_name')
-            self.aria2_enabled = 0
             try:
                 self.jd = myjdapi.Myjdapi()
                 self.jd.set_app_key('https://git.io/vaDti')
@@ -299,6 +298,8 @@ class PremConfig:
             try:
                 self.jd_device = self.jd.get_device(self.jd_device_name)
                 self.jd_connected = 1
+                self.download_builtin = 0
+                self.aria2_enabled = 0
             except BaseException as e:
                 logger.error('myjdapi : ' + str(e.message))
                 logger.error('Could not get device name (%s) for My Jdownloader', self.jd_device_name)
@@ -314,7 +315,6 @@ class PremConfig:
                     logger.error('Could not enable Jdownloader speed limit')
 
         elif self.aria2_enabled:
-            self.jd_enabled = 0
             self.aria2_host = prem_config.get('downloads', 'aria2_host')
             self.aria2_port = prem_config.get('downloads', 'aria2_port')
             self.aria2_token = "token:" + prem_config.get('downloads', 'aria2_secret')
@@ -327,6 +327,8 @@ class PremConfig:
                     download_speed = str(self.download_speed // 1048576) + 'M'
                 self.aria.aria2.changeGlobalOption(self.aria2_token, {'max-overall-download-limit': download_speed})
                 self.aria2_connected = 1
+                self.jd_enabled = 0
+                self.download_builtin = 0
             except Exception as e:
                 uri = ' '
                 logger.error('Could not connect to Aria2 RPC: %s --- message: %s', uri, e)
