@@ -13,9 +13,9 @@ flask-compress==1.4.0
 flask-reverse-proxy==0.2.0.2
 gevent-websocket==0.10.1
 jinja2==2.10
-MarkupSafe==1.1.0
+MarkupSafe==1.1.1
 pathtools==0.1.2
-git+https://github.com/iTaybb/pySmartDL.git@b9b7774d46e6404a6e35ee44ab246382f882507f
+pySmartDL==1.3.1
 requests==2.21.0
 python-socketio==3.1.2
 tzlocal==1.5.1
