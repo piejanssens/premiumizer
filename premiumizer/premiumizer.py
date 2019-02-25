@@ -1549,7 +1549,7 @@ def add_task(id, size, name, category, type='', folder_id=None):
     if not exists:
         dldir, dlext, delsample, dlnzbtomedia = get_cat_var(category)
         try:
-            name = urllib.parse.unquote(name).decode('ASCII')
+            name = urllib.parse.unquote(name)
             name = clean_name(name)
             if 'download.php?id=' in name:
                 name = name.split("&f=", 1)[1]
