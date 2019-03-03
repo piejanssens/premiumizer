@@ -56,7 +56,8 @@ nginx example:
 ## Installation
 
 ### Requirements
-Git & Python 2.7 (with pip)
+Git
+Python 3.7 (with pip)
 
 Optional: 
 
@@ -82,7 +83,7 @@ Manual installation:
 
 Install [Git](https://git-scm.com/download/win) &  select: Use git from the windows command prompt.
 
-Download [Python](https://www.python.org/ftp/python/2.7.11/python-2.7.11.msi)
+Download [Python](https://www.python.org/downloads/)
 
 1. ```git clonehttps://github.com/piejanssens/premiumizer.git [to a folder]```
 2. ```pip.exe install virtualenv```
@@ -92,7 +93,7 @@ Download [Python](https://www.python.org/ftp/python/2.7.11/python-2.7.11.msi)
 6. ```python premiumizer.py```
 
 Optional:
-Install NzbToMedia & pywin32 & Microsoft Visual c++ python compiler:
+Install NzbToMedia & pywwin32:
 
 4. ```git clone https://github.com/clinton-hall/nzbToMedia.git [your folder]\nzbtomedia```
 5. ```easy_install pywin32```

@@ -8,12 +8,6 @@
         <span class="sr-only">Error:</span>
         Cannot connect to premiumize.me. Check your premiumize account details in settings and if premiumize.me is up.
     </div>
-    <p>&nbsp;</p>
-    <div class="alert alert-danger" role="alert" style="display:inline;">
-        <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
-        <span class="sr-only">Python 3 Update:</span>
-        With the next update Premiumizer switches to Python 3. If you need help, reach out via our GitHub issues page.
-    </div>
     {% if cfg.download_builtin == 1 %}
         <p>&nbsp;</p>
         <div id="cfg.download_builtin" class="alert alert-info" role="alert" style="display:inline;">
@@ -94,7 +88,8 @@
             <div class="col-lg-6">
                 <div class="form-group">
                     <div class="icon-addon addon-fa">
-                        <input type="text" placeholder="Drop or Paste a magnet URI" class="form-control" id="magnet-input">
+                        <input type="text" placeholder="Drop or Paste a magnet URI" class="form-control"
+                               id="magnet-input">
                         <label for="magnet" class="fa fa-magnet" rel="tooltip" title="magnet"></label>
                     </div>
                 </div>
@@ -107,7 +102,7 @@
                               placeholder="Paste filehosts links"></textarea>
                     <i class="fa fa-external-link"></i>
                 </div>
-                <span class="input-group-addon btn btn-primary" id="filehost_urls">Start</span>
+                <span class="input-group-addon btn btn-primary" id="filehost_urls">Add</span>
             </div>
         </div>
         <div id="loading_upload" class="row" style="display:none">
@@ -147,5 +142,5 @@
 {% block js_footer %}
     {{ super() }}
     <script type="text/javascript" src="{{ url_for('static', filename='js/socket.io.slim.js') }}?v=4"></script>
-    <script type="text/javascript" src="{{ url_for('static', filename='js/control.js') }}?v=17"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/control.js') }}?v=18"></script>
 {% endblock %}

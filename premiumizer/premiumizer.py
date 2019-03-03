@@ -1,5 +1,4 @@
 #! /usr/bin/env python
-import ConfigParser
 import json
 import logging
 import os
@@ -11,9 +10,12 @@ import subprocess
 import sys
 import time
 import unicodedata
-import urllib
+import urllib.error
+import urllib.parse
+import urllib.request
 import uuid
-import xmlrpclib
+import xmlrpc.client
+from configparser import ConfigParser
 from datetime import datetime, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -39,16 +41,17 @@ from watchdog import events
 from watchdog.observers import Observer
 from werkzeug.utils import secure_filename
 
+import DownloadTask
 from DownloadTask import DownloadTask
 
 # "https://www.premiumize.me/api"
-print ('------------------------------------------------------------------------------------------------------------')
-print ('|                                                                                                           |')
-print ('-------------------------------------------WELCOME TO PREMIUMIZER-------------------------------------------')
-print ('|                                                                                                           |')
-print ('------------------------------------------------------------------------------------------------------------')
+print('------------------------------------------------------------------------------------------------------------')
+print('|                                                                                                           |')
+print('-------------------------------------------WELCOME TO PREMIUMIZER-------------------------------------------')
+print('|                                                                                                           |')
+print('------------------------------------------------------------------------------------------------------------')
 # Initialize config values
-prem_config = ConfigParser.RawConfigParser()
+prem_config = ConfigParser()
 runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0]
 rootdir = os.path.split(runningdir)[0]
 os_arg = ''
@@ -91,11 +94,11 @@ if debug_enabled:
                                        datefmt='%m-%d %H:%M:%S')
     syslog.setFormatter(formatterdebug)
     logger.addHandler(syslog)
-    print ('---------------------------------------------------------------------------------------------------------')
-    print ('|                                                                                                        |')
-    print ('------------------------PREMIUMIZER IS RUNNING IN DEBUG MODE, THIS IS NOT RECOMMENDED--------------------')
-    print ('|                                                                                                        |')
-    print ('---------------------------------------------------------------------------------------------------------')
+    print('---------------------------------------------------------------------------------------------------------')
+    print('|                                                                                                        |')
+    print('------------------------PREMIUMIZER IS RUNNING IN DEBUG MODE, THIS IS NOT RECOMMENDED--------------------')
+    print('|                                                                                                        |')
+    print('---------------------------------------------------------------------------------------------------------')
     logger.debug('----------------------------------')
     logger.debug('----------------------------------')
     logger.debug('----------------------------------')
@@ -173,23 +176,33 @@ if prem_config.getboolean('update', 'updated'):
             logger.info('*************************************************************************************')
         except:
             logger.error('Could not delete old premiumizerDEBUG.log file')
-    if os.path.isfile(os.path.join(rootdir, 'premiumizer', 'premiumizer.db')):
+    if os.path.isfile(os.path.join(rootdir, 'premiumizer', 'database.db')) or os.path.isfile(os.path.join(rootdir, 'premiumizer', 'database.db.dat')):
+        sucess = 0
         try:
-            os.remove(os.path.join(rootdir, 'premiumizer', 'premiumizer.db'))
-            logger.info('*************************************************************************************')
-            logger.info('---------------Premiumizer.db file has been deleted as a precaution----------------')
-            logger.info('*************************************************************************************')
+            os.remove(os.path.join(rootdir, 'premiumizer', 'database.db'))
+            success = 1
         except:
-            logger.error('Could not delete old premiumizer.db file')
-    if os.path.isfile(os.path.join(rootdir, 'conf', 'settings.cfg.old2')):
-        try:
-            shutil.move(os.path.join(rootdir, 'conf', 'settings.cfg.old2'),
-                        os.path.join(rootdir, 'conf', 'settings.cfg.old'))
+            try:
+                os.remove(os.path.join(rootdir, 'premiumizer', 'database.db.dat'))
+                success = 1
+            except:
+                pass
+            try:
+                os.remove(os.path.join(rootdir, 'premiumizer', 'database.db.bak'))
+            except:
+                pass
+            try:
+                os.remove(os.path.join(rootdir, 'premiumizer', 'database.db.dir'))
+            except:
+                pass
+        if success:
             logger.info('*************************************************************************************')
-            logger.info('-------Settings file has been updated, old settings file renamed to .old-------')
+            logger.info('---------------Database file has been deleted as a precaution----------------')
             logger.info('*************************************************************************************')
-        except:
-            logger.error('Could not rename old settings file')
+    if os.path.isfile(os.path.join(rootdir, 'conf', 'settings.cfg.old')):
+        logger.info('*************************************************************************************')
+        logger.info('-------Settings file has been updated, old settings file renamed to .old-------')
+        logger.info('*************************************************************************************')
     prem_config.set('update', 'updated', '0')
     with open(os.path.join(rootdir, 'conf', 'settings.cfg'), 'w') as configfile:
         prem_config.write(configfile)
@@ -211,6 +224,40 @@ class PremConfig:
 
     def check_config(self):
         logger.debug('Initializing config')
+        default_config = ConfigParser()
+        default_config.read(os.path.join(rootdir, 'conf', 'settings.cfg.tpl'))
+        if prem_config.getfloat('update', 'req_version') < default_config.getfloat('update', 'req_version'):
+            try:
+                logging.info('updating pip requirements')
+                from pip._internal import main as pipmain
+                pipmain(['install', '-r', os.path.join(rootdir, 'requirements.txt')])
+                prem_config.set('update', 'req_version', str(default_config.getfloat('update', 'req_version')))
+                with open(os.path.join(rootdir, 'conf', 'settings.cfg'), 'w') as configfile:
+                    prem_config.write(configfile)
+                prem_config.read(os.path.join(rootdir, 'conf', 'settings.cfg'))
+            except:
+                logger.error('Could not update requirements')
+                pass
+        if prem_config.getfloat('update', 'config_version') < default_config.getfloat('update', 'config_version'):
+            logging.info('updating config file')
+            try:
+                shutil.copy(os.path.join(rootdir, 'conf', 'settings.cfg'),
+                            os.path.join(rootdir, 'conf', 'settings.cfg.old'))
+                shutil.copy(os.path.join(rootdir, 'conf', 'settings.cfg.tpl'),
+                            os.path.join(rootdir, 'conf', 'settings.cfg'))
+                prem_config.read(os.path.join(rootdir, 'conf', 'settings.cfg.old'))
+                default_config.read(os.path.join(rootdir, 'conf', 'settings.cfg'))
+                for section in prem_config.sections():
+                    if section in default_config.sections() and section != 'update':
+                        for key in prem_config.options(section):
+                            if key in default_config.options(section):
+                                default_config.set(section, key, (prem_config.get(section, key)))
+                with open(os.path.join(rootdir, 'conf', 'settings.cfg'), 'w') as configfile:
+                    default_config.write(configfile)
+                prem_config.read(os.path.join(rootdir, 'conf', 'settings.cfg'))
+            except:
+                logger.error('Could not update settings file')
+                pass
         self.jd_connected = 0
         self.aria2_connected = 0
         self.bind_ip = prem_config.get('global', 'bind_ip')
@@ -238,6 +285,7 @@ class PremConfig:
         self.download_enabled = prem_config.getboolean('downloads', 'download_enabled')
         self.download_location = prem_config.get('downloads', 'download_location')
         self.download_max = prem_config.getint('downloads', 'download_max')
+        self.download_threads = prem_config.getint('downloads', 'download_threads')
         self.download_speed = prem_config.get('downloads', 'download_speed')
         self.download_rss = prem_config.getboolean('downloads', 'download_rss')
         self.jd_enabled = prem_config.getboolean('downloads', 'jd_enabled')
@@ -253,7 +301,6 @@ class PremConfig:
             self.jd_username = prem_config.get('downloads', 'jd_username')
             self.jd_password = prem_config.get('downloads', 'jd_password')
             self.jd_device_name = prem_config.get('downloads', 'jd_device_name')
-            self.aria2_enabled = 0
             try:
                 self.jd = myjdapi.Myjdapi()
                 self.jd.set_app_key('https://git.io/vaDti')
@@ -266,6 +313,8 @@ class PremConfig:
             try:
                 self.jd_device = self.jd.get_device(self.jd_device_name)
                 self.jd_connected = 1
+                self.download_builtin = 0
+                self.aria2_enabled = 0
             except BaseException as e:
                 logger.error('myjdapi : ' + str(e.message))
                 logger.error('Could not get device name (%s) for My Jdownloader', self.jd_device_name)
@@ -281,19 +330,20 @@ class PremConfig:
                     logger.error('Could not enable Jdownloader speed limit')
 
         elif self.aria2_enabled:
-            self.jd_enabled = 0
             self.aria2_host = prem_config.get('downloads', 'aria2_host')
             self.aria2_port = prem_config.get('downloads', 'aria2_port')
             self.aria2_token = "token:" + prem_config.get('downloads', 'aria2_secret')
             try:
                 uri = ('http://' + self.aria2_host + ':' + self.aria2_port + '/rpc')
-                self.aria = xmlrpclib.ServerProxy(uri, allow_none=True)
+                self.aria = xmlrpc.client.ServerProxy(uri, allow_none=True)
                 if self.download_speed == -1:
                     download_speed = 0
                 else:
                     download_speed = str(self.download_speed // 1048576) + 'M'
                 self.aria.aria2.changeGlobalOption(self.aria2_token, {'max-overall-download-limit': download_speed})
                 self.aria2_connected = 1
+                self.jd_enabled = 0
+                self.download_builtin = 0
             except Exception as e:
                 uri = ' '
                 logger.error('Could not connect to Aria2 RPC: %s --- message: %s', uri, e)
@@ -303,7 +353,9 @@ class PremConfig:
             self.download_builtin = 1
         if os.path.isfile(os.path.join(rootdir, 'nzbtomedia', 'NzbToMedia.py')):
             self.nzbtomedia_location = (os.path.join(rootdir, 'nzbtomedia', 'NzbToMedia.py'))
-            self.nzbtomedia_builtin = 1
+            prem_config.set('downloads', 'nzbtomedia_location', self.nzbtomedia_location)
+            with open(os.path.join(rootdir, 'conf', 'settings.cfg'), 'w') as configfile:  # save
+                prem_config.write(configfile)
         else:
             self.nzbtomedia_location = prem_config.get('downloads', 'nzbtomedia_location')
         self.watchdir_enabled = prem_config.getboolean('upload', 'watchdir_enabled')
@@ -397,7 +449,7 @@ def jd_connect():
 def aria2_connect():
     try:
         uri = ('http://' + cfg.aria2_host + ':' + cfg.aria2_port + '/rpc')
-        cfg.aria = xmlrpclib.ServerProxy(uri, allow_none=True)
+        cfg.aria = xmlrpc.client.ServerProxy(uri, allow_none=True)
         cfg.aria.aria2.getVersion(cfg.aria2_token)
         cfg.aria2_connected = 1
     except Exception as e:
@@ -425,15 +477,17 @@ def check_update(auto_update=cfg.auto_update):
             logger.error('Update failed: could not git fetch: %s', rootdir)
         if cfg.update_status != 'failed':
             cfg.update_localcommit = subprocess.check_output(
-                ['git', '-C', rootdir, 'log', '-n', '1', '--pretty=format:%h'])
-            local_branch = str(
-                subprocess.check_output(['git', '-C', rootdir, 'rev-parse', '--abbrev-ref', 'HEAD'])).rstrip('\n')
+                ['git', '-C', rootdir, 'log', '-n', '1', '--pretty=format:%h'], encoding='utf8').rstrip('\n')
+            local_branch = subprocess.check_output(['git', '-C', rootdir, 'rev-parse', '--abbrev-ref', 'HEAD'],
+                                                   encoding='utf8').rstrip('\n')
             remote_commit = subprocess.check_output(
-                ['git', '-C', rootdir, 'log', '-n', '1', 'origin/' + local_branch, '--pretty=format:%h'])
+                ['git', '-C', rootdir, 'log', '-n', '1', 'origin/' + local_branch, '--pretty=format:%h'],
+                encoding='utf8').rstrip('\n')
 
             if cfg.update_localcommit != remote_commit:
                 cfg.update_diffcommit = subprocess.check_output(
-                    ['git', '-C', rootdir, 'log', '--oneline', local_branch + '..origin/' + local_branch])
+                    ['git', '-C', rootdir, 'log', '--oneline', local_branch + '..origin/' + local_branch],
+                    encoding='utf8').rstrip('\n')
 
                 cfg.update_available = 1
                 cfg.update_status = 'Update Available !!'
@@ -531,15 +585,29 @@ logger.debug('Initializing Flask complete')
 
 # Initialise Database
 logger.debug('Initializing Database')
-if os.path.isfile(os.path.join(rootdir, 'premiumizer', 'premiumizer.db')):
-    db = shelve.open(os.path.join(rootdir, 'premiumizer', 'premiumizer.db'))
+if os.path.isfile(os.path.join(rootdir, 'premiumizer', 'database.db')) or os.path.isfile(os.path.join(rootdir, 'premiumizer', 'database.db.dat')):
+    db = shelve.open(os.path.join(rootdir, 'premiumizer', 'database.db'))
     if not db.keys():
         db.close()
-        os.remove(os.path.join(rootdir, 'premiumizer', 'premiumizer.db'))
-        db = shelve.open(os.path.join(rootdir, 'premiumizer', 'premiumizer.db'))
+        try:
+            os.remove(os.path.join(rootdir, 'premiumizer', 'database.db'))
+        except:
+            try:
+                os.remove(os.path.join(rootdir, 'premiumizer', 'database.db.dat'))
+            except:
+                pass
+            try:
+                os.remove(os.path.join(rootdir, 'premiumizer', 'database.db.bak'))
+            except:
+                pass
+            try:
+                os.remove(os.path.join(rootdir, 'premiumizer', 'database.db.dir'))
+            except:
+                pass
+        db = shelve.open(os.path.join(rootdir, 'premiumizer', 'database.db'))
         logger.debug('Database cleared')
 else:
-    db = shelve.open(os.path.join(rootdir, 'premiumizer', 'premiumizer.db'))
+    db = shelve.open(os.path.join(rootdir, 'premiumizer', 'database.db'))
 logger.debug('Initializing Database complete')
 
 # Initialise Globals
@@ -570,7 +638,7 @@ class User(UserMixin):
 def to_unicode(original, *args):
     logger.debug('def to_unicode started')
     try:
-        if isinstance(original, unicode):
+        if isinstance(original, str):
             return original
         else:
             try:
@@ -595,7 +663,7 @@ def to_unicode(original, *args):
 
 def ek(original, *args):
     logger.debug('def ek started')
-    if isinstance(original, (str, unicode)):
+    if isinstance(original, str):
         try:
             return original.decode('UTF-8', 'ignore')
         except UnicodeDecodeError:
@@ -607,7 +675,7 @@ def ek(original, *args):
 def clean_name(original):
     logger.debug('def clean_name started')
     valid_chars = "-_.,()[]{}&!@ %s%s" % (ascii_letters, digits)
-    cleaned_filename = unicodedata.normalize('NFKD', to_unicode(original)).encode('ASCII', 'ignore')
+    cleaned_filename = unicodedata.normalize('NFKD', to_unicode(original)).encode('ASCII', 'ignore').decode('utf8')
     valid_string = ''.join(c for c in cleaned_filename if c in valid_chars)
     return ' '.join(valid_string.split())
 
@@ -619,7 +687,7 @@ def notify_nzbtomedia():
             subprocess.check_output(
                 ['python', cfg.nzbtomedia_location, greenlet.task.dldir, greenlet.task.name, greenlet.task.category,
                  greenlet.task.id, 'generic'],
-                stderr=subprocess.STDOUT, shell=False)
+                stderr=subprocess.STDOUT, shell=False, encoding='utf8').rstrip('\n')
             returncode = 0
             logger.info('Send to nzbToMedia: %s', greenlet.task.name)
         except subprocess.CalledProcessError as e:
@@ -807,7 +875,7 @@ def get_download_stats_jd(package_name):
                 if greenlet.task.local_status == 'stopped':
                     try:
                         cfg.jd_device.downloads.cleanup("DELETE_ALL", "REMOVE_LINKS_AND_DELETE_FILES", "SELECTED",
-                                                        packages_ids=[package_id])
+                                                        package_ids=[package_id])
                     except BaseException as e:
                         logger.error('myjdapi : ' + str(e.message))
                         logger.error('Could not delete package in JD for : %s', greenlet.task.name)
@@ -815,7 +883,7 @@ def get_download_stats_jd(package_name):
                     return 1
                 if greenlet.task.local_status == 'paused':
                     try:
-                        cfg.jd_device.downloads.set_enabled(0, packages_ids=[package_id])
+                        cfg.jd_device.downloads.set_enabled(0, package_ids=[package_id])
                         logger.warning('Download paused for: %s', greenlet.task.name)
                     except BaseException as e:
                         logger.error('myjdapi : ' + str(e.message))
@@ -826,7 +894,7 @@ def get_download_stats_jd(package_name):
                     if greenlet.task.local_status != 'downloading':
                         continue
                     try:
-                        cfg.jd_device.downloads.force_download(packages_ids=[package_id])
+                        cfg.jd_device.downloads.force_download(package_ids=[package_id])
                         logger.info('Download resumed for: %s', greenlet.task.name)
                     except BaseException as e:
                         logger.error('myjdapi : ' + str(e.message))
@@ -874,7 +942,7 @@ def get_download_stats_jd(package_name):
 
             try:
                 cfg.jd_device.downloads.cleanup("DELETE_FINISHED", "REMOVE_LINKS_ONLY", "ALL",
-                                                packages_ids=[package_id])
+                                                package_ids=[package_id])
             except BaseException as e:
                 logger.error('myjdapi : ' + str(e.message))
                 logger.error('Could not delete package in JD for: %s', greenlet.task.name)
@@ -959,9 +1027,10 @@ def download_file():
     for download in greenlet.task.download_list:
         if greenlet.task.type == 'Filehost':
             payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'src': download['url']}
-            r = prem_connection("post", "https://www.premiumize.me/api/transfer/create", payload)
+            r = prem_connection("post", "https://www.premiumize.me/api/transfer/directdl", payload)
+            response_content = json.loads(r.content)
             try:
-                download['url'] = r.text.split('"location":"', 1)[1].splitlines()[0].split('",', 1)[0].replace('\\', '')
+                download['url'] = response_content['location']
             except:
                 return 1
             download['path'] = os.path.join(greenlet.task.dldir, download['path'])
@@ -972,25 +1041,23 @@ def download_file():
             files_downloaded = 1
             if cfg.download_builtin:
                 downloader = SmartDL(url, download['path'], progress_bar=False, logger=logger,
-                                     threads_count=1, fix_urls=False)
+                                     threads=cfg.download_threads, fix_urls=False)
                 downloader.start(blocking=False)
                 while not downloader.isFinished():
                     if cfg.download_speed != -1:
                         jobs = len(scheduler.scheduler._lookup_executor('downloads')._instances)
                         if jobs != 0:
-                            downloader.limit_speed(kbytes=((cfg.download_speed / 1000) / jobs))
+                            downloader.limit_speed(cfg.download_speed / jobs)
                         else:
-                            downloader.limit_speed(kbytes=cfg.download_speed / 1000)
+                            downloader.limit_speed(cfg.download_speed)
                     get_download_stats(downloader, total_size_downloaded)
-                    # if greenlet.task.local_status == "paused":            #   When paused to long
-                    #   downloader.pause()                                  #   PysmartDl fails with WARNING :
-                    #   while greenlet.task.local_status == "paused":       #   Diff between downloaded files and expected
-                    #       gevent_sleep_time()                               #   filesizes is .... Retrying...
-                    #   downloader.unpause()
+                    if greenlet.task.local_status == "paused":
+                        downloader.pause()
+                        while greenlet.task.local_status == "paused":
+                            gevent_sleep_time()
+                        downloader.unpause()
                     if greenlet.task.local_status == "stopped":
-                        while not downloader.isFinished():
-                            downloader.stop()
-                            gevent.sleep(0.5)
+                        downloader.stop()
                         return 1
                     gevent_sleep_time()
                 if downloader.isSuccessful():
@@ -1123,7 +1190,10 @@ def process_dir(dir_content, path):
 def download_process():
     logger.debug('def download_process started')
     returncode = 0
-    greenlet.task.update(local_status='downloading', progress=0, speed=' ', eta=' ', size=0, download_list=[])
+    if greenlet.task.type != 'Filehost':
+        greenlet.task.update(local_status='downloading', progress=0, speed=' ', eta=' ', size=0, download_list=[])
+    else:
+        greenlet.task.update(local_status='downloading', progress=0, speed=' ', eta=' ')
     name = clean_name(greenlet.task.name)
     if not greenlet.task.dldir.endswith(name):
         greenlet.task.dldir = os.path.join(greenlet.task.dldir, name)
@@ -1204,7 +1274,7 @@ def download_task(task):
 
     if cfg.remove_cloud:
         if not failed:
-            if cfg.remove_cloud_delay != 0:
+            if cfg.remove_cloud_delay != 0 and task.type != 'Filehost':
                 scheduler.scheduler.add_job(delete_task, args=(task.id,), name=task.name, id=task.name,
                                             misfire_grace_time=7200, coalesce=False, jobstore='remove_cloud',
                                             replace_existing=True,
@@ -1306,7 +1376,7 @@ def parse_tasks(transfers):
         eta = ' '
         speed = ' '
         size = ' '
-        task = get_task(transfer['id'].encode("utf-8"))
+        task = get_task(transfer['id'])
         try:
             if 'ETA is' in transfer['message']:
                 eta = transfer['message'].split("ETA is", 1)[1]
@@ -1328,11 +1398,11 @@ def parse_tasks(transfers):
         except:
             progress = int(round(float(transfer['progress']) * 100))
         try:
-            folder_id = transfer['folder_id'].encode("utf-8")
+            folder_id = transfer['folder_id']
         except:
             folder_id = None
         try:
-            file_id = transfer['file_id'].encode("utf-8")
+            file_id = transfer['file_id']
         except:
             file_id = None
         if not task:
@@ -1341,10 +1411,10 @@ def parse_tasks(transfers):
             else:
                 name = transfer['name']
             if cfg.download_all:
-                add_task(transfer['id'].encode("utf-8"), size, name, 'default', folder_id=folder_id)
+                add_task(transfer['id'], size, name, 'default', folder_id=folder_id)
             else:
-                add_task(transfer['id'].encode("utf-8"), size, name, '', folder_id=folder_id)
-            task = get_task(transfer['id'].encode("utf-8"))
+                add_task(transfer['id'], size, name, '', folder_id=folder_id)
+            task = get_task(transfer['id'])
             id_local.append(task.id)
             task.update(progress=progress, cloud_status=transfer['status'], dlsize=size + ' --- ',
                         speed=speed + ' --- ', eta=eta, file_id=file_id)
@@ -1479,7 +1549,7 @@ def add_task(id, size, name, category, type='', folder_id=None):
     if not exists:
         dldir, dlext, delsample, dlnzbtomedia = get_cat_var(category)
         try:
-            name = urllib.unquote(name).decode('ASCII')
+            name = urllib.parse.unquote(name)
             name = clean_name(name)
             if 'download.php?id=' in name:
                 name = name.split("&f=", 1)[1]
@@ -1491,7 +1561,7 @@ def add_task(id, size, name, category, type='', folder_id=None):
                 type = 'NZB'
         except:
             pass
-        task = DownloadTask(socketio.emit, id.encode("utf-8"), folder_id, size, name, category, dldir, dlext,
+        task = DownloadTask(socketio.emit, id, folder_id, size, name, category, dldir, dlext,
                             delsample, dlnzbtomedia, type)
         tasks.append(task)
         if not task.type == 'Filehost':
@@ -1563,22 +1633,27 @@ def upload_filehost(urls):
         return
     for url in urls.splitlines():
         payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'src': url}
-        r = prem_connection("post", "https://www.premiumize.me/api/transfer/create", payload)
+        r = prem_connection("post", "https://www.premiumize.me/api/transfer/directdl", payload)
         try:
-            full_name = r.text.split('"filename":"', 1)[1].splitlines()[0].split('",', 1)[0].encode("utf-8")
-            if name == '':
-                name = os.path.splitext(full_name)[0]
-                if name.endswith('.part1'):
-                    name = name.split('.part1', 1)[0]
-                elif name.endswith('.part01'):
-                    name = name.split('.part01', 1)[0]
-            download = {'path': clean_name(full_name), 'url': url}
-            download_list.append(download)
-            try:
-                filesize = int(r.text.split('"filesize":"', 1)[1].splitlines()[0].split('",', 1)[0].encode("utf-8"))
-                total_filesize += filesize
-            except:
-                pass
+            response_content = json.loads(r.content)
+            if response_content['status'] == 'success':
+                full_name = response_content['filename']
+                if name == '':
+                    name = os.path.splitext(full_name)[0]
+                    if full_name.endswith('.part1'):
+                        name = name.split('.part1', 1)[0]
+                    elif full_name.endswith('.part01'):
+                        name = name.split('.part01', 1)[0]
+                download = {'path': clean_name(full_name), 'url': url}
+                download_list.append(download)
+                try:
+                    filesize = response_content['filesize']
+                    total_filesize += filesize
+                except:
+                    pass
+            else:
+                failed = 1
+                logger.error('Filehost error: %s for %s', response_content['message'], urls)
         except:
             failed = 1
             try:
@@ -1724,16 +1799,17 @@ class MyHandler(events.PatternMatchingEventHandler):
 
 def torrent_metainfo(torrent):
     logger.debug('def torrent_metainfo started')
-    metainfo = bencode.bdecode(open(torrent, 'rb').read())
-    info = metainfo['info']
-    name = info['name']
+    with open(torrent, 'rb') as f:
+        torrent_data = f.read()
+    metainfo = bencode.bdecode(torrent_data)
+    name = metainfo['info']['name']
     return name
 
 
 def load_tasks():
     logger.debug('def load_tasks started')
     for id in db.keys():
-        task = db[id.encode("utf-8")]
+        task = db[id]
         task.callback = socketio.emit
         tasks.append(task)
     for task in tasks:
@@ -1807,10 +1883,10 @@ def upload():
             except Exception as err:
                 logger.error('Could not remove file from watchdir: %s --- error: %s', upload_file, err)
     elif request.data:
-        if str(request.data).startswith('magnet:'):
-            upload_magnet(request.data)
+        if request.data.decode('utf-8').startswith('magnet:'):
+            upload_magnet(request.data.decode('utf-8'))
         else:
-            upload_filehost(request.data)
+            upload_filehost(request.data.decode('utf-8'))
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
     return 'OK'
 
@@ -1998,6 +2074,7 @@ def settings():
             prem_config.set('premiumize', 'pin', request.form.get('pin'))
             prem_config.set('downloads', 'download_location', request.form.get('download_location'))
             prem_config.set('downloads', 'download_max', request.form.get('download_max'))
+            prem_config.set('downloads', 'download_threads', request.form.get('download_threads'))
             prem_config.set('downloads', 'download_speed', request.form.get('download_speed'))
             prem_config.set('downloads', 'download_speed', request.form.get('download_speed'))
             prem_config.set('downloads', 'remove_cloud_delay', request.form.get('remove_cloud_delay'))
@@ -2031,6 +2108,15 @@ def settings():
     return render_template('settings.html', settings=prem_config, cfg=cfg, categories_amount=categories_amount)
 
 
+def redirect_dest(fallback):
+    dest = request.args.get('next')[1:]
+    try:
+        dest_url = url_for(dest)
+    except:
+        return redirect(fallback)
+    return redirect(dest_url)
+
+
 @app.route('/login', methods=["GET", "POST"])
 def login():
     if request.method == 'GET':
@@ -2039,7 +2125,7 @@ def login():
     password = request.form['password']
     if username == cfg.web_username and password == cfg.web_password:
         login_user(User(username, password))
-        return redirect(url_for('home'))
+        return redirect_dest(fallback=url_for('home'))
     else:
         flash('Username or password incorrect', 'error')
         return render_template('login.html')
@@ -2069,13 +2155,13 @@ def log():
             logger.info('Logfile Cleared')
     try:
         with open(os.path.join(rootdir, 'logs', 'premiumizer.log'), "r") as f:
-            log = unicode(f.read(), "utf-8")
+            log = str(f.read())
     except:
         log = 'Error opening logfile'
 
     try:
         with open(os.path.join(rootdir, 'logs', 'premiumizerDEBUG.log'), "r") as f:
-            debuglog = unicode(f.read(), "utf-8")
+            debuglog = str(f.read())
     except:
         debuglog = 'no debug log file or corrupted'
     return render_template("log.html", log=log, debuglog=debuglog)
@@ -2124,7 +2210,7 @@ def delete_task(message):
     try:
         if task.local_status != 'stopped':
             task.update(local_status='stopped')
-            if cfg.download_builtin:
+            if cfg.download_builtin and task.local_status == 'downloading':
                 gevent.sleep(8)
     except:
         pass
@@ -2197,17 +2283,17 @@ def test_disconnect():
 def hello_server(message):
     send_categories()
     scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
-    print(message['data'])
+    print((message['data']))
 
 
 @socketio.on('message')
 def handle_message(message):
-    print('received message: ' + message)
+    print(('received message: ' + message))
 
 
 @socketio.on('json')
 def handle_json(json):
-    print('received json: ' + str(json))
+    print(('received json: ' + str(json)))
 
 
 @socketio.on('change_category')

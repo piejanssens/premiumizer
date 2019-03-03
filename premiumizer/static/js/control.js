@@ -266,7 +266,7 @@ function update_task(task) {
             if (fileExt == '.torrent' || fileExt == '.nzb' || fileExt == '.magnet') {
                 uploadFile(file);
             } else {
-                alert('Nope, valid file...');
+                alert('Nope, not a valid file...');
             }
         }
         $('#file-file-upload[type="file"]').val(null);
@@ -411,12 +411,13 @@ function delete_task(e) {
 }
 
 function pause_resume_task(e) {
- var elem = $(e.target);
- var id = elem.closest('.panel').attr('id');
+    var elem = $(e.target);
+    var id = elem.closest('.panel').attr('id');
     socket.emit('pause_resume_task', {
- data: id
- });
- }
+        data: id
+    });
+}
+
 function stop_task(e) {
     var elem = $(e.target);
     var id = elem.closest('.panel').attr('id');
