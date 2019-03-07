@@ -43,7 +43,7 @@ Open services.msc & edit Premiumizer service to logon using your account that is
 
 1. Install [Git](https://git-scm.com/download/win) & select: "Use git from the windows command prompt".
 2. Download [Python](https://www.python.org/downloads/)
-From the command line:
+3. From the command line:
 ```
 git clone https://github.com/piejanssens/premiumizer.git premiumizer
 pip.exe install virtualenv
