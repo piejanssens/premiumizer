@@ -43,27 +43,28 @@ Open services.msc & edit Premiumizer service to logon using your account that is
 
 1. Install [Git](https://git-scm.com/download/win) & select: "Use git from the windows command prompt".
 2. Download [Python](https://www.python.org/downloads/)
-3. From the command line:
+3. Open cmd.exe
 ```
-git clone https://github.com/piejanssens/premiumizer.git premiumizer
-pip.exe install virtualenv
-virtualenv premiumizer\env
-env\Scripts\activate.bat
-pip install -r requirements.txt
-python premiumizer.py
+$ git clone https://github.com/piejanssens/premiumizer.git premiumizer
+$ pip.exe install virtualenv
+$ virtualenv premiumizer\env
+$ env\Scripts\activate.bat
+$ pip install -r requirements.txt
+$ python premiumizer.py
 ```
 
-### OS X
+### Unix / macOS
 
-Install [brew](http://brew.sh/) & use brew to install Python
-From the command line:
+1. Install Python 3.7 (e.g. using [brew](http://brew.sh/))
+2. Open Terminal
 ```
-git clone https://github.com/piejanssens/premiumizer.git premiumizer
-pip.exe install virtualenv
-virtualenv premiumizer\env
-env\Scripts\activate.bat
-pip install -r requirements.txt
-python premiumizer.py
+$ brew install python3
+$ git clone https://github.com/piejanssens/premiumizer.git premiumizer
+$ pip.exe install virtualenv
+$ virtualenv premiumizer\env
+$ env\Scripts\activate.bat
+$ pip install -r requirements.txt
+$ python premiumizer.py
 ```
 
 ### Docker
@@ -81,7 +82,6 @@ Manually setting PUID and PGID might be necessary for the bind-mounts (depends o
 ## Updating
 Update from the settings page / enable automatic updates
 Update button & changes will be displayed when an update is available.
-Leave disabled for Docker.
 
 ## Settings
 Once you can access the premiumizer web interface make sure you head over to the settings page.
