@@ -1,21 +1,18 @@
 [global]
 server_port = 5000
-bind_ip = 127.0.0.1
+bind_ip = 0.0.0.0
 active_interval = 10
 idle_interval = 300
 debug_enabled = 0
-
 
 [security]
 login_enabled = 0
 username =
 password =
 
-
 [premiumize]
 customer_id =
 pin =
-
 
 [downloads]
 download_enabled = 0
@@ -37,7 +34,6 @@ aria2_enabled = 0
 aria2_host = localhost
 aria2_port = 6800
 aria2_secret = premiumizer
-
 
 [categories]
 cat_name[1] = tv
@@ -71,11 +67,9 @@ cat_ext[6] =
 cat_delsample[6] = 0
 cat_nzbtomedia[6] = 0
 
-
 [upload]
 watchdir_enabled = 0
 watchdir_location =
-
 
 [notifications]
 email_enabled = 0
@@ -87,7 +81,6 @@ email_port = 25
 email_encryption = 0
 email_username =
 email_password =
-
 
 [update]
 #Do not change these values#

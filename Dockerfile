@@ -12,7 +12,7 @@ RUN apk --no-cache add shadow \
 COPY --from=0 /usr/local/lib/python3.7/site-packages /usr/local/lib/python3.7/site-packages/
 COPY --from=0 /usr/share/zoneinfo /usr/share/zoneinfo/
 COPY . /premiumizer/
-RUN chmod -R 777 /premiumizer && sed -i "s/127.0.0.1/0.0.0.0/g" premiumizer/conf/settings.cfg.tpl
+RUN chmod -R 777 /premiumizer
 WORKDIR /premiumizer
 EXPOSE 5000
 ENTRYPOINT ["/bin/sh","./premiumizer/docker-entrypoint.sh"]
