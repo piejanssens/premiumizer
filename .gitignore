@@ -5,6 +5,8 @@ premiumizer.db
 logs/
 tmp/
 
+.vscode/
+
 #PyCharm
 .idea/
 
