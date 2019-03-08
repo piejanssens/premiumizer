@@ -1876,7 +1876,7 @@ def upload():
     if request.files:
         upload_file = request.files['file']
         filename = secure_filename(upload_file.filename)
-        tmp = os.path.join(rootdir, 'tmp')
+        tmp = os.path.join(ConfDir, 'tmp')
         if not os.path.isdir(tmp):
             os.makedirs(tmp)
         upload_file.save(os.path.join(tmp, filename))
