@@ -84,7 +84,10 @@ docker run -d -p 5000:5000 -e TZ=Europe/London -e PUID=1000 -e PGID=1000 -v <hos
 5. Under 'Registry': Download the piejanssens/premiumizer image
 6. Under 'Image': Select the image and click 'launch'
 7. Map a port of your chosing to '5000' (e.g. Chosing 5555 to 5000, means your Premiumizer will be accessible through 5555)
-8. Set the following environment variables
+8. Map your blackhole folder to '/blackhole'
+9. Map your downloads folder to '/downloads'
+10. Map your premiumizer conf folder to '/premiumizer/conf'
+11. Set the following environment variables
 -- PUID (see step 3.)
 -- PGID (see step 3.)
 -- TZ (e.g. Europe/London)
