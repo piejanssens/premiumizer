@@ -15,7 +15,7 @@ import urllib.parse
 import urllib.request
 import uuid
 import xmlrpc.client
-from configparser import ConfigParser
+import configparser
 from datetime import datetime, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -51,9 +51,17 @@ print('-------------------------------------------WELCOME TO PREMIUMIZER--------
 print('|                                                                                                           |')
 print('------------------------------------------------------------------------------------------------------------')
 # Initialize config values
-prem_config = ConfigParser()
+prem_config = configparser.ConfigParser()
 runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0]
-rootdir = os.path.split(runningdir)[0]
+rootdir = os.path.dirname(runningdir)
+ConfDir = os.path.join(rootdir, 'conf')
+LogsDir = os.path.join(ConfDir, 'logs')
+
+print('Runtime at ', runningdir)
+print('Root at ', rootdir)
+print('Conf at ', ConfDir)
+print('Logs at ', LogsDir)
+
 os_arg = ''
 
 if len(sys.argv) > 1:
@@ -69,23 +77,30 @@ else:
 # Remove later, migration for update
 try:
     if os.path.isfile(os.path.join(rootdir, 'settings.cfg')):
-        shutil.move(os.path.join(rootdir, 'settings.cfg'), os.path.join(rootdir, 'conf', 'settings.cfg'))
+        shutil.move(os.path.join(rootdir, 'settings.cfg'), os.path.join(ConfDir, 'settings.cfg'))
+    if os.path.isfile(os.path.join(runningdir, 'settings.cfg')):
+        shutil.move(os.path.join(runningdir, 'settings.cfg'), os.path.join(ConfDir, 'settings.cfg'))
+    if os.path.isfile(os.path.join(runningdir, 'database.db')):
+        shutil.move(os.path.join(runningdir, 'database.db'), os.path.join(ConfDir, 'database.db'))
 except:
     pass
 # Remove later, migration for update
 
-
-if not os.path.isfile(os.path.join(rootdir, 'conf', 'settings.cfg')):
-    shutil.copy(os.path.join(rootdir, 'conf', 'settings.cfg.tpl'), os.path.join(rootdir, 'conf', 'settings.cfg'))
-prem_config.read(os.path.join(rootdir, 'conf', 'settings.cfg'))
+if not os.path.isdir(ConfDir):
+    os.makedirs(ConfDir)
+if not os.path.isfile(os.path.join(ConfDir, 'settings.cfg')):
+    shutil.copy(os.path.join(runningdir, 'settings.cfg.tpl'), os.path.join(ConfDir, 'settings.cfg'))
+try:
+    prem_config.read(os.path.join(ConfDir, 'settings.cfg'), encoding='utf-8')
+except Exception as e :
+    print(str(e))
 active_interval = prem_config.getint('global', 'active_interval')
 idle_interval = prem_config.getint('global', 'idle_interval')
 debug_enabled = prem_config.getboolean('global', 'debug_enabled')
 
 # Initialize logging
-logs = os.path.join(rootdir, 'logs')
-if not os.path.isdir(logs):
-    os.makedirs(logs)
+if not os.path.isdir(LogsDir):
+    os.makedirs(LogsDir)
 syslog = logging.StreamHandler()
 if debug_enabled:
     logger = logging.getLogger('')
@@ -103,7 +118,7 @@ if debug_enabled:
     logger.debug('----------------------------------')
     logger.debug('----------------------------------')
     logger.debug('DEBUG Logger Initialized')
-    handler = logging.handlers.RotatingFileHandler(os.path.join(rootdir, 'logs', 'premiumizerDEBUG.log'),
+    handler = logging.handlers.RotatingFileHandler(os.path.join(LogsDir, 'premiumizerDEBUG.log'),
                                                    maxBytes=(500 * 1024))
     handler.setFormatter(formatterdebug)
     logger.addHandler(handler)
@@ -119,7 +134,7 @@ else:
     logger.debug('-------------------------------------------------------------------------------------')
     logger.debug('-------------------------------------------------------------------------------------')
     logger.debug('Logger Initialized')
-    handler = logging.handlers.RotatingFileHandler(os.path.join(rootdir, 'logs', 'premiumizer.log'),
+    handler = logging.handlers.RotatingFileHandler(os.path.join(LogsDir, 'premiumizer.log'),
                                                    maxBytes=(500 * 1024))
     handler.setFormatter(formatter)
     logger.addHandler(handler)
@@ -158,41 +173,41 @@ if not log_flask:
 
 # Check if premiumizer has been updated
 if prem_config.getboolean('update', 'updated'):
-    if os.path.isfile(os.path.join(rootdir, 'logs', 'premiumizer.log')):
+    if os.path.isfile(os.path.join(LogsDir, 'premiumizer.log')):
         try:
-            with open(os.path.join(rootdir, 'logs', 'premiumizer.log'), 'w'):
+            with open(os.path.join(LogsDir, 'premiumizer.log'), 'w'):
                 pass
             logger.info('*************************************************************************************')
             logger.info('----------------Premiumizer.log file has been deleted as a precaution----------------')
             logger.info('*************************************************************************************')
         except:
             logger.error('Could not delete old premiumizer.log file')
-    if os.path.isfile(os.path.join(rootdir, 'logs', 'premiumizerDEBUG.log')):
+    if os.path.isfile(os.path.join(LogsDir, 'premiumizerDEBUG.log')):
         try:
-            with open(os.path.join(rootdir, 'logs', 'premiumizerDEBUG.log'), 'w'):
+            with open(os.path.join(LogsDir, 'premiumizerDEBUG.log'), 'w'):
                 pass
             logger.info('*************************************************************************************')
             logger.info('---------------PremiumizerDEBUG file has been deleted as a precaution----------------')
             logger.info('*************************************************************************************')
         except:
             logger.error('Could not delete old premiumizerDEBUG.log file')
-    if os.path.isfile(os.path.join(rootdir, 'premiumizer', 'database.db')) or os.path.isfile(os.path.join(rootdir, 'premiumizer', 'database.db.dat')):
+    if os.path.isfile(os.path.join(ConfDir, 'database.db')) or os.path.isfile(os.path.join(ConfDir, 'database.db.dat')):
         sucess = 0
         try:
-            os.remove(os.path.join(rootdir, 'premiumizer', 'database.db'))
+            os.remove(os.path.join(ConfDir, 'database.db'))
             success = 1
         except:
             try:
-                os.remove(os.path.join(rootdir, 'premiumizer', 'database.db.dat'))
+                os.remove(os.path.join(ConfDir, 'database.db.dat'))
                 success = 1
             except:
                 pass
             try:
-                os.remove(os.path.join(rootdir, 'premiumizer', 'database.db.bak'))
+                os.remove(os.path.join(ConfDir, 'database.db.bak'))
             except:
                 pass
             try:
-                os.remove(os.path.join(rootdir, 'premiumizer', 'database.db.dir'))
+                os.remove(os.path.join(ConfDir, 'database.db.dir'))
             except:
                 pass
         if success:
@@ -209,9 +224,6 @@ if prem_config.getboolean('update', 'updated'):
     logger.info('*************************************************************************************')
     logger.info('---------------------------Premiumizer has been updated!!----------------------------')
     logger.info('*************************************************************************************')
-#
-logger.info('Running at %s', rootdir)
-
 
 # noinspection PyAttributeOutsideInit
 class PremConfig:
@@ -224,37 +236,37 @@ class PremConfig:
 
     def check_config(self):
         logger.debug('Initializing config')
-        default_config = ConfigParser()
-        default_config.read(os.path.join(rootdir, 'conf', 'settings.cfg.tpl'))
+        default_config = configparser.ConfigParser()
+        default_config.read(os.path.join(runningdir, 'settings.cfg.tpl'))
         if prem_config.getfloat('update', 'req_version') < default_config.getfloat('update', 'req_version'):
             try:
                 logging.info('updating pip requirements')
                 from pip._internal import main as pipmain
                 pipmain(['install', '-r', os.path.join(rootdir, 'requirements.txt')])
                 prem_config.set('update', 'req_version', str(default_config.getfloat('update', 'req_version')))
-                with open(os.path.join(rootdir, 'conf', 'settings.cfg'), 'w') as configfile:
+                with open(os.path.join(ConfDir, 'settings.cfg'), 'w') as configfile:
                     prem_config.write(configfile)
-                prem_config.read(os.path.join(rootdir, 'conf', 'settings.cfg'))
+                prem_config.read(os.path.join(ConfDir, 'settings.cfg'))
             except:
                 logger.error('Could not update requirements')
                 pass
         if prem_config.getfloat('update', 'config_version') < default_config.getfloat('update', 'config_version'):
             logging.info('updating config file')
             try:
-                shutil.copy(os.path.join(rootdir, 'conf', 'settings.cfg'),
-                            os.path.join(rootdir, 'conf', 'settings.cfg.old'))
-                shutil.copy(os.path.join(rootdir, 'conf', 'settings.cfg.tpl'),
-                            os.path.join(rootdir, 'conf', 'settings.cfg'))
-                prem_config.read(os.path.join(rootdir, 'conf', 'settings.cfg.old'))
-                default_config.read(os.path.join(rootdir, 'conf', 'settings.cfg'))
+                shutil.copy(os.path.join(ConfDir, 'settings.cfg'),
+                            os.path.join(ConfDir, 'settings.cfg.old'))
+                shutil.copy(os.path.join(runningdir, 'settings.cfg.tpl'),
+                            os.path.join(ConfDir, 'settings.cfg'))
+                prem_config.read(os.path.join(ConfDir, 'settings.cfg.old'))
+                default_config.read(os.path.join(ConfDir, 'settings.cfg'))
                 for section in prem_config.sections():
                     if section in default_config.sections() and section != 'update':
                         for key in prem_config.options(section):
                             if key in default_config.options(section):
                                 default_config.set(section, key, (prem_config.get(section, key)))
-                with open(os.path.join(rootdir, 'conf', 'settings.cfg'), 'w') as configfile:
+                with open(os.path.join(ConfDir, 'settings.cfg'), 'w') as configfile:
                     default_config.write(configfile)
-                prem_config.read(os.path.join(rootdir, 'conf', 'settings.cfg'))
+                prem_config.read(os.path.join(ConfDir, 'settings.cfg'))
             except:
                 logger.error('Could not update settings file')
                 pass
@@ -354,7 +366,7 @@ class PremConfig:
         if os.path.isfile(os.path.join(rootdir, 'nzbtomedia', 'NzbToMedia.py')):
             self.nzbtomedia_location = (os.path.join(rootdir, 'nzbtomedia', 'NzbToMedia.py'))
             prem_config.set('downloads', 'nzbtomedia_location', self.nzbtomedia_location)
-            with open(os.path.join(rootdir, 'conf', 'settings.cfg'), 'w') as configfile:  # save
+            with open(os.path.join(ConfDir, 'settings.cfg'), 'w') as configfile:  # save
                 prem_config.write(configfile)
         else:
             self.nzbtomedia_location = prem_config.get('downloads', 'nzbtomedia_location')
@@ -523,16 +535,16 @@ def update_self():
     logger.info('Update - will restart')
     cfg.update_date = datetime.now().strftime("%d-%m %H:%M:%S")
     prem_config.set('update', 'update_date', cfg.update_date)
-    with open(os.path.join(rootdir, 'conf', 'settings.cfg'), 'w') as configfile:  # save
+    with open(os.path.join(ConfDir, 'settings.cfg'), 'w') as configfile:  # save
         prem_config.write(configfile)
     scheduler.shutdown(wait=False)
     db.close()
     socketio.stop()
     if os_arg == '--windows':
-        subprocess.call(['python', os.path.join(rootdir, 'premiumizer', 'utils.py'), '--update', '--windows'])
+        subprocess.call(['python', os.path.join(runningdir, 'utils.py'), '--update', '--windows'])
         os._exit(1)
     else:
-        subprocess.Popen(['python', os.path.join(rootdir, 'premiumizer', 'utils.py'), '--update', '--none'],
+        subprocess.Popen(['python', os.path.join(runningdir, 'utils.py'), '--update', '--none'],
                          shell=False,
                          close_fds=True)
         os._exit(1)
@@ -548,7 +560,7 @@ def restart():
         # windows service will automatically restart on 'failure'
         os._exit(1)
     else:
-        subprocess.Popen(['python', os.path.join(rootdir, 'premiumizer', 'utils.py'), '--restart', '--none'],
+        subprocess.Popen(['python', os.path.join(runningdir, 'utils.py'), '--restart', '--none'],
                          shell=False,
                          close_fds=True)
         os._exit(1)
@@ -585,29 +597,29 @@ logger.debug('Initializing Flask complete')
 
 # Initialise Database
 logger.debug('Initializing Database')
-if os.path.isfile(os.path.join(rootdir, 'premiumizer', 'database.db')) or os.path.isfile(os.path.join(rootdir, 'premiumizer', 'database.db.dat')):
-    db = shelve.open(os.path.join(rootdir, 'premiumizer', 'database.db'))
+if os.path.isfile(os.path.join(ConfDir, 'database.db')) or os.path.isfile(os.path.join(ConfDir, 'database.db.dat')):
+    db = shelve.open(os.path.join(ConfDir, 'database.db'))
     if not db.keys():
         db.close()
         try:
-            os.remove(os.path.join(rootdir, 'premiumizer', 'database.db'))
+            os.remove(os.path.join(ConfDir, 'database.db'))
         except:
             try:
-                os.remove(os.path.join(rootdir, 'premiumizer', 'database.db.dat'))
+                os.remove(os.path.join(ConfDir, 'database.db.dat'))
             except:
                 pass
             try:
-                os.remove(os.path.join(rootdir, 'premiumizer', 'database.db.bak'))
+                os.remove(os.path.join(ConfDir, 'database.db.bak'))
             except:
                 pass
             try:
-                os.remove(os.path.join(rootdir, 'premiumizer', 'database.db.dir'))
+                os.remove(os.path.join(ConfDir, 'database.db.dir'))
             except:
                 pass
-        db = shelve.open(os.path.join(rootdir, 'premiumizer', 'database.db'))
+        db = shelve.open(os.path.join(ConfDir, 'database.db'))
         logger.debug('Database cleared')
 else:
-    db = shelve.open(os.path.join(rootdir, 'premiumizer', 'database.db'))
+    db = shelve.open(os.path.join(ConfDir, 'database.db'))
 logger.debug('Initializing Database complete')
 
 # Initialise Globals
@@ -731,7 +743,7 @@ def email(subject, text=None):
                 log = 'premiumizerDEBUG.log'
             else:
                 log = 'premiumizer.log'
-            with open(os.path.join(rootdir, 'logs', log), 'r') as f:
+            with open(os.path.join(LogsDir, log), 'r') as f:
                 for line in f:
                     if greenlet.task.name in line:
                         text += line
@@ -1920,7 +1932,7 @@ def history():
             log = 'premiumizerDEBUG.log'
         else:
             log = 'premiumizer.log'
-        with open(os.path.join(rootdir, 'logs', log), 'r') as f:
+        with open(os.path.join(LogsDir, log), 'r') as f:
             for line in f:
                 if 'Added:' in line:
                     taskname = line.split("Added: ", 1)[1].splitlines()[0].split(" --", 1)[0]
@@ -2093,7 +2105,7 @@ def settings():
                 else:
                     prem_config.set('categories', ('cat_nzbtomedia' + str([x])), '0')
 
-            with open(os.path.join(rootdir, 'conf', 'settings.cfg'), 'w') as configfile:
+            with open(os.path.join(ConfDir, 'settings.cfg'), 'w') as configfile:
                 prem_config.write(configfile)
             logger.info('Settings saved, reloading configuration')
             cfg.check_config()
@@ -2143,24 +2155,24 @@ def log():
     if request.method == 'POST':
         if 'Clear' in request.form.values():
             try:
-                with open(os.path.join(rootdir, 'logs', 'premiumizer.log'), 'w'):
+                with open(os.path.join(LogsDir, 'premiumizer.log'), 'w'):
                     pass
             except:
                 pass
             try:
-                with open(os.path.join(rootdir, 'logs', 'premiumizerDEBUG.log'), 'w'):
+                with open(os.path.join(LogsDir, 'premiumizerDEBUG.log'), 'w'):
                     pass
             except:
                 pass
             logger.info('Logfile Cleared')
     try:
-        with open(os.path.join(rootdir, 'logs', 'premiumizer.log'), "r") as f:
+        with open(os.path.join(LogsDir, 'premiumizer.log'), "r") as f:
             log = str(f.read())
     except:
         log = 'Error opening logfile'
 
     try:
-        with open(os.path.join(rootdir, 'logs', 'premiumizerDEBUG.log'), "r") as f:
+        with open(os.path.join(LogsDir, 'premiumizerDEBUG.log'), "r") as f:
             debuglog = str(f.read())
     except:
         debuglog = 'no debug log file or corrupted'

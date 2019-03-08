@@ -70,14 +70,30 @@ $ python premiumizer.py
 ### Docker
 
 #### General
-```
-docker run -d -p 5000:5000 -e TZ=Europe/London -e PUID=1000 -e PGID=1000 -v <host_path>:/conf -v <host_path>:/blackhole -v <host_path>:/downloads piejanssens/premiumizer:latest
-```
+You need to set the correct PUID and PGID equal to the user that has rw access to the mounted volumes.
 
-Manually setting PUID and PGID might be necessary for the bind-mounts (depends on your permission setup).
+```
+docker run -d -p 5000:5000 -e TZ=Europe/London -e PUID=1000 -e PGID=1000 -v <host_path>:/premiumizer/conf -v <host_path>:/blackhole -v <host_path>:/downloads piejanssens/premiumizer:latest
+```
 
 #### Synology DSM
-\#ToDo
+1. Create a folder using File Station where Premiumizer can store its config and logs (e.g. /volume1/docker/premiumizer)
+2. Identify (or create) the locations for blackhole and downloads that Premiumizer will use
+3. SSH into your syno and figure out the PUID and PGID of the user that has access to these folders
+4. Open Docker app
+5. Under 'Registry': Download the piejanssens/premiumizer image
+6. Under 'Image': Select the image and click 'launch'
+7. Map a port of your chosing to '5000' (e.g. Chosing 5555 to 5000, means your Premiumizer will be accessible through 5555)
+8. Set the following environment variables
+-- PUID (see step 3.)
+-- PGID (see step 3.)
+-- TZ (e.g. Europe/London)
+
+##### Updating
+1. Under 'Container': Stop the container
+2. Under 'Container': Action -> Clear
+2. Under 'Registry': Download the piejanssens/premiumizer image (this will pull in the latest image)
+3. Under 'Container': Start the container 
 
 ## Updating
 Update from the settings page / enable automatic updates

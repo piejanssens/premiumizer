@@ -1,5 +1,5 @@
 #Premiumizer Specific
-conf/*
+conf/
 !conf/settings.cfg.tpl
 premiumizer.db
 logs/
