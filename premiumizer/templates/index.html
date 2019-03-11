@@ -3,69 +3,60 @@
 {% block title %} - Home{% endblock %}
 {% block content %}
     <!-- Page Content -->
-    <div id="premiumize_connect_error" class="alert alert-danger" role="alert" style="display:none;">
-        <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
-        <span class="sr-only">Error:</span>
-        Cannot connect to premiumize.me. Check your premiumize account details in settings and if premiumize.me is up.
-    </div>
-    {% if cfg.download_builtin == 1 %}
-        <p>&nbsp;</p>
-        <div id="cfg.download_builtin" class="alert alert-info" role="alert" style="display:inline;">
+        <div id="premiumize_connect_error" class="alert alert-danger" role="alert" style="display:none;">
             <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
-            <span class="sr-only">Warning:</span>
-            Consider Jdownloader or Aria2 for optimal performance
+            <span class="sr-only">Error:</span>
+            Cannot connect to premiumize.me. Check your premiumize account details in settings and if premiumize.me is up.
         </div>
-    {% endif %}
-    {% if cfg.jd_connected == 0 and cfg.jd_enabled %}
-        <p>&nbsp;</p>
-        <div id="cfg.jd_connected" class="alert alert-danger" role="alert" style="display:inline;">
-            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
-            <span class="sr-only">Warning:</span>
-            Jdownloader connection error.
-        </div>
-    {% endif %}
-    {% if cfg.aria2_connected == 0 and cfg.aria2_enabled %}
-        <p>&nbsp;</p>
-        <div id="cfg.aria2_connected" class="alert alert-danger" role="alert" style="display:inline;">
-            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
-            <span class="sr-only">Warning:</span>
-            Aria2 connection error
-        </div>
-    {% endif %}
-    {% if debug_enabled == 1 %}
-        <p>&nbsp;</p>
-        <div id="debug_enabled" class="alert alert-warning" role="alert" style="display:inline;">
-            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
-            <span class="sr-only">Warning:</span>
-            Debug mode is enabled, this is not recommended, disable it in the settings page & restart.
-        </div>
-    {% endif %}
-    {% if cfg.update_available == 1 %}
-        <p>&nbsp;</p>
-        <div id="update_available" class="alert alert-info" role="alert" style="display:inline;">
-            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
-            <span class="sr-only">Info:</span>
-            Update available !! Go to the settings page.
-        </div>
-    {% endif %}
-    {% if cfg.jd_update_available == 1 %}
-        <p>&nbsp;</p>
-        <div id="jd_update_available" class="alert alert-info" role="alert" style="display:inline;">
-            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
-            <span class="sr-only">Info:</span>
-            Jdownloader Update available !! Go to the settings page.
-        </div>
-    {% endif %}
-    {% if download_speed != -1 %}
-        <p>&nbsp;</p>
-        <div id="download_speed" class="alert alert-info" role="alert" style="display:inline;">
-            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
-            <span class="sr-only">Info:</span>
-            Download speed is limited to {{ download_speed }}/s
-        </div>
-    {% endif %}
-    <div id="main_container" class="container">
-
+        {% if cfg.jd_connected == 0 and cfg.jd_enabled %}
+            <p>&nbsp;</p>
+            <div id="cfg.jd_connected" class="alert alert-danger" role="alert" style="display:inline;">
+                <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+                <span class="sr-only">Warning:</span>
+                Jdownloader connection error.
+            </div>
+        {% endif %}
+        {% if cfg.aria2_connected == 0 and cfg.aria2_enabled %}
+            <p>&nbsp;</p>
+            <div id="cfg.aria2_connected" class="alert alert-danger" role="alert" style="display:inline;">
+                <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+                <span class="sr-only">Warning:</span>
+                Aria2 connection error
+            </div>
+        {% endif %}
+        {% if debug_enabled == 1 %}
+            <p>&nbsp;</p>
+            <div id="debug_enabled" class="alert alert-warning" role="alert" style="display:inline;">
+                <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+                <span class="sr-only">Warning:</span>
+                Debug mode is enabled, this is not recommended, disable it in the settings page & restart.
+            </div>
+        {% endif %}
+        {% if cfg.update_available == 1 %}
+            <p>&nbsp;</p>
+            <div id="update_available" class="alert alert-info" role="alert" style="display:inline;">
+                <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+                <span class="sr-only">Info:</span>
+                Update available !! Go to the settings page.
+            </div>
+        {% endif %}
+        {% if cfg.jd_update_available == 1 %}
+            <p>&nbsp;</p>
+            <div id="jd_update_available" class="alert alert-info" role="alert" style="display:inline;">
+                <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+                <span class="sr-only">Info:</span>
+                Jdownloader Update available !! Go to the settings page.
+            </div>
+        {% endif %}
+        {% if download_speed != -1 %}
+            <p>&nbsp;</p>
+            <div id="download_speed" class="alert alert-info" role="alert" style="display:inline;">
+                <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+                <span class="sr-only">Info:</span>
+                Download speed is limited to {{ download_speed }}/s
+            </div>
+        {% endif %}
+        
         <div class="row">
             <div class="col-lg-12">
                 <h3><i class="fa fa-cloud-upload fa-2x"></i></h3>
@@ -135,8 +126,6 @@
         <div id="download_section">
 
         </div>
-    </div>
-    <!-- /.container -->
 {% endblock %}
 
 {% block js_footer %}

@@ -18,8 +18,8 @@
 </head>
 <body>
 {% block navbar %}
-    <nav class="navbar navbar-inverse navbar-static-top">
-        <div class="container-fluid">
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+        <div class="container">
             <!-- Brand and toggle get grouped for better mobile display -->
             <div class="navbar-header">
                 <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
@@ -42,9 +42,9 @@
                 ('about', 'about', 'About')
                 ] %}
                         {% for href, id, caption in navigation_bar %}
-                            <li
-                                    {% if id == active_page %} class="active"{% endif %}><a
-                                    href="{{ url_for(href|e) }}">{{ caption|e }}</a></li>
+                            <li {% if id == active_page %} class="active"{% endif %}>
+                                <a href="{{ url_for(href|e) }}">{{ caption|e }}</a>
+                            </li>
                         {% endfor %}
                     </ul>
                     <ul class="nav navbar-nav navbar-right">
@@ -55,12 +55,11 @@
         </div>
     </nav>
 {% endblock %}
-<div class="container page">
+<div class="container">
     <div class="content">
         {% block content %}
         {% endblock %}
     </div>
-    <hr>
 </div>
 {% block js_footer %}
     <script
