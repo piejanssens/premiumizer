@@ -1757,6 +1757,7 @@ class MyHandler(events.PatternMatchingEventHandler):
                     else:
                         try:
                             name = re.search('&dn=(.+?)(&|.torrent)', magnet).group(1)
+                            name.replace('+', ' ')
                         except AttributeError:
                             logger.error('Extracting id / name from .magnet failed for: %s', watchdir_file)
                             return
