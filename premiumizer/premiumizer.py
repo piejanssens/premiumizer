@@ -1492,16 +1492,23 @@ def parse_tasks(transfers):
                                                 jobstore='check_downloads', replace_existing=True, max_instances=1,
                                                 coalesce=True, next_run_time=(datetime.now() + timedelta(minutes=5)))
             elif task.local_status == 'finished_seeding':
-                try:
-                    ratio = eta.split('ratio of ')[1].split('. Seeding')[0]
-                except:
-                    ratio = ''
-                try:
-                    time = (scheduler.scheduler.get_job(task.name).next_run_time.replace(tzinfo=None) - datetime.now())
-                    time = str(time).split('.', 2)[0]
-                    task.update(cloud_status=transfer['status'], eta='Deleting from cloud in: ' + time + ' / Ratio: ' + ratio)
-                except:
+                if transfer['status'] == 'finished':
                     delete_task(task.id)
+                    try:
+                        scheduler.scheduler.remove_job(job_id=task.name, jobstore='remove_cloud')
+                    except:
+                        pass
+                else:
+                    try:
+                        ratio = eta.split('ratio of ')[1].split('. Seeding')[0]
+                    except:
+                        ratio = ''
+                    try:
+                        time = (scheduler.scheduler.get_job(task.name).next_run_time.replace(tzinfo=None) - datetime.now())
+                        time = str(time).split('.', 2)[0]
+                        task.update(cloud_status=transfer['status'], eta='Deleting from cloud in: ' + time + ' / Ratio: ' + ratio)
+                    except:
+                        delete_task(task.id)
             elif task.local_status == 'finished_waiting':
                 try:
                     time = (scheduler.scheduler.get_job(task.name).next_run_time.replace(tzinfo=None) - datetime.now())
