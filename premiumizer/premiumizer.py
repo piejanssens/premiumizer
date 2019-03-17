@@ -1449,8 +1449,6 @@ def parse_tasks(transfers):
                         name = name.split("&f=", 1)[1]
                 else:
                     name = 'Loading name'
-                if transfer['status'] == 'finished' or transfer['status'] == 'seeding':
-                    scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=10)
                 task.update(progress=progress, cloud_status=transfer['status'], name=name, dlsize=size + ' --- ',
                             speed=speed + ' --- ', eta=eta, folder_id=folder_id, file_id=file_id)
                 idle = False
