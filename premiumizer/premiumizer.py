@@ -1464,24 +1464,24 @@ def parse_tasks(transfers):
                                 if breadcrumbs[1]['name'] == 'Feed Downloads' and breadcrumbs[2][
                                     'name'] in cfg.download_categories:
                                     dldir, dlext, delsample, dlnzbtomedia = get_cat_var(breadcrumbs[2]['name'])
-                                    task.update(local_status=None, process=None, speed=None,
+                                    task.update(cloud_status=transfer['status'], local_status=None, process=None, speed=None,
                                                 category=breadcrumbs[2]['name'], dldir=dldir, dlext=dlext,
                                                 delsample=delsample, dlnzbtomedia=dlnzbtomedia, type='RSS')
                             except BaseException as e:
                                 logger.error('download rss failed: ' + str(e.message))
                                 pass
                         elif cfg.download_all:
-                            task.update(category='default')
+                            task.update(cloud_status=transfer['status'], category='default')
                     if task.category in cfg.download_categories:
                         if not task.local_status == ('queued' or 'downloading'):
-                            task.update(local_status='queued', folder_id=folder_id, file_id=file_id, dlsize='')
+                            task.update(cloud_status=transfer['status'], local_status='queued', folder_id=folder_id, file_id=file_id, dlsize='')
                             gevent.sleep(3)
                             scheduler.scheduler.add_job(download_task, args=(task,), name=task.name, id=task.id,
                                                         misfire_grace_time=7200, coalesce=False, max_instances=1,
                                                         jobstore='downloads', executor='downloads',
                                                         replace_existing=True)
                     elif task.category == '':
-                        task.update(local_status='waiting', progress=100, folder_id=folder_id, file_id=file_id)
+                        task.update(cloud_status=transfer['status'],local_status='waiting', progress=100, folder_id=folder_id, file_id=file_id)
                 else:
                     task.update(cloud_status=transfer['status'], local_status='download_disabled', speed=None, folder_id=folder_id, file_id=file_id)
         else:
