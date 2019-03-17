@@ -1459,15 +1459,18 @@ def parse_tasks(transfers):
                                                     {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
                                                      'id': transfer['folder_id'], 'includebreadcrumbs': 1})
                                 breadcrumbs = json.loads(r.content)['breadcrumbs']
-                                if breadcrumbs[1]['name'] == 'Feed Downloads' and breadcrumbs[2][
-                                    'name'] in cfg.download_categories:
-                                    dldir, dlext, delsample, dlnzbtomedia = get_cat_var(breadcrumbs[2]['name'])
-                                    task.update(cloud_status=transfer['status'], local_status=None, process=None,
-                                                speed=None,
-                                                category=breadcrumbs[2]['name'], dldir=dldir, dlext=dlext,
-                                                delsample=delsample, dlnzbtomedia=dlnzbtomedia, type='RSS')
+                                if len(breadcrumbs) > 1:
+                                    if breadcrumbs[1]['name'] == 'Feed Downloads':
+                                        if breadcrumbs[2]['name'] in cfg.download_categories:
+                                            dldir, dlext, delsample, dlnzbtomedia = get_cat_var(breadcrumbs[2]['name'])
+                                            task.update(cloud_status=transfer['status'], local_status=None,
+                                                        process=None, speed=None, category=breadcrumbs[2]['name'],
+                                                        dldir=dldir, dlext=dlext, delsample=delsample,
+                                                        dlnzbtomedia=dlnzbtomedia, type='RSS')
+                                        else:
+                                            logger.warning('RSS feed name not in categories: %s', breadcrumbs[2]['name'])
                             except BaseException as e:
-                                logger.error('download rss failed: ' + str(e.message))
+                                logger.error('RSS download failed: ' + str(e))
                                 pass
                         elif cfg.download_all:
                             task.update(cloud_status=transfer['status'], category='default')
