@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+import configparser
 import json
 import logging
 import os
@@ -15,7 +16,6 @@ import urllib.parse
 import urllib.request
 import uuid
 import xmlrpc.client
-import configparser
 from datetime import datetime, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -92,7 +92,7 @@ if not os.path.isfile(os.path.join(ConfDir, 'settings.cfg')):
     shutil.copy(os.path.join(runningdir, 'settings.cfg.tpl'), os.path.join(ConfDir, 'settings.cfg'))
 try:
     prem_config.read(os.path.join(ConfDir, 'settings.cfg'), encoding='utf-8')
-except Exception as e :
+except Exception as e:
     print(str(e))
 active_interval = prem_config.getint('global', 'active_interval')
 idle_interval = prem_config.getint('global', 'idle_interval')
@@ -224,6 +224,7 @@ if prem_config.getboolean('update', 'updated'):
     logger.info('*************************************************************************************')
     logger.info('---------------------------Premiumizer has been updated!!----------------------------')
     logger.info('*************************************************************************************')
+
 
 # noinspection PyAttributeOutsideInit
 class PremConfig:
@@ -1469,7 +1470,7 @@ def parse_tasks(transfers):
                         if not task.local_status == ('queued' or 'downloading'):
                             task.update(local_status='queued', folder_id=folder_id, file_id=file_id, dlsize='')
                             gevent.sleep(3)
-                            scheduler.scheduler.add_job(download_task, args=(task,), name=task.name,
+                            scheduler.scheduler.add_job(download_task, args=(task,), name=task.name, id=task.id,
                                                         misfire_grace_time=7200, coalesce=False, max_instances=1,
                                                         jobstore='downloads', executor='downloads',
                                                         replace_existing=True)
@@ -1480,10 +1481,10 @@ def parse_tasks(transfers):
         else:
             if task.local_status == 'downloading':
                 if task.name not in str(scheduler.scheduler.get_jobs('check_downloads')):
-                    scheduler.scheduler.add_job(check_downloads, args=(task.dlsize, task.id),
+                    scheduler.scheduler.add_job(check_downloads, args=(task.dlsize, task.id), id=task.id,
                                                 name=(task.name + ' check_downloads'), misfire_grace_time=7200,
                                                 jobstore='check_downloads', replace_existing=True, max_instances=1,
-                                                coalesce=True, next_run_time=(datetime.now() + timedelta(minutes=1)))
+                                                coalesce=True, next_run_time=(datetime.now() + timedelta(minutes=5)))
             elif task.local_status == 'finished_waiting':
                 try:
                     time = (scheduler.scheduler.get_job(task.name).next_run_time.replace(tzinfo=None) - datetime.now())
@@ -1523,6 +1524,7 @@ def check_downloads(dlsize, id):
         if dlsize == task.dlsize:
             dldir = get_cat_var(task.category)
             dldir = dldir[0]
+            scheduler.scheduler.reschedule_job(id=task.id, jobstore='downloads')
             task.update(local_status=None, dldir=dldir)
             msg = 'Download: %s stuck restarting task' % task.name
             logger.warning(msg)
@@ -2319,7 +2321,7 @@ def change_category(message):
                     if not task.local_status == ('queued' or 'downloading'):
                         task.update(local_status='queued')
                         gevent.sleep(3)
-                        scheduler.scheduler.add_job(download_task, args=(task,), name=task.name,
+                        scheduler.scheduler.add_job(download_task, args=(task,), name=task.name, id=task.id,
                                                     misfire_grace_time=7200, coalesce=False, max_instances=1,
                                                     jobstore='downloads', executor='downloads', replace_existing=True)
     else:
