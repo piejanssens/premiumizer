@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+import configparser
 import json
 import logging
 import os
@@ -15,7 +16,6 @@ import urllib.parse
 import urllib.request
 import uuid
 import xmlrpc.client
-import configparser
 from datetime import datetime, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -92,7 +92,7 @@ if not os.path.isfile(os.path.join(ConfDir, 'settings.cfg')):
     shutil.copy(os.path.join(runningdir, 'settings.cfg.tpl'), os.path.join(ConfDir, 'settings.cfg'))
 try:
     prem_config.read(os.path.join(ConfDir, 'settings.cfg'), encoding='utf-8')
-except Exception as e :
+except Exception as e:
     print(str(e))
 active_interval = prem_config.getint('global', 'active_interval')
 idle_interval = prem_config.getint('global', 'idle_interval')
@@ -224,6 +224,7 @@ if prem_config.getboolean('update', 'updated'):
     logger.info('*************************************************************************************')
     logger.info('---------------------------Premiumizer has been updated!!----------------------------')
     logger.info('*************************************************************************************')
+
 
 # noinspection PyAttributeOutsideInit
 class PremConfig:
@@ -1286,7 +1287,13 @@ def download_task(task):
 
     if cfg.remove_cloud:
         if not failed:
-            if cfg.remove_cloud_delay != 0 and task.type != 'Filehost':
+            if cfg.seed_torrent:
+                if task.cloud_status != 'seeding':
+                    delete_task(task.id)
+                else:
+                    task.update(eta='Deleting from the cloud in' + time, speed='', dlsize='',
+                                local_status='finished_seeding', progress=99)
+            elif cfg.remove_cloud_delay != 0 and task.type != 'Filehost':
                 scheduler.scheduler.add_job(delete_task, args=(task.id,), name=task.name, id=task.name,
                                             misfire_grace_time=7200, coalesce=False, jobstore='remove_cloud',
                                             replace_existing=True,
@@ -1452,41 +1459,53 @@ def parse_tasks(transfers):
                                                     {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
                                                      'id': transfer['folder_id'], 'includebreadcrumbs': 1})
                                 breadcrumbs = json.loads(r.content)['breadcrumbs']
-                                if breadcrumbs[1]['name'] == 'Feed Downloads' and breadcrumbs[2][
-                                    'name'] in cfg.download_categories:
-                                    dldir, dlext, delsample, dlnzbtomedia = get_cat_var(breadcrumbs[2]['name'])
-                                    task.update(local_status=None, process=None, speed=None,
-                                                category=breadcrumbs[2]['name'], dldir=dldir, dlext=dlext,
-                                                delsample=delsample, dlnzbtomedia=dlnzbtomedia, type='RSS')
+                                if len(breadcrumbs) > 1:
+                                    if breadcrumbs[1]['name'] == 'Feed Downloads':
+                                        if breadcrumbs[2]['name'] in cfg.download_categories:
+                                            dldir, dlext, delsample, dlnzbtomedia = get_cat_var(breadcrumbs[2]['name'])
+                                            task.update(cloud_status=transfer['status'], local_status=None,
+                                                        process=None, speed=None, category=breadcrumbs[2]['name'],
+                                                        dldir=dldir, dlext=dlext, delsample=delsample,
+                                                        dlnzbtomedia=dlnzbtomedia, type='RSS')
+                                        else:
+                                            logger.warning('RSS feed name not in categories: %s', breadcrumbs[2]['name'])
                             except BaseException as e:
-                                logger.error('download rss failed: ' + str(e.message))
+                                logger.error('RSS download failed: ' + str(e))
                                 pass
                         elif cfg.download_all:
-                            task.update(category='default')
+                            task.update(cloud_status=transfer['status'], category='default')
                     if task.category in cfg.download_categories:
                         if not task.local_status == ('queued' or 'downloading'):
-                            task.update(local_status='queued', folder_id=folder_id, file_id=file_id, dlsize='')
+                            task.update(cloud_status=transfer['status'], local_status='queued', folder_id=folder_id,
+                                        file_id=file_id, dlsize='')
                             gevent.sleep(3)
-                            scheduler.scheduler.add_job(download_task, args=(task,), name=task.name,
+                            scheduler.scheduler.add_job(download_task, args=(task,), name=task.name, id=task.id,
                                                         misfire_grace_time=7200, coalesce=False, max_instances=1,
                                                         jobstore='downloads', executor='downloads',
                                                         replace_existing=True)
                     elif task.category == '':
-                        task.update(local_status='waiting', progress=100, folder_id=folder_id, file_id=file_id)
+                        task.update(cloud_status=transfer['status'], local_status='waiting', progress=100,
+                                    folder_id=folder_id, file_id=file_id)
                 else:
-                    task.update(local_status='download_disabled', speed=None, folder_id=folder_id, file_id=file_id)
+                    task.update(cloud_status=transfer['status'], local_status='download_disabled', speed=None,
+                                folder_id=folder_id, file_id=file_id)
         else:
             if task.local_status == 'downloading':
                 if task.name not in str(scheduler.scheduler.get_jobs('check_downloads')):
-                    scheduler.scheduler.add_job(check_downloads, args=(task.dlsize, task.id),
+                    scheduler.scheduler.add_job(check_downloads, args=(task.dlsize, task.id), id=task.id,
                                                 name=(task.name + ' check_downloads'), misfire_grace_time=7200,
                                                 jobstore='check_downloads', replace_existing=True, max_instances=1,
-                                                coalesce=True, next_run_time=(datetime.now() + timedelta(minutes=1)))
+                                                coalesce=True, next_run_time=(datetime.now() + timedelta(minutes=5)))
+            elif task.local_status == 'finished_seeding':
+                if transfer['status'] == 'finished':
+                    delete_task(task.id)
+                else:
+                    task.update(cloud_status=transfer['status'], eta=eta)
             elif task.local_status == 'finished_waiting':
                 try:
                     time = (scheduler.scheduler.get_job(task.name).next_run_time.replace(tzinfo=None) - datetime.now())
                     time = str(time).split('.', 2)[0]
-                    task.update(eta='Deleting from cloud in: ' + time)
+                    task.update(cloud_status=transfer['status'], eta='Deleting from cloud in: ' + time)
                 except:
                     delete_task(task.id)
             task.update(cloud_status=transfer['status'], folder_id=folder_id, file_id=file_id)
@@ -1521,6 +1540,7 @@ def check_downloads(dlsize, id):
         if dlsize == task.dlsize:
             dldir = get_cat_var(task.category)
             dldir = dldir[0]
+            scheduler.scheduler.remove_job(job_id=task.id, jobstore='downloads')
             task.update(local_status=None, dldir=dldir)
             msg = 'Download: %s stuck restarting task' % task.name
             logger.warning(msg)
@@ -1585,10 +1605,7 @@ def add_task(id, size, name, category, type='', folder_id=None):
 
 def upload_torrent(torrent):
     logger.debug('def upload_torrent started')
-    if cfg.seed_torrent:
-        payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'seed': '2or48h'}
-    else:
-        payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
+    payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
     files = {'src': open(torrent, 'rb')}
     logger.debug('Uploading torrent to the cloud: %s', torrent)
     r = prem_connection("postfile", "https://www.premiumize.me/api/transfer/create", payload, files)
@@ -1611,10 +1628,7 @@ def upload_torrent(torrent):
 
 def upload_magnet(magnet):
     logger.debug('def upload_magnet started')
-    if cfg.seed_torrent:
-        payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'seed': '2or48h', 'src': magnet}
-    else:
-        payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'src': magnet}
+    payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'src': magnet}
     r = prem_connection("post", "https://www.premiumize.me/api/transfer/create", payload)
     if 'failed' not in r:
         response_content = json.loads(r.content)
@@ -2323,7 +2337,7 @@ def change_category(message):
                     if not task.local_status == ('queued' or 'downloading'):
                         task.update(local_status='queued')
                         gevent.sleep(3)
-                        scheduler.scheduler.add_job(download_task, args=(task,), name=task.name,
+                        scheduler.scheduler.add_job(download_task, args=(task,), name=task.name, id=task.id,
                                                     misfire_grace_time=7200, coalesce=False, max_instances=1,
                                                     jobstore='downloads', executor='downloads', replace_existing=True)
     else:
