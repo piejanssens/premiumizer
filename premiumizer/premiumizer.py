@@ -294,8 +294,6 @@ class PremConfig:
         self.remove_cloud = prem_config.getboolean('downloads', 'remove_cloud')
         self.remove_cloud_delay = prem_config.getint('downloads', 'remove_cloud_delay')
         self.seed_torrent = prem_config.getboolean('downloads', 'seed_torrent')
-        if self.seed_torrent:
-            self.remove_cloud_delay = 80
         self.download_all = prem_config.getboolean('downloads', 'download_all')
         self.download_enabled = prem_config.getboolean('downloads', 'download_enabled')
         self.download_location = prem_config.get('downloads', 'download_location')
@@ -1289,8 +1287,12 @@ def download_task(task):
 
     if cfg.remove_cloud:
         if not failed:
-            if cfg.seed_torrent and task.cloud_status != 'seeding':
-                delete_task(task.id)
+            if cfg.seed_torrent:
+                if task.cloud_status != 'seeding':
+                    delete_task(task.id)
+                else:
+                    task.update(eta='Deleting from the cloud in' + time, speed='', dlsize='',
+                                local_status='finished_seeding', progress=99)
             elif cfg.remove_cloud_delay != 0 and task.type != 'Filehost':
                 scheduler.scheduler.add_job(delete_task, args=(task.id,), name=task.name, id=task.name,
                                             misfire_grace_time=7200, coalesce=False, jobstore='remove_cloud',
@@ -1298,12 +1300,8 @@ def download_task(task):
                                             next_run_time=(datetime.now() + timedelta(hours=cfg.remove_cloud_delay)))
                 time = (scheduler.scheduler.get_job(task.name).next_run_time.replace(tzinfo=None) - datetime.now())
                 time = str(time).split('.', 2)[0]
-                if cfg.seed_torrent and task.local_status == 'seeding':
-                    task.update(eta='Deleting from the cloud in' + time, speed='', dlsize='',
-                                local_status='finished_seeding', progress=99)
-                else:
-                    task.update(eta='Deleting from the cloud in' + time, speed='', dlsize='',
-                                local_status='finished_waiting', progress=99)
+                task.update(eta='Deleting from the cloud in' + time, speed='', dlsize='',
+                            local_status='finished_waiting', progress=99)
             else:
                 delete_task(task.id)
     else:
@@ -1464,7 +1462,8 @@ def parse_tasks(transfers):
                                 if breadcrumbs[1]['name'] == 'Feed Downloads' and breadcrumbs[2][
                                     'name'] in cfg.download_categories:
                                     dldir, dlext, delsample, dlnzbtomedia = get_cat_var(breadcrumbs[2]['name'])
-                                    task.update(cloud_status=transfer['status'], local_status=None, process=None, speed=None,
+                                    task.update(cloud_status=transfer['status'], local_status=None, process=None,
+                                                speed=None,
                                                 category=breadcrumbs[2]['name'], dldir=dldir, dlext=dlext,
                                                 delsample=delsample, dlnzbtomedia=dlnzbtomedia, type='RSS')
                             except BaseException as e:
@@ -1474,16 +1473,19 @@ def parse_tasks(transfers):
                             task.update(cloud_status=transfer['status'], category='default')
                     if task.category in cfg.download_categories:
                         if not task.local_status == ('queued' or 'downloading'):
-                            task.update(cloud_status=transfer['status'], local_status='queued', folder_id=folder_id, file_id=file_id, dlsize='')
+                            task.update(cloud_status=transfer['status'], local_status='queued', folder_id=folder_id,
+                                        file_id=file_id, dlsize='')
                             gevent.sleep(3)
                             scheduler.scheduler.add_job(download_task, args=(task,), name=task.name, id=task.id,
                                                         misfire_grace_time=7200, coalesce=False, max_instances=1,
                                                         jobstore='downloads', executor='downloads',
                                                         replace_existing=True)
                     elif task.category == '':
-                        task.update(cloud_status=transfer['status'],local_status='waiting', progress=100, folder_id=folder_id, file_id=file_id)
+                        task.update(cloud_status=transfer['status'], local_status='waiting', progress=100,
+                                    folder_id=folder_id, file_id=file_id)
                 else:
-                    task.update(cloud_status=transfer['status'], local_status='download_disabled', speed=None, folder_id=folder_id, file_id=file_id)
+                    task.update(cloud_status=transfer['status'], local_status='download_disabled', speed=None,
+                                folder_id=folder_id, file_id=file_id)
         else:
             if task.local_status == 'downloading':
                 if task.name not in str(scheduler.scheduler.get_jobs('check_downloads')):
@@ -1494,21 +1496,8 @@ def parse_tasks(transfers):
             elif task.local_status == 'finished_seeding':
                 if transfer['status'] == 'finished':
                     delete_task(task.id)
-                    try:
-                        scheduler.scheduler.remove_job(job_id=task.name, jobstore='remove_cloud')
-                    except:
-                        pass
                 else:
-                    try:
-                        ratio = eta.split('ratio of ')[1].split('. Seeding')[0]
-                    except:
-                        ratio = ''
-                    try:
-                        time = (scheduler.scheduler.get_job(task.name).next_run_time.replace(tzinfo=None) - datetime.now())
-                        time = str(time).split('.', 2)[0]
-                        task.update(cloud_status=transfer['status'], eta='Deleting from cloud in: ' + time + ' / Ratio: ' + ratio)
-                    except:
-                        delete_task(task.id)
+                    task.update(cloud_status=transfer['status'], eta=eta)
             elif task.local_status == 'finished_waiting':
                 try:
                     time = (scheduler.scheduler.get_job(task.name).next_run_time.replace(tzinfo=None) - datetime.now())
