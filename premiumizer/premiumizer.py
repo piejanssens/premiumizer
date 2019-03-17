@@ -1585,10 +1585,7 @@ def add_task(id, size, name, category, type='', folder_id=None):
 
 def upload_torrent(torrent):
     logger.debug('def upload_torrent started')
-    if cfg.seed_torrent:
-        payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'seed': '2or48h'}
-    else:
-        payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
+    payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
     files = {'src': open(torrent, 'rb')}
     logger.debug('Uploading torrent to the cloud: %s', torrent)
     r = prem_connection("postfile", "https://www.premiumize.me/api/transfer/create", payload, files)
@@ -1611,10 +1608,7 @@ def upload_torrent(torrent):
 
 def upload_magnet(magnet):
     logger.debug('def upload_magnet started')
-    if cfg.seed_torrent:
-        payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'seed': '2or48h', 'src': magnet}
-    else:
-        payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'src': magnet}
+    payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'src': magnet}
     r = prem_connection("post", "https://www.premiumize.me/api/transfer/create", payload)
     if 'failed' not in r:
         response_content = json.loads(r.content)
