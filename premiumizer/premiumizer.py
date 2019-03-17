@@ -1524,7 +1524,7 @@ def check_downloads(dlsize, id):
         if dlsize == task.dlsize:
             dldir = get_cat_var(task.category)
             dldir = dldir[0]
-            scheduler.scheduler.reschedule_job(id=task.id, jobstore='downloads')
+            scheduler.scheduler.remove_job(job_id=task.id, jobstore='downloads')
             task.update(local_status=None, dldir=dldir)
             msg = 'Download: %s stuck restarting task' % task.name
             logger.warning(msg)
