@@ -275,10 +275,8 @@ class PremConfig:
         self.aria2_connected = 0
         self.bind_ip = prem_config.get('global', 'bind_ip')
         self.web_login_enabled = prem_config.getboolean('security', 'login_enabled')
-        if self.web_login_enabled:
-            logger.debug('Premiumizer login is enabled')
-            self.web_username = prem_config.get('security', 'username')
-            self.web_password = prem_config.get('security', 'password')
+        self.web_username = prem_config.get('security', 'username')
+        self.web_password = prem_config.get('security', 'password')
 
         self.update_available = 0
         self.update_localcommit = ''
