@@ -1289,7 +1289,7 @@ def download_task(task):
                 if task.cloud_status != 'seeding':
                     delete_task(task.id)
                 else:
-                    task.update(eta='Deleting from the cloud in' + time, speed='', dlsize='',
+                    task.update(eta='Seeding', speed='', dlsize='',
                                 local_status='finished_seeding', progress=99)
             elif cfg.remove_cloud_delay != 0 and task.type != 'Filehost':
                 scheduler.scheduler.add_job(delete_task, args=(task.id,), name=task.name, id=task.name,
