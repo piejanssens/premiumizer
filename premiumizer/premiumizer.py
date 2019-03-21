@@ -880,6 +880,11 @@ def get_download_stats_jd(package_name):
             return 1
     for package in query_packages:
         if package['name'] in package_name:
+            try:
+                x = package['status']
+            except:
+                logger.error('Jdownloader did not return package[status]')
+                return 1
             start_time = time.time()
             package_id = str(package['uuid'])
             while 'finished' not in package and package['status'] != 'Failed':
@@ -1293,7 +1298,7 @@ def download_task(task):
                                 local_status='finished_seeding', progress=99)
             elif cfg.remove_cloud_delay != 0 and task.type != 'Filehost':
                 scheduler.scheduler.add_job(delete_task, args=(task.id,), name=task.name, id=task.name,
-                                            misfire_grace_time=7200, coalesce=False, jobstore='remove_cloud',
+                                            misfire_grace_time=7200, coalesce=True, jobstore='remove_cloud',
                                             replace_existing=True,
                                             next_run_time=(datetime.now() + timedelta(hours=cfg.remove_cloud_delay)))
                 time = (scheduler.scheduler.get_job(task.name).next_run_time.replace(tzinfo=None) - datetime.now())
@@ -1493,7 +1498,7 @@ def parse_tasks(transfers):
                     scheduler.scheduler.add_job(check_downloads, args=(task.dlsize, task.id), id=task.id,
                                                 name=(task.name + ' check_downloads'), misfire_grace_time=7200,
                                                 jobstore='check_downloads', replace_existing=True, max_instances=1,
-                                                coalesce=True, next_run_time=(datetime.now() + timedelta(minutes=5)))
+                                                coalesce=True, next_run_time=(datetime.now() + timedelta(seconds=10)))
             elif task.local_status == 'finished_seeding':
                 if transfer['status'] == 'finished':
                     delete_task(task.id)
@@ -1529,7 +1534,6 @@ def parse_tasks(transfers):
 
 def check_downloads(dlsize, id):
     logger.debug('def check_downloads started')
-    gevent.sleep(60)
     try:
         task = get_task(id)
     except:
@@ -1538,7 +1542,6 @@ def check_downloads(dlsize, id):
         if dlsize == task.dlsize:
             dldir = get_cat_var(task.category)
             dldir = dldir[0]
-            scheduler.scheduler.remove_job(job_id=task.id, jobstore='downloads')
             task.update(local_status=None, dldir=dldir)
             msg = 'Download: %s stuck restarting task' % task.name
             logger.warning(msg)
@@ -2336,7 +2339,7 @@ def change_category(message):
                         task.update(local_status='queued')
                         gevent.sleep(3)
                         scheduler.scheduler.add_job(download_task, args=(task,), name=task.name, id=task.id,
-                                                    misfire_grace_time=7200, coalesce=False, max_instances=1,
+                                                    misfire_grace_time=7200, coalesce=True, max_instances=1,
                                                     jobstore='downloads', executor='downloads', replace_existing=True)
     else:
         task.update(local_status=None, process=None, speed=None, category=data['category'], dldir=dldir, dlext=dlext,
