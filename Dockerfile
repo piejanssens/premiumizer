@@ -1,3 +1,6 @@
+ARG SOURCE_COMMIT
+ENV SOURCE_COMMIT $SOURCE_COMMIT
+
 FROM python:3.7
 COPY requirements.txt /premiumizer/
 RUN find /usr/local/lib/python3.7/site-packages -mindepth 1 -maxdepth 1 > /filelist \
