@@ -2,7 +2,9 @@ body {
     padding-top: 70px;
 }
 
-.pointer { cursor: pointer; }
+.pointer {
+    cursor: pointer;
+}
 
 .center-block {
     float: none;
@@ -31,7 +33,7 @@ body {
 }
 
 .icon-addon.addon-md .glyphicon,
-.icon-addon .glyphicon, 
+.icon-addon .glyphicon,
 .icon-addon.addon-md .fa,
 .icon-addon .fa {
     position: absolute;
@@ -89,24 +91,25 @@ body {
     color: #2580db;
 }
 
-.table tbody>tr>td.vert-align{
+.table tbody > tr > td.vert-align {
     vertical-align: middle;
 }
 
-.bootstrap-switch-container{ white-space:nowrap;
+.bootstrap-switch-container {
+    white-space: nowrap;
 }
 
-.panel-body
-{
+.panel-body {
     padding-left: 30px;
     padding-right: 30px;
     padding-top: 10px;
     padding-bottom: 10px;
 }
-.dropdown-menu
-{
+
+.dropdown-menu {
     position: relative;
 }
+
 h4 {
-  word-wrap: break-word;
+    word-wrap: break-word;
 }
