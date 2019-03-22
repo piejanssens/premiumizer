@@ -26,4 +26,4 @@ gevent==1.4.0
 python-dateutil==2.8.0
 pycryptodome==3.7.3
 urllib3==1.24.1
-git+https://github.com/neox387/myjdapi.git@tmp
+https://github.com/neox387/myjdapi/archive/1.1.zip#egg=myjdapi==1.1
