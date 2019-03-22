@@ -1289,8 +1289,7 @@ def download_task(task):
                 if task.cloud_status != 'seeding':
                     delete_task(task.id)
                 else:
-                    task.update(eta='Deleting from the cloud in' + time, speed='', dlsize='',
-                                local_status='finished_seeding', progress=99)
+                    task.update(eta='Seeding', speed='', dlsize='', local_status='finished_seeding', progress=99)
             elif cfg.remove_cloud_delay != 0 and task.type != 'Filehost':
                 scheduler.scheduler.add_job(delete_task, args=(task.id,), name=task.name, id=task.name,
                                             misfire_grace_time=7200, coalesce=False, jobstore='remove_cloud',
@@ -1466,7 +1465,8 @@ def parse_tasks(transfers):
                                                         dldir=dldir, dlext=dlext, delsample=delsample,
                                                         dlnzbtomedia=dlnzbtomedia, type='RSS')
                                         else:
-                                            logger.warning('RSS feed name not in categories: %s', breadcrumbs[2]['name'])
+                                            logger.warning('RSS feed name not in categories: %s',
+                                                           breadcrumbs[2]['name'])
                             except BaseException as e:
                                 logger.error('RSS download failed: ' + str(e))
                                 pass
