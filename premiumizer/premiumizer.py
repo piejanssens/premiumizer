@@ -882,6 +882,11 @@ def get_download_stats_jd(package_name):
         if package['name'] in package_name:
             start_time = time.time()
             package_id = str(package['uuid'])
+            try:
+                x = package['status']
+            except:
+                logger.error('Jdownloader did not return package[status]')
+                return 1
             while 'finished' not in package and package['status'] != 'Failed':
                 if greenlet.task.local_status == 'stopped':
                     try:
@@ -1289,8 +1294,7 @@ def download_task(task):
                 if task.cloud_status != 'seeding':
                     delete_task(task.id)
                 else:
-                    task.update(eta='Deleting from the cloud in' + time, speed='', dlsize='',
-                                local_status='finished_seeding', progress=99)
+                    task.update(eta='Seeding', speed='', dlsize='', local_status='finished_seeding', progress=99)
             elif cfg.remove_cloud_delay != 0 and task.type != 'Filehost':
                 scheduler.scheduler.add_job(delete_task, args=(task.id,), name=task.name, id=task.name,
                                             misfire_grace_time=7200, coalesce=False, jobstore='remove_cloud',
@@ -1466,7 +1470,8 @@ def parse_tasks(transfers):
                                                         dldir=dldir, dlext=dlext, delsample=delsample,
                                                         dlnzbtomedia=dlnzbtomedia, type='RSS')
                                         else:
-                                            logger.warning('RSS feed name not in categories: %s', breadcrumbs[2]['name'])
+                                            logger.warning('RSS feed name not in categories: %s',
+                                                           breadcrumbs[2]['name'])
                             except BaseException as e:
                                 logger.error('RSS download failed: ' + str(e))
                                 pass
@@ -1493,7 +1498,7 @@ def parse_tasks(transfers):
                     scheduler.scheduler.add_job(check_downloads, args=(task.dlsize, task.id), id=task.id,
                                                 name=(task.name + ' check_downloads'), misfire_grace_time=7200,
                                                 jobstore='check_downloads', replace_existing=True, max_instances=1,
-                                                coalesce=True, next_run_time=(datetime.now() + timedelta(minutes=5)))
+                                                coalesce=True, next_run_time=(datetime.now() + timedelta(minutes=10)))
             elif task.local_status == 'finished_seeding':
                 if transfer['status'] == 'finished':
                     delete_task(task.id)
@@ -1529,7 +1534,6 @@ def parse_tasks(transfers):
 
 def check_downloads(dlsize, id):
     logger.debug('def check_downloads started')
-    gevent.sleep(60)
     try:
         task = get_task(id)
     except:
@@ -1538,7 +1542,6 @@ def check_downloads(dlsize, id):
         if dlsize == task.dlsize:
             dldir = get_cat_var(task.category)
             dldir = dldir[0]
-            scheduler.scheduler.remove_job(job_id=task.id, jobstore='downloads')
             task.update(local_status=None, dldir=dldir)
             msg = 'Download: %s stuck restarting task' % task.name
             logger.warning(msg)
