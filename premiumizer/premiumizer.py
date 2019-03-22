@@ -882,6 +882,11 @@ def get_download_stats_jd(package_name):
         if package['name'] in package_name:
             start_time = time.time()
             package_id = str(package['uuid'])
+            try:
+                x = package['status']
+            except:
+                logger.error('Jdownloader did not return package[status]')
+                return 1
             while 'finished' not in package and package['status'] != 'Failed':
                 if greenlet.task.local_status == 'stopped':
                     try:
