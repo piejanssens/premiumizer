@@ -1498,7 +1498,7 @@ def parse_tasks(transfers):
                     scheduler.scheduler.add_job(check_downloads, args=(task.dlsize, task.id), id=task.id,
                                                 name=(task.name + ' check_downloads'), misfire_grace_time=7200,
                                                 jobstore='check_downloads', replace_existing=True, max_instances=1,
-                                                coalesce=True, next_run_time=(datetime.now() + timedelta(minutes=5)))
+                                                coalesce=True, next_run_time=(datetime.now() + timedelta(minutes=10)))
             elif task.local_status == 'finished_seeding':
                 if transfer['status'] == 'finished':
                     delete_task(task.id)
@@ -1534,7 +1534,6 @@ def parse_tasks(transfers):
 
 def check_downloads(dlsize, id):
     logger.debug('def check_downloads started')
-    gevent.sleep(60)
     try:
         task = get_task(id)
     except:
@@ -1543,7 +1542,6 @@ def check_downloads(dlsize, id):
         if dlsize == task.dlsize:
             dldir = get_cat_var(task.category)
             dldir = dldir[0]
-            scheduler.scheduler.remove_job(job_id=task.id, jobstore='downloads')
             task.update(local_status=None, dldir=dldir)
             msg = 'Download: %s stuck restarting task' % task.name
             logger.warning(msg)
