@@ -6,14 +6,14 @@
     <div id="premiumize_connect_error" class="alert alert-danger" role="alert" style="display:none;">
         <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
         <span class="sr-only">Error:</span>
-        Cannot connect to premiumize.me. Check your premiumize account details in settings and if premiumize.me is up.
+        Premiumize.me connection error, check settings
     </div>
     {% if cfg.jd_connected == 0 and cfg.jd_enabled %}
         <p>&nbsp;</p>
         <div id="cfg.jd_connected" class="alert alert-danger" role="alert" style="display:inline;">
             <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
             <span class="sr-only">Warning:</span>
-            Jdownloader connection error.
+            JDownloader connection error
         </div>
     {% endif %}
     {% if cfg.aria2_connected == 0 and cfg.aria2_enabled %}
@@ -29,7 +29,7 @@
         <div id="debug_enabled" class="alert alert-warning" role="alert" style="display:inline;">
             <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
             <span class="sr-only">Warning:</span>
-            Debug mode is enabled, this is not recommended, disable it in the settings page & restart.
+            Debug mode is enabled
         </div>
     {% endif %}
     {% if cfg.update_available == 1 %}
@@ -37,7 +37,7 @@
         <div id="update_available" class="alert alert-info" role="alert" style="display:inline;">
             <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
             <span class="sr-only">Info:</span>
-            Update available !! Go to the settings page.
+            Premiumizer Update available
         </div>
     {% endif %}
     {% if cfg.jd_update_available == 1 %}
@@ -45,7 +45,7 @@
         <div id="jd_update_available" class="alert alert-info" role="alert" style="display:inline;">
             <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
             <span class="sr-only">Info:</span>
-            Jdownloader Update available !! Go to the settings page.
+            JDownloader Update available
         </div>
     {% endif %}
     {% if download_speed != -1 %}
