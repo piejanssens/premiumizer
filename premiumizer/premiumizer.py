@@ -356,7 +356,6 @@ class PremConfig:
                 self.jd_enabled = 0
                 self.download_builtin = 0
             except Exception as e:
-                uri = ' '
                 logger.error('Could not connect to Aria2 RPC: %s --- message: %s', uri, e)
                 self.aria2_connected = 0
 
@@ -464,7 +463,6 @@ def aria2_connect():
         cfg.aria.aria2.getVersion(cfg.aria2_token)
         cfg.aria2_connected = 1
     except Exception as e:
-        uri = ' '
         logger.error('Could not connect to Aria2 RPC: %s --- message: %s', uri, e)
         try:
             greenlet.task.update(eta=' Could not connect to Aria2 RPC')
