@@ -319,7 +319,7 @@ class PremConfig:
                 self.jd_connected = 1
             except BaseException as e:
                 logger.error('myjdapi : ' + str(e))
-                logger.error('Could not connect to My Jdownloader')
+                logger.error('Could not connect to My JDownloader')
                 self.jd_connected = 0
             try:
                 self.jd_device = self.jd.get_device(self.jd_device_name)
@@ -328,7 +328,7 @@ class PremConfig:
                 self.aria2_enabled = 0
             except BaseException as e:
                 logger.error('myjdapi : ' + str(e))
-                logger.error('Could not get device name (%s) for My Jdownloader', self.jd_device_name)
+                logger.error('Could not get device name (%s) for My JDownloader', self.jd_device_name)
                 self.jd_connected = 0
             if self.jd_connected:
                 try:
@@ -338,7 +338,7 @@ class PremConfig:
                         self.jd_device.toolbar.enable_downloadSpeedLimit()
                         self.download_speed = self.jd_device.toolbar.get_status().get('limitspeed')
                 except:
-                    logger.error('Could not enable Jdownloader speed limit')
+                    logger.error('Could not enable JDownloader speed limit')
 
         elif self.aria2_enabled:
             self.aria2_host = prem_config.get('downloads', 'aria2_host')
@@ -445,14 +445,14 @@ def jd_connect():
         cfg.jd_connected = 1
     except BaseException as e:
         logger.error('myjdapi : ' + str(e))
-        logger.error('Could not connect to My Jdownloader')
+        logger.error('Could not connect to My JDownloader')
         cfg.jd_connected = 0
     try:
         cfg.jd_device = cfg.jd.get_device(cfg.jd_device_name)
         cfg.jd_connected = 1
     except BaseException as e:
         logger.error('myjdapi : ' + str(e))
-        logger.error('Could not get device name (%s) for My Jdownloader', cfg.jd_device_name)
+        logger.error('Could not get device name (%s) for My JDownloader', cfg.jd_device_name)
         cfg.jd_connected = 0
 
 
@@ -522,7 +522,7 @@ def check_update(auto_update=cfg.auto_update):
                 try:
                     cfg.jd_update_available = cfg.jd_device.update.update_available()
                 except:
-                    logger.error('Jdownloader update check failed')
+                    logger.error('JDownloader update check failed')
         scheduler.scheduler.reschedule_job('check_update', trigger='interval', hours=6)
 
 
@@ -883,7 +883,7 @@ def get_download_stats_jd(package_name):
             try:
                 x = package['status']
             except:
-                logger.error('Jdownloader did not return package[status]')
+                logger.error('JDownloader did not return package[status]')
                 return 1
             while 'finished' not in package and package['status'] != 'Failed':
                 if greenlet.task.local_status == 'stopped':
@@ -2002,14 +2002,14 @@ def settings():
         elif 'Update Premiumizer' in request.form.values():
             gevent.spawn_later(1, update_self)
             return 'Updating, please try and refresh the page in a few seconds...'
-        elif 'Update Jdownloader' in request.form.values():
+        elif 'Update JDownloader' in request.form.values():
             try:
                 cfg.jd_device.update.restart_and_update()
-                flash('Jdownloader update started', 'info')
+                flash('JDownloader update started', 'info')
                 cfg.jd_update_available = 0
             except:
-                logger.error('Jdownloader update failed')
-                flash('Jdownloader update failed', 'info')
+                logger.error('JDownloader update failed')
+                flash('JDownloader update failed', 'info')
                 cfg.jd_update_available = 1
         elif 'Send Test Email' in request.form.values():
             email('Test Email from premiumizer !')

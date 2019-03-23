@@ -41,8 +41,8 @@
                         <pre>{{ cfg.update_diffcommit }}</pre>
                     {% endif %}
                     {% if cfg.jd_update_available %}
-                        <p>Pressing Update will restart Jdownloader.</p>
-                        <input type="submit" class="btn-danger" name="submit" value="Update Jdownloader">
+                        <p>Pressing Update will restart JDownloader.</p>
+                        <input type="submit" class="btn-danger" name="submit" value="Update JDownloader">
                     {% endif %}
                     <label for="login_enabled">Login enabled:</label>
                     {% if settings.get('security', 'login_enabled') == '1' %}
@@ -206,7 +206,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="jd_enabled">Use Jdownloader:</label>
+                    <label for="jd_enabled">Use JDownloader:</label>
                     {% if settings.get('downloads', 'jd_enabled') == '1' %}
                         <input type="checkbox" class="form-control bootstrap_switch" name="jd_enabled"
                                data-size="small" checked>
