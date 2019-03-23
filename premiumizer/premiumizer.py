@@ -318,7 +318,7 @@ class PremConfig:
                 self.jd.connect(self.jd_username, self.jd_password)
                 self.jd_connected = 1
             except BaseException as e:
-                logger.error('myjdapi : ' + str(e.message))
+                logger.error('myjdapi : ' + str(e))
                 logger.error('Could not connect to My Jdownloader')
                 self.jd_connected = 0
             try:
@@ -327,7 +327,7 @@ class PremConfig:
                 self.download_builtin = 0
                 self.aria2_enabled = 0
             except BaseException as e:
-                logger.error('myjdapi : ' + str(e.message))
+                logger.error('myjdapi : ' + str(e))
                 logger.error('Could not get device name (%s) for My Jdownloader', self.jd_device_name)
                 self.jd_connected = 0
             if self.jd_connected:
@@ -445,14 +445,14 @@ def jd_connect():
         cfg.jd.connect(cfg.jd_username, cfg.jd_password)
         cfg.jd_connected = 1
     except BaseException as e:
-        logger.error('myjdapi : ' + str(e.message))
+        logger.error('myjdapi : ' + str(e))
         logger.error('Could not connect to My Jdownloader')
         cfg.jd_connected = 0
     try:
         cfg.jd_device = cfg.jd.get_device(cfg.jd_device_name)
         cfg.jd_connected = 1
     except BaseException as e:
-        logger.error('myjdapi : ' + str(e.message))
+        logger.error('myjdapi : ' + str(e))
         logger.error('Could not get device name (%s) for My Jdownloader', cfg.jd_device_name)
         cfg.jd_connected = 0
 
@@ -810,7 +810,7 @@ def jd_query_packages(id=None):
                 response = cfg.jd_device.downloads.query_packages()
             except:
                 response = None
-                logger.error('myjdapi : ' + str(e.message))
+                logger.error('myjdapi : ' + str(e))
         while not response:
             gevent.sleep(5)
             if not jd_packages['time'] < (datetime.now() - timedelta(seconds=seconds)):
@@ -819,7 +819,7 @@ def jd_query_packages(id=None):
                 try:
                     response = cfg.jd_device.downloads.query_packages()
                 except BaseException as e:
-                    logger.error('myjdapi : ' + str(e.message))
+                    logger.error('myjdapi : ' + str(e))
             count += 1
             if count == 6:
                 logger.error('JD did not return package status for: %s', greenlet.task.name)
@@ -832,7 +832,7 @@ def jd_query_packages(id=None):
                 try:
                     response = cfg.jd_device.downloads.query_packages()
                 except BaseException as e:
-                    logger.error('myjdapi : ' + str(e.message))
+                    logger.error('myjdapi : ' + str(e))
             count += 1
             if count == 12:
                 logger.error('Could not find package in JD for: %s', greenlet.task.name)
@@ -855,7 +855,7 @@ def jd_query_packages(id=None):
                         try:
                             package = cfg.jd_device.downloads.query_packages([{"packageUUIDs": [id]}])
                         except BaseException as e:
-                            logger.error('myjdapi : ' + str(e.message))
+                            logger.error('myjdapi : ' + str(e))
                         count += 1
                         if count == 24:
                             package = {'status': 'Failed'}
@@ -893,7 +893,7 @@ def get_download_stats_jd(package_name):
                         cfg.jd_device.downloads.cleanup("DELETE_ALL", "REMOVE_LINKS_AND_DELETE_FILES", "SELECTED",
                                                         package_ids=[package_id])
                     except BaseException as e:
-                        logger.error('myjdapi : ' + str(e.message))
+                        logger.error('myjdapi : ' + str(e))
                         logger.error('Could not delete package in JD for : %s', greenlet.task.name)
                         pass
                     return 1
@@ -902,7 +902,7 @@ def get_download_stats_jd(package_name):
                         cfg.jd_device.downloads.set_enabled(0, package_ids=[package_id])
                         logger.warning('Download paused for: %s', greenlet.task.name)
                     except BaseException as e:
-                        logger.error('myjdapi : ' + str(e.message))
+                        logger.error('myjdapi : ' + str(e))
                         logger.error('Could not pause/disable package in JD for : %s', greenlet.task.name)
                         break
                     while greenlet.task.local_status == 'paused':
@@ -913,7 +913,7 @@ def get_download_stats_jd(package_name):
                         cfg.jd_device.downloads.force_download(package_ids=[package_id])
                         logger.info('Download resumed for: %s', greenlet.task.name)
                     except BaseException as e:
-                        logger.error('myjdapi : ' + str(e.message))
+                        logger.error('myjdapi : ' + str(e))
                         logger.error('Could not unpause/enable package in JD for : %s', greenlet.task.name)
                 try:
                     speed = package['speed']
@@ -960,7 +960,7 @@ def get_download_stats_jd(package_name):
                 cfg.jd_device.downloads.cleanup("DELETE_FINISHED", "REMOVE_LINKS_ONLY", "ALL",
                                                 package_ids=[package_id])
             except BaseException as e:
-                logger.error('myjdapi : ' + str(e.message))
+                logger.error('myjdapi : ' + str(e))
                 logger.error('Could not delete package in JD for: %s', greenlet.task.name)
                 pass
             return 0
@@ -1029,8 +1029,8 @@ def download_file():
                     query_links = cfg.jd_device.downloads.query_links()
                     count = + 1
                     if count == 5:
-                        logger.error('myjdapi : ' + str(e.message))
-                        greenlet.task.update(eta=' ' + str(e.message))
+                        logger.error('myjdapi : ' + str(e))
+                        greenlet.task.update(eta=' ' + str(e))
                         return 1
             else:
                 return 1
@@ -1098,7 +1098,7 @@ def download_file():
                                                               "destinationFolder": greenlet.task.dldir,
                                                               "overwritePackagizerRules": True}])
                     except BaseException as e:
-                        logger.error('myjdapi error: ' + str(e.message))
+                        logger.error('myjdapi error: ' + str(e))
 
             elif cfg.aria2_enabled:
                 if cfg.aria2_connected:
