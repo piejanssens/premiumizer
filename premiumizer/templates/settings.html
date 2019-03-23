@@ -235,16 +235,16 @@
                         <input type="checkbox" class="form-control bootstrap_switch" name="aria2_enabled"
                                data-size="small">
                     {% endif %}
-                    <p>Start Aria2 with: aria2c --disable-ipv6=true --enable-rpc --rpc-allow-origin-all --rpc-listen-all
+                    <p>Start aria2 with: aria2c --disable-ipv6=true --enable-rpc --rpc-allow-origin-all --rpc-listen-all
                         --rpc-listen-port=6800 --rpc-secret=premiumizer --max-connection-per-server=16
                         --file-allocation=none --disk-cache=0</p>
-                    <label for="aria2_host">Aria2 host:</label>
+                    <label for="aria2_host">aria2 host:</label>
                     <input type="text" class="form-control" name="aria2_host"
                            aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'aria2_host') }}">
-                    <label for="aria2_port">Aria2 port:</label>
+                    <label for="aria2_port">aria2 port:</label>
                     <input type="number" class="form-control" name="aria2_port"
                            aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'aria2_port') }}">
-                    <label for="jd_password">Aria2 RPC secret:</label>
+                    <label for="jd_password">aria2 RPC secret:</label>
                     <input type="password" class="form-control" name="aria2_secret"
                            aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'aria2_secret') }}">
                 </div>
