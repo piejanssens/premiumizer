@@ -318,8 +318,8 @@ class PremConfig:
                 self.jd.connect(self.jd_username, self.jd_password)
                 self.jd_connected = 1
             except BaseException as e:
-                logger.error('myjdapi : ' + str(e.message))
-                logger.error('Could not connect to My Jdownloader')
+                logger.error('myjdapi : ' + str(e))
+                logger.error('Could not connect to My JDownloader')
                 self.jd_connected = 0
             try:
                 self.jd_device = self.jd.get_device(self.jd_device_name)
@@ -327,8 +327,8 @@ class PremConfig:
                 self.download_builtin = 0
                 self.aria2_enabled = 0
             except BaseException as e:
-                logger.error('myjdapi : ' + str(e.message))
-                logger.error('Could not get device name (%s) for My Jdownloader', self.jd_device_name)
+                logger.error('myjdapi : ' + str(e))
+                logger.error('Could not get device name (%s) for My JDownloader', self.jd_device_name)
                 self.jd_connected = 0
             if self.jd_connected:
                 try:
@@ -338,7 +338,7 @@ class PremConfig:
                         self.jd_device.toolbar.enable_downloadSpeedLimit()
                         self.download_speed = self.jd_device.toolbar.get_status().get('limitspeed')
                 except:
-                    logger.error('Could not enable Jdownloader speed limit')
+                    logger.error('Could not enable JDownloader speed limit')
 
         elif self.aria2_enabled:
             self.aria2_host = prem_config.get('downloads', 'aria2_host')
@@ -356,8 +356,7 @@ class PremConfig:
                 self.jd_enabled = 0
                 self.download_builtin = 0
             except Exception as e:
-                uri = ' '
-                logger.error('Could not connect to Aria2 RPC: %s --- message: %s', uri, e)
+                logger.error('Could not connect to aria2 RPC: %s --- message: %s', uri, e)
                 self.aria2_connected = 0
 
         else:
@@ -445,15 +444,15 @@ def jd_connect():
         cfg.jd.connect(cfg.jd_username, cfg.jd_password)
         cfg.jd_connected = 1
     except BaseException as e:
-        logger.error('myjdapi : ' + str(e.message))
-        logger.error('Could not connect to My Jdownloader')
+        logger.error('myjdapi : ' + str(e))
+        logger.error('Could not connect to My JDownloader')
         cfg.jd_connected = 0
     try:
         cfg.jd_device = cfg.jd.get_device(cfg.jd_device_name)
         cfg.jd_connected = 1
     except BaseException as e:
-        logger.error('myjdapi : ' + str(e.message))
-        logger.error('Could not get device name (%s) for My Jdownloader', cfg.jd_device_name)
+        logger.error('myjdapi : ' + str(e))
+        logger.error('Could not get device name (%s) for My JDownloader', cfg.jd_device_name)
         cfg.jd_connected = 0
 
 
@@ -464,10 +463,9 @@ def aria2_connect():
         cfg.aria.aria2.getVersion(cfg.aria2_token)
         cfg.aria2_connected = 1
     except Exception as e:
-        uri = ' '
-        logger.error('Could not connect to Aria2 RPC: %s --- message: %s', uri, e)
+        logger.error('Could not connect to aria2 RPC: %s --- message: %s', uri, e)
         try:
-            greenlet.task.update(eta=' Could not connect to Aria2 RPC')
+            greenlet.task.update(eta=' Could not connect to aria2 RPC')
         except:
             pass
         cfg.aria2_connected = 0
@@ -524,7 +522,7 @@ def check_update(auto_update=cfg.auto_update):
                 try:
                     cfg.jd_update_available = cfg.jd_device.update.update_available()
                 except:
-                    logger.error('Jdownloader update check failed')
+                    logger.error('JDownloader update check failed')
         scheduler.scheduler.reschedule_job('check_update', trigger='interval', hours=6)
 
 
@@ -810,7 +808,7 @@ def jd_query_packages(id=None):
                 response = cfg.jd_device.downloads.query_packages()
             except:
                 response = None
-                logger.error('myjdapi : ' + str(e.message))
+                logger.error('myjdapi : ' + str(e))
         while not response:
             gevent.sleep(5)
             if not jd_packages['time'] < (datetime.now() - timedelta(seconds=seconds)):
@@ -819,7 +817,7 @@ def jd_query_packages(id=None):
                 try:
                     response = cfg.jd_device.downloads.query_packages()
                 except BaseException as e:
-                    logger.error('myjdapi : ' + str(e.message))
+                    logger.error('myjdapi : ' + str(e))
             count += 1
             if count == 6:
                 logger.error('JD did not return package status for: %s', greenlet.task.name)
@@ -832,7 +830,7 @@ def jd_query_packages(id=None):
                 try:
                     response = cfg.jd_device.downloads.query_packages()
                 except BaseException as e:
-                    logger.error('myjdapi : ' + str(e.message))
+                    logger.error('myjdapi : ' + str(e))
             count += 1
             if count == 12:
                 logger.error('Could not find package in JD for: %s', greenlet.task.name)
@@ -855,7 +853,7 @@ def jd_query_packages(id=None):
                         try:
                             package = cfg.jd_device.downloads.query_packages([{"packageUUIDs": [id]}])
                         except BaseException as e:
-                            logger.error('myjdapi : ' + str(e.message))
+                            logger.error('myjdapi : ' + str(e))
                         count += 1
                         if count == 24:
                             package = {'status': 'Failed'}
@@ -885,7 +883,7 @@ def get_download_stats_jd(package_name):
             try:
                 x = package['status']
             except:
-                logger.error('Jdownloader did not return package[status]')
+                logger.error('JDownloader did not return package[status]')
                 return 1
             while 'finished' not in package and package['status'] != 'Failed':
                 if greenlet.task.local_status == 'stopped':
@@ -893,7 +891,7 @@ def get_download_stats_jd(package_name):
                         cfg.jd_device.downloads.cleanup("DELETE_ALL", "REMOVE_LINKS_AND_DELETE_FILES", "SELECTED",
                                                         package_ids=[package_id])
                     except BaseException as e:
-                        logger.error('myjdapi : ' + str(e.message))
+                        logger.error('myjdapi : ' + str(e))
                         logger.error('Could not delete package in JD for : %s', greenlet.task.name)
                         pass
                     return 1
@@ -902,7 +900,7 @@ def get_download_stats_jd(package_name):
                         cfg.jd_device.downloads.set_enabled(0, package_ids=[package_id])
                         logger.warning('Download paused for: %s', greenlet.task.name)
                     except BaseException as e:
-                        logger.error('myjdapi : ' + str(e.message))
+                        logger.error('myjdapi : ' + str(e))
                         logger.error('Could not pause/disable package in JD for : %s', greenlet.task.name)
                         break
                     while greenlet.task.local_status == 'paused':
@@ -913,7 +911,7 @@ def get_download_stats_jd(package_name):
                         cfg.jd_device.downloads.force_download(package_ids=[package_id])
                         logger.info('Download resumed for: %s', greenlet.task.name)
                     except BaseException as e:
-                        logger.error('myjdapi : ' + str(e.message))
+                        logger.error('myjdapi : ' + str(e))
                         logger.error('Could not unpause/enable package in JD for : %s', greenlet.task.name)
                 try:
                     speed = package['speed']
@@ -960,7 +958,7 @@ def get_download_stats_jd(package_name):
                 cfg.jd_device.downloads.cleanup("DELETE_FINISHED", "REMOVE_LINKS_ONLY", "ALL",
                                                 package_ids=[package_id])
             except BaseException as e:
-                logger.error('myjdapi : ' + str(e.message))
+                logger.error('myjdapi : ' + str(e))
                 logger.error('Could not delete package in JD for: %s', greenlet.task.name)
                 pass
             return 0
@@ -1029,8 +1027,8 @@ def download_file():
                     query_links = cfg.jd_device.downloads.query_links()
                     count = + 1
                     if count == 5:
-                        logger.error('myjdapi : ' + str(e.message))
-                        greenlet.task.update(eta=' ' + str(e.message))
+                        logger.error('myjdapi : ' + str(e))
+                        greenlet.task.update(eta=' ' + str(e))
                         return 1
             else:
                 return 1
@@ -1098,7 +1096,7 @@ def download_file():
                                                               "destinationFolder": greenlet.task.dldir,
                                                               "overwritePackagizerRules": True}])
                     except BaseException as e:
-                        logger.error('myjdapi error: ' + str(e.message))
+                        logger.error('myjdapi error: ' + str(e))
 
             elif cfg.aria2_enabled:
                 if cfg.aria2_connected:
@@ -2004,14 +2002,14 @@ def settings():
         elif 'Update Premiumizer' in request.form.values():
             gevent.spawn_later(1, update_self)
             return 'Updating, please try and refresh the page in a few seconds...'
-        elif 'Update Jdownloader' in request.form.values():
+        elif 'Update JDownloader' in request.form.values():
             try:
                 cfg.jd_device.update.restart_and_update()
-                flash('Jdownloader update started', 'info')
+                flash('JDownloader update started', 'info')
                 cfg.jd_update_available = 0
             except:
-                logger.error('Jdownloader update failed')
-                flash('Jdownloader update failed', 'info')
+                logger.error('JDownloader update failed')
+                flash('JDownloader update failed', 'info')
                 cfg.jd_update_available = 1
         elif 'Send Test Email' in request.form.values():
             email('Test Email from premiumizer !')

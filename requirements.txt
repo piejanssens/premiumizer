@@ -19,11 +19,11 @@ pySmartDL==1.3.1
 requests==2.21.0
 python-socketio==3.1.2
 tzlocal==1.5.1
-werkzeug==0.15
+werkzeug==0.15.1
 itsdangerous==1.1.0
 six==1.12
 gevent==1.4.0
 python-dateutil==2.8.0
 pycryptodome==3.7.3
 urllib3==1.24.1
-myjdapi==1.0.3dev0
+myjdapi==1.0.3dev1
