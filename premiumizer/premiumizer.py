@@ -577,7 +577,7 @@ def shutdown():
     db.close()
     socketio.stop()
     if os_arg == '--windows':
-        subprocess.call([os.path.join(rootdir, 'Installer', 'nssm.exe'), 'stop', 'Premiumizer'])
+        subprocess.call([os.path.join(os.path.dirname(rootdir), 'Installer', 'nssm.exe'), 'stop', 'Premiumizer'])
     else:
         os._exit(1)
 
