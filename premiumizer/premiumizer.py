@@ -2182,13 +2182,13 @@ def log():
         with open(os.path.join(LogsDir, 'premiumizer.log'), "r") as f:
             log = str(f.read())
     except:
-        log = 'Error opening logfile'
+        log = 'Error opening premiumizer.log or not available'
 
     try:
         with open(os.path.join(LogsDir, 'premiumizerDEBUG.log'), "r") as f:
             debuglog = str(f.read())
     except:
-        debuglog = 'no debug log file or corrupted'
+        debuglog = 'Error opening premiumizerDEBUG.log or not available'
     return render_template("log.html", log=log, debuglog=debuglog)
 
 
