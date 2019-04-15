@@ -6,6 +6,7 @@ import os
 import re
 import shelve
 import shutil
+import signal
 import smtplib
 import subprocess
 import sys
@@ -150,6 +151,13 @@ def uncaught_exception(exc_type, exc_value, exc_traceback):
 
 
 sys.excepthook = uncaught_exception
+
+
+def terminateProcess(signalNumber, frame):
+    logger.warning('My PID is: %s', os.getpid())
+    logger.warning('Received Signal: %s', signalNumber)
+    shutdown()
+
 
 # Logging filters for debugging, default is 1
 log_apscheduler = 1
@@ -566,7 +574,6 @@ def restart():
 # noinspection PyProtectedMember
 def shutdown():
     logger.info('Shutdown recieved')
-    scheduler.shutdown(wait=False)
     db.close()
     socketio.stop()
     if os_arg == '--windows':
@@ -2349,6 +2356,8 @@ def change_category(message):
 logger.info('Starting server on %s:%s ', prem_config.get('global', 'bind_ip'),
             prem_config.getint('global', 'server_port'))
 if __name__ == '__main__':
+    signal.signal(signal.SIGINT, terminateProcess)
+    signal.signal(signal.SIGTERM, terminateProcess)
     try:
         load_tasks()
         scheduler = APScheduler(GeventScheduler())
