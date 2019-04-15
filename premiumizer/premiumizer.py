@@ -542,7 +542,6 @@ def update_self():
     prem_config.set('update', 'update_date', cfg.update_date)
     with open(os.path.join(ConfDir, 'settings.cfg'), 'w') as configfile:  # save
         prem_config.write(configfile)
-    scheduler.shutdown(wait=False)
     db.close()
     socketio.stop()
     if os_arg == '--windows':
@@ -558,7 +557,6 @@ def update_self():
 # noinspection PyProtectedMember
 def restart():
     logger.info('Restarting')
-    scheduler.shutdown(wait=False)
     db.close()
     socketio.stop()
     if os_arg == '--windows':
