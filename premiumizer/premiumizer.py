@@ -200,7 +200,7 @@ if prem_config.getboolean('update', 'updated'):
         except:
             logger.error('Could not delete old premiumizerDEBUG.log file')
     if os.path.isfile(os.path.join(ConfDir, 'database.db')) or os.path.isfile(os.path.join(ConfDir, 'database.db.dat')):
-        sucess = 0
+        success = 0
         try:
             os.remove(os.path.join(ConfDir, 'database.db'))
             success = 1
