@@ -625,8 +625,7 @@ greenlet = local.local()
 client_connected = 0
 prem_session = requests.Session()
 last_email = {'time': datetime.now() - timedelta(days=1), 'subject': ""}
-if cfg.jd_enabled:
-    jd_packages = {'time': datetime.now(), 'packages': []}
+jd_packages = {'time': datetime.now(), 'packages': []}
 
 
 #
