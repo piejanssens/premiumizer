@@ -113,3 +113,7 @@ body {
 h4 {
     word-wrap: break-word;
 }
+
+pre {
+    display: inline-block;
+}

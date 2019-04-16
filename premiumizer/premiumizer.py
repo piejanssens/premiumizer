@@ -6,6 +6,7 @@ import os
 import re
 import shelve
 import shutil
+import signal
 import smtplib
 import subprocess
 import sys
@@ -151,6 +152,13 @@ def uncaught_exception(exc_type, exc_value, exc_traceback):
 
 sys.excepthook = uncaught_exception
 
+
+def terminateProcess(signalNumber, frame):
+    logger.warning('My PID is: %s', os.getpid())
+    logger.warning('Received Signal: %s', signalNumber)
+    shutdown()
+
+
 # Logging filters for debugging, default is 1
 log_apscheduler = 1
 log_flask = 1
@@ -192,7 +200,7 @@ if prem_config.getboolean('update', 'updated'):
         except:
             logger.error('Could not delete old premiumizerDEBUG.log file')
     if os.path.isfile(os.path.join(ConfDir, 'database.db')) or os.path.isfile(os.path.join(ConfDir, 'database.db.dat')):
-        sucess = 0
+        success = 0
         try:
             os.remove(os.path.join(ConfDir, 'database.db'))
             success = 1
@@ -534,7 +542,6 @@ def update_self():
     prem_config.set('update', 'update_date', cfg.update_date)
     with open(os.path.join(ConfDir, 'settings.cfg'), 'w') as configfile:  # save
         prem_config.write(configfile)
-    scheduler.shutdown(wait=False)
     db.close()
     socketio.stop()
     if os_arg == '--windows':
@@ -550,7 +557,6 @@ def update_self():
 # noinspection PyProtectedMember
 def restart():
     logger.info('Restarting')
-    scheduler.shutdown(wait=False)
     db.close()
     socketio.stop()
     if os_arg == '--windows':
@@ -566,11 +572,10 @@ def restart():
 # noinspection PyProtectedMember
 def shutdown():
     logger.info('Shutdown recieved')
-    scheduler.shutdown(wait=False)
     db.close()
     socketio.stop()
     if os_arg == '--windows':
-        subprocess.call([os.path.join(rootdir, 'Installer', 'nssm.exe'), 'stop', 'Premiumizer'])
+        subprocess.call([os.path.join(os.path.dirname(rootdir), 'Installer', 'nssm.exe'), 'stop', 'Premiumizer'])
     else:
         os._exit(1)
 
@@ -625,8 +630,7 @@ greenlet = local.local()
 client_connected = 0
 prem_session = requests.Session()
 last_email = {'time': datetime.now() - timedelta(days=1), 'subject': ""}
-if cfg.jd_enabled:
-    jd_packages = {'time': datetime.now(), 'packages': []}
+jd_packages = {'time': datetime.now(), 'packages': []}
 
 
 #
@@ -2183,13 +2187,13 @@ def log():
         with open(os.path.join(LogsDir, 'premiumizer.log'), "r") as f:
             log = str(f.read())
     except:
-        log = 'Error opening logfile'
+        log = 'Error opening premiumizer.log or not available'
 
     try:
         with open(os.path.join(LogsDir, 'premiumizerDEBUG.log'), "r") as f:
             debuglog = str(f.read())
     except:
-        debuglog = 'no debug log file or corrupted'
+        debuglog = 'Error opening premiumizerDEBUG.log or not available'
     return render_template("log.html", log=log, debuglog=debuglog)
 
 
@@ -2350,6 +2354,8 @@ def change_category(message):
 logger.info('Starting server on %s:%s ', prem_config.get('global', 'bind_ip'),
             prem_config.getint('global', 'server_port'))
 if __name__ == '__main__':
+    signal.signal(signal.SIGINT, terminateProcess)
+    signal.signal(signal.SIGTERM, terminateProcess)
     try:
         load_tasks()
         scheduler = APScheduler(GeventScheduler())

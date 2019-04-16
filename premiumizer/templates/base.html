@@ -13,7 +13,7 @@
               crossorigin="anonymous">
         <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
         <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
-        <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=6">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=7">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/animate.min.css') }}?v=5">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-switch.min.css') }}">
     {% endblock %}
@@ -31,7 +31,7 @@
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                <a class="navbar-brand" href="#">Premiumizer</a>
+                <a class="navbar-brand" href="{{ url_for('home') }}">Premiumizer</a>
             </div>
             <div class="navbar-collapse collapse">
                 {% block barbuttons %}
@@ -64,9 +64,8 @@
     </div>
 </div>
 {% block js_footer %}
-    <script
-            src="https://code.jquery.com/jquery-3.3.1.min.js"
-            integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+    <script src="https://code.jquery.com/jquery-3.4.0.min.js"
+            integrity="sha384-JUMjoW8OzDJw4oFpWIB2Bu/c6768ObEthBMVSiIx4ruBIEdyNSUQAjJNFqT5pnJ6"
             crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"
             integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd"
