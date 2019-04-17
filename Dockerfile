@@ -1,5 +1,5 @@
 ARG SOURCE_COMMIT
-FROM python:3.9-alpine
+FROM python:3.8-alpine
 ENV SOURCE_COMMIT $SOURCE_COMMIT
 COPY requirements.txt /premiumizer/
 RUN find /usr/local/lib/python3.7/site-packages -mindepth 1 -maxdepth 1 > /filelist \
