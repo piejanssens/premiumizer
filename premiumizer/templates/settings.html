@@ -133,7 +133,7 @@
                     {% endif %}
                     <p>&nbsp;</p>
                     <label for="download_rss">Download RSS feeds:</label>
-                    {% if settings.get('downloads', 'seed_torrent') == '1' %}
+                    {% if settings.get('downloads', 'download_rss') == '1' %}
                         <input type="checkbox" class="form-control bootstrap_switch" name="download_rss"
                                data-size="small"
                                checked>
