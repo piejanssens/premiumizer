@@ -1563,7 +1563,11 @@ def get_task(id):
 # noinspection PyUnboundLocalVariable
 def get_cat_var(category):
     logger.debug('def get_cat_var started')
-    if category != '':
+    dldir = None
+    dlext = None
+    delsample = 0
+    dlnzbtomedia = 0
+    if any(cat['name'] == category for cat in cfg.categories):
         for cat in cfg.categories:
             if cat['name'] == category:
                 dldir = cat['dir']
@@ -1571,10 +1575,8 @@ def get_cat_var(category):
                 delsample = cat['delsample']
                 dlnzbtomedia = cat['nzb']
     else:
-        dldir = None
-        dlext = None
-        delsample = 0
-        dlnzbtomedia = 0
+        if category != '':
+            logger.debug('%s not found in categories', category)
     return dldir, dlext, delsample, dlnzbtomedia
 
 
