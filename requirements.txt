@@ -10,7 +10,7 @@ flask_apscheduler==1.11.0
 flask_socketio==3.3.2
 flask-login==0.4.1
 flask-compress==1.4.0
-flask-reverse-proxy==0.2.0.2
+flask-behind-proxy==0.1.1
 gevent-websocket==0.10.1
 jinja2==2.10.1
 MarkupSafe==1.1.1
