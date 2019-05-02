@@ -60,9 +60,9 @@ $ python premiumizer.py
 ```
 $ brew install python3
 $ git clone https://github.com/piejanssens/premiumizer.git premiumizer
-$ pip.exe install virtualenv
+$ pip install virtualenv
 $ virtualenv premiumizer\env
-$ env\Scripts\activate.bat
+$ source env/bin/activate
 $ pip install -r requirements.txt
 $ python premiumizer.py
 ```
