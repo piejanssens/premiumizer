@@ -154,31 +154,38 @@ function update_task(task) {
         update = true;
     }
 
-    var dropDown = '<div class="dropdown"><button class="btn btn-primary dropdown-toggle' + categoryState + '" type="button" data-toggle="dropdown">' +
-        task.category + '<span class="caret"></span></button><ul class="dropdown-menu">';
+    var dropDown = '<div class="dropdown"><button class="btn btn-xs btn-primary dropdown-toggle' + categoryState + '" type="button" data-toggle="dropdown">' +
+        ( task.category ? task.category : 'Category ' ) + '<span class="caret"></span></button><ul class="dropdown-menu">';
     for (category in download_categories) {
         dropDown += '<li><a href="javascript:category_selected(\'' + task.id + '\', \'' + download_categories[category] + '\')" class="download_category">' + download_categories[category] + '</a></li>';
     }
     dropDown += '</ul></div>';
 
     var htmlString = '<div class="panel panel-default' + (!update ? ' animated fadeInDown' : "") + ' task_panel" id="' + task.id + '">' +
+        '<div class="panel-heading clearfix"><h3 class="panel-title pull-left" style="padding-top: 7.5px;">' + task.name + '</h3>' +
+        '<div class="btn-toolbar pull-right">' +
+        '<a class="btn btn-xs btn-danger delete_btn pointer" onclick="delete_task(event)"><i class="fa fa-trash-o fa-lg"></i></a>'
+        + (task.cloud_status == "finished" ? (!task.file_id ? '<a class="btn btn-xs btn-success" href="https://www.premiumize.me/files?folder_id=' + task.folder_id + '" target="_blank"><i class="fa fa-folder-open-o fa-lg"></i></a>' : "") 
+        + (task.file_id ? '<a class="btn btn-xs btn-success" href="https://www.premiumize.me/files?file_id=' + task.file_id + '" target="_blank"><i class="fa fa-folder-open-o fa-lg"></i></a>' : "") : "") 
+        + (task.local_status == "downloading" || (task.local_status == 'paused') ? '<a class="btn btn-xs btn-warning pointer" onclick="stop_task(event)"><i class="fa fa-stop fa-lg"></i></a>' : "") 
+        + (task.local_status == "downloading" ? '<a class="btn btn-xs btn-warning pointer" onclick="pause_resume_task(event)"><i class="fa fa-pause fa-lg"></i></a>' : "") 
+        + (task.local_status == "paused" ? '<a class="btn btn-xs btn-warning pointer" onclick="pause_resume_task(event)"><i class="fa fa-play fa-lg"></i></a>' : "") +
+        '</div>' +
+        '</div>'+
         '<div class="panel-body">' +
         '<div class="row">' +
-        '<span class="col-md-1 text-center">' +
+        '<span class="col-md-2 text-center"><div class="col-md-12">' +
         '<div class="row"><i class="fa fa-' + stateIcon + ' fa-fw fa-2x"></i></div>' +
         '<div class="row"><span class="label label-' + stateColor + '">' + stateStr + '</span></div>' +
-        '<div class="row"><h5>' + task.type + '</h5></div>' +
+        '<div class="row"><h5>' + task.type + '</h5></div></div>' +
         '</span>' +
-        '<span class="col-md-1 text-center">' +
-        '<div class="row">' + dropDown + '</div>' +
+        '<span class="col-md-8"><div class="col-md-12">' +
+        '<div class="row"><h6>' + (task.progress != 100 ? "Speed: " + task.speed + "Size: " + task.dlsize + " ETA: " + task.eta : 'Inactive') + '</h6></div>' +
+        '<div class="row"><div class="progress"><div class="progress-bar progress-bar-' + stateColor + (task.cloud_status == "downloading" || task.local_status == "downloading" ? " progress-bar-striped active" : "") + '" style="width: ' + task.progress + '%">' + task.progress + '% ' + '</div></div></div></div>' +
         '</span>' +
-        '<span class="col-md-7">' +
-        '<div class="row"><h4>' + task.name + '</h4></div>' +
-        '<div class="row"><div class="progress"><div class="progress-bar progress-bar-' + stateColor + (task.cloud_status == "downloading" || task.local_status == "downloading" ? " progress-bar-striped active" : "") + '" style="width: ' + task.progress + '%">' + task.progress + '% ' + '</div></div></div>' +
-        '<div class="row"><h6>' + (task.progress != 100 ? "Speed: " + task.speed + "Size: " + task.dlsize + " ETA: " + task.eta : '') + '</h6></div>' +
-        '</span>' +
-        '<span class="col-md-3">' +
-        '<div class="btn-toolbar text-center"><a class="btn btn-danger delete_btn pointer" onclick="delete_task(event)"><i class="fa fa-trash-o fa-lg"></i> Delete</a>' + (task.cloud_status == "finished" ? (!task.file_id ? '<a class="btn btn-success" href="https://www.premiumize.me/files?folder_id=' + task.folder_id + '" target="_blank"><i class="fa fa-folder-open-o fa-lg"></i> Browse</a>' : "") + (task.file_id ? '<a class="btn btn-success" href="https://www.premiumize.me/files?file_id=' + task.file_id + '" target="_blank"><i class="fa fa-folder-open-o fa-lg"></i>Browse</a>' : "") : "") + (task.local_status == "downloading" || (task.local_status == 'paused') ? '<a class="btn btn-warning pointer" onclick="stop_task(event)"><i class="fa fa-stop fa-lg"></i> Stop</a>' : "") + (task.local_status == "downloading" ? '<a class="btn btn-warning pointer" onclick="pause_resume_task(event)"><i class="fa fa-pause fa-lg"></i> Pause</a>' : "") + (task.local_status == "paused" ? '<a class="btn btn-warning pointer" onclick="pause_resume_task(event)"><i class="fa fa-play fa-lg"></i> Resume</a>' : "") + '</div>' +
+        '<span class="col-md-2"><div class="col-md-12">'+
+        '<div class="row"><h6>&nbsp;</h6></div>' +
+        '<div class="row">' + dropDown + '</div></div>' +
         '</span>' +
         '</div>' +
         '</div>' +
