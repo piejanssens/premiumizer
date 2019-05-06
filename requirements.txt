@@ -3,7 +3,6 @@ MarkupSafe==1.1.1
 bencode.py==2.0.0
 chardet==3.0.4
 click==7.0
-flask-behind-proxy==0.1.1
 flask-compress==1.4.0
 flask-login==0.4.1
 flask==1.0.2
