@@ -34,7 +34,6 @@ from flask import Flask, flash, request, redirect, url_for, render_template, sen
 from flask_apscheduler import APScheduler
 from flask_compress import Compress
 from flask_login import LoginManager, login_required, login_user, logout_user, UserMixin
-from flask_behind_proxy import FlaskBehindProxy
 from flask_socketio import SocketIO, emit
 from gevent import local
 from pySmartDL import SmartDL, utils
@@ -164,6 +163,43 @@ log_apscheduler = 1
 log_flask = 1
 
 
+class ReverseProxy(object):
+    '''Wrap the application in this middleware and configure the
+    front-end server to add these headers, to let you quietly bind
+    this to a URL other than / and to an HTTP scheme that is
+    different than what is used locally.
+
+    In nginx:
+    location /myprefix {
+        proxy_pass       http://localhost:5000;
+        proxy_set_header Host              $http_host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Script-Name /myprefix; or trough premiumizer settings
+        }
+
+    :param app: the WSGI application
+    '''
+    def __init__(self, app):
+        self.app = app
+
+    def __call__(self, environ, start_response):
+        script_name = environ.get('HTTP_X_SCRIPT_NAME', '')
+        if not script_name:
+            script_name = cfg.reverse_proxy_path
+        if script_name:
+            environ['SCRIPT_NAME'] = script_name
+            path_info = environ['PATH_INFO']
+            if path_info and path_info.startswith(script_name):
+                environ['PATH_INFO'] = path_info[len(script_name):]
+
+        scheme = environ.get('HTTP_X_FORWARDED_PROTO', '')
+        if scheme:
+            environ['wsgi.url_scheme'] = scheme
+        return self.app(environ, start_response)
+
+
 class ErrorFilter(logging.Filter):
     def __init__(self, *errorfilter):
         self.errorfilter = [logging.Filter(name) for name in errorfilter]
@@ -282,6 +318,7 @@ class PremConfig:
         self.jd_connected = 0
         self.aria2_connected = 0
         self.bind_ip = prem_config.get('global', 'bind_ip')
+        self.reverse_proxy_path = prem_config.get('global', 'reverse_proxy_path')
         self.web_login_enabled = prem_config.getboolean('security', 'login_enabled')
         self.web_username = prem_config.get('security', 'username')
         self.web_password = prem_config.get('security', 'password')
@@ -583,7 +620,7 @@ def shutdown():
 #
 logger.debug('Initializing Flask')
 app = Flask(__name__)
-proxied = FlaskBehindProxy(app)
+app.wsgi_app = ReverseProxy(app.wsgi_app)
 Compress(app)
 app.config['SECRET_KEY'] = uuid.uuid4().hex
 app.config.update(DEBUG=debug_enabled)
@@ -2098,6 +2135,7 @@ def settings():
             prem_config.set('notifications', 'email_password', request.form.get('email_password'))
             prem_config.set('global', 'server_port', request.form.get('server_port'))
             prem_config.set('global', 'bind_ip', request.form.get('bind_ip'))
+            prem_config.set('global', 'reverse_proxy_path', request.form.get('reverse_proxy_path'))
             prem_config.set('global', 'idle_interval', request.form.get('idle_interval'))
             prem_config.set('security', 'username', request.form.get('username'))
             prem_config.set('security', 'password', request.form.get('password'))

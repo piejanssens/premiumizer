@@ -1,6 +1,7 @@
 [global]
 server_port = 5000
 bind_ip = 0.0.0.0
+reverse_proxy_path =
 active_interval = 10
 idle_interval = 300
 debug_enabled = 0
@@ -87,5 +88,5 @@ email_password =
 updated = 1
 auto_update = 0
 update_date = Never
-config_version = 2.1
+config_version = 2.2
 req_version = 8.9

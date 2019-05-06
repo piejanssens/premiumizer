@@ -95,6 +95,9 @@
                     <label for="bind_port">Bind to ip:</label>
                     <input type="text" class="form-control" aria-describedby="basic-addon1"
                            name="bind_ip" value="{{ settings.get('global', 'bind_ip') }}">
+                    <label for="reverse_proxy_path">Reverse proxy URL base:</label>
+                    <input type="text" class="form-control" aria-describedby="basic-addon1"
+                           name="reverse_proxy_path" value="{{ settings.get('global', 'reverse_proxy_path') }}">
                 </div>
 
             </div>
