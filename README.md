@@ -60,11 +60,12 @@ $ python premiumizer.py
 ```
 $ brew install python3
 $ git clone https://github.com/piejanssens/premiumizer.git premiumizer
+$ cd premiumizer
 $ pip install virtualenv
-$ virtualenv premiumizer\env
+$ virtualenv -p /usr/local/bin/python3 env
 $ source env/bin/activate
 $ pip install -r requirements.txt
-$ python premiumizer.py
+$ python premiumizer/premiumizer.py
 ```
 
 ### Docker
