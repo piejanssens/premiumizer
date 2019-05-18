@@ -74,18 +74,6 @@ else:
     except:
         pass
 
-# Remove later, migration for update
-try:
-    if os.path.isfile(os.path.join(rootdir, 'settings.cfg')):
-        shutil.move(os.path.join(rootdir, 'settings.cfg'), os.path.join(ConfDir, 'settings.cfg'))
-    if os.path.isfile(os.path.join(runningdir, 'settings.cfg')):
-        shutil.move(os.path.join(runningdir, 'settings.cfg'), os.path.join(ConfDir, 'settings.cfg'))
-    if os.path.isfile(os.path.join(runningdir, 'database.db')):
-        shutil.move(os.path.join(runningdir, 'database.db'), os.path.join(ConfDir, 'database.db'))
-except:
-    pass
-# Remove later, migration for update
-
 if not os.path.isdir(ConfDir):
     os.makedirs(ConfDir)
 if not os.path.isfile(os.path.join(ConfDir, 'settings.cfg')):
@@ -181,6 +169,7 @@ class ReverseProxy(object):
 
     :param app: the WSGI application
     '''
+
     def __init__(self, app):
         self.app = app
 
@@ -1763,11 +1752,6 @@ def upload_nzb(filename):
         return 'failed'
 
 
-def send_categories():
-    logger.debug('def send_categories started')
-    emit('download_categories', {'data': cfg.download_categories})
-
-
 class MyHandler(events.PatternMatchingEventHandler):
     patterns = ["*.torrent", "*.magnet", "*.nzb"]
 
@@ -2338,21 +2322,16 @@ def stop_task(message):
 def test_message():
     global client_connected
     client_connected = 1
-    emit('hello_client', {'data': 'Server says hello!'})
+    logger.debug('Client connected')
+    emit('download_categories', {'data': cfg.download_categories})
+    scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
 
 
 @socketio.on('disconnect')
 def test_disconnect():
     global client_connected
     client_connected = 0
-    print('Client disconnected')
-
-
-@socketio.on('hello_server')
-def hello_server(message):
-    send_categories()
-    scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
-    print((message['data']))
+    logger.debug('Client disconnected')
 
 
 @socketio.on('message')
