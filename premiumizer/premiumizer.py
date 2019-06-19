@@ -1428,6 +1428,8 @@ def parse_tasks(transfers):
         try:
             if 'ETA is' in transfer['message']:
                 eta = transfer['message'].split("ETA is", 1)[1]
+            elif 'peers,' in transfer['message'] or 'peer,' in transfer['message'] or 'usenet,' in transfer['message']:
+                eta = transfer['message'].split(',')[2]
             elif transfer['message']:
                 eta = transfer['message']
         except:
@@ -1435,12 +1437,17 @@ def parse_tasks(transfers):
         try:
             if 'Downloading at' in transfer['message']:
                 speed = transfer['message'].split("Downloading at", 1)[1].split(". ", 1)[0]
+            elif 'peers,' in transfer['message'] or 'peer,' in transfer['message'] or 'usenet,' in transfer['message']:
+                speed = transfer['message'].split(',')[0]
         except:
             pass
         try:
             if '% of' in transfer['message']:
                 size = transfer['message'].split("of ", 1)[1].split(" finished", 1)[0]
                 progress = int(transfer['message'].split("s.", 1)[1].split("% of", 1)[0])
+            elif 'peers,' in transfer['message'] or 'peer,' in transfer['message'] or 'usenet,' in transfer['message']:
+                size = transfer['message'].split(',')[1]
+                progress = int(round(float(transfer['progress']) * 100))
             else:
                 progress = int(round(float(transfer['progress']) * 100))
         except:
