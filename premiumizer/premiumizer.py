@@ -1415,6 +1415,10 @@ def parse_tasks(transfers):
                 task.callback = socketio.emit
             task.update()
     for transfer in reversed(transfers):
+        if transfer['name'] is None or transfer['name'] == 0:
+            name = 'Loading name'
+        else:
+            name = transfer['name']
         eta = ' '
         speed = ' '
         size = ' '
@@ -1455,29 +1459,17 @@ def parse_tasks(transfers):
         except:
             file_id = None
         if not task:
-            if transfer['name'] is None or transfer['name'] == 0:
-                name = 'Loading name'
-            else:
-                name = transfer['name']
             if cfg.download_all:
                 add_task(transfer['id'], size, name, 'default', folder_id=folder_id)
             else:
                 add_task(transfer['id'], size, name, '', folder_id=folder_id)
             task = get_task(transfer['id'])
             id_local.append(task.id)
-            task.update(progress=progress, cloud_status=transfer['status'], dlsize=size + ' --- ',
+            task.update(name=name, progress=progress, cloud_status=transfer['status'], dlsize=size + ' --- ',
                         speed=speed + ' --- ', eta=eta, file_id=file_id)
         if task.local_status is None:
             if task.cloud_status != 'finished' and task.cloud_status != 'seeding':
-                if task.name is not None and task.name != 'Loading name':
-                    name = task.name
-                elif task.name == 'Loading name' and transfer['name'] is not None and transfer['name'] != 0:
-                    name = transfer['name']
-                    if 'download.php?id=' in name:
-                        name = name.split("&f=", 1)[1]
-                else:
-                    name = 'Loading name'
-                task.update(progress=progress, cloud_status=transfer['status'], name=name, dlsize=size + ' --- ',
+                task.update(name=name, progress=progress, cloud_status=transfer['status'], dlsize=size + ' --- ',
                             speed=speed + ' --- ', eta=eta, folder_id=folder_id, file_id=file_id)
                 idle = False
             elif task.cloud_status == 'finished' or task.cloud_status == 'seeding':
@@ -1493,7 +1485,7 @@ def parse_tasks(transfers):
                                     if breadcrumbs[1]['name'] == 'Feed Downloads':
                                         if breadcrumbs[2]['name'] in cfg.download_categories:
                                             dldir, dlext, delsample, dlnzbtomedia = get_cat_var(breadcrumbs[2]['name'])
-                                            task.update(cloud_status=transfer['status'], local_status=None,
+                                            task.update(name=name, cloud_status=transfer['status'], local_status=None,
                                                         process=None, speed=None, category=breadcrumbs[2]['name'],
                                                         dldir=dldir, dlext=dlext, delsample=delsample,
                                                         dlnzbtomedia=dlnzbtomedia, type='RSS')
@@ -1504,10 +1496,11 @@ def parse_tasks(transfers):
                                 logger.error('RSS download failed: ' + str(e))
                                 pass
                         elif cfg.download_all:
-                            task.update(cloud_status=transfer['status'], category='default')
+                            task.update(name=name, cloud_status=transfer['status'], category='default')
                     if task.category in cfg.download_categories:
                         if not task.local_status == ('queued' or 'downloading'):
-                            task.update(cloud_status=transfer['status'], local_status='queued', folder_id=folder_id,
+                            task.update(name=name, cloud_status=transfer['status'], local_status='queued',
+                                        folder_id=folder_id,
                                         file_id=file_id, dlsize='')
                             gevent.sleep(3)
                             scheduler.scheduler.add_job(download_task, args=(task,), name=task.name, id=task.id,
@@ -1515,10 +1508,11 @@ def parse_tasks(transfers):
                                                         jobstore='downloads', executor='downloads',
                                                         replace_existing=True)
                     elif task.category == '':
-                        task.update(cloud_status=transfer['status'], local_status='waiting', progress=100,
+                        task.update(name=name, cloud_status=transfer['status'], local_status='waiting', progress=100,
                                     folder_id=folder_id, file_id=file_id)
                 else:
-                    task.update(cloud_status=transfer['status'], local_status='download_disabled', speed=None,
+                    task.update(name=name, cloud_status=transfer['status'], local_status='download_disabled',
+                                speed=None,
                                 folder_id=folder_id, file_id=file_id)
         else:
             if task.local_status == 'downloading':
@@ -1531,15 +1525,15 @@ def parse_tasks(transfers):
                 if transfer['status'] == 'finished':
                     delete_task(task.id)
                 else:
-                    task.update(cloud_status=transfer['status'], eta=eta)
+                    task.update(name=name, cloud_status=transfer['status'], eta=eta)
             elif task.local_status == 'finished_waiting':
                 try:
                     time = (scheduler.scheduler.get_job(task.name).next_run_time.replace(tzinfo=None) - datetime.now())
                     time = str(time).split('.', 2)[0]
-                    task.update(cloud_status=transfer['status'], eta='Deleting from cloud in: ' + time)
+                    task.update(name=name, cloud_status=transfer['status'], eta='Deleting from cloud in: ' + time)
                 except:
                     delete_task(task.id)
-            task.update(cloud_status=transfer['status'], folder_id=folder_id, file_id=file_id)
+            task.update(name=name, cloud_status=transfer['status'], folder_id=folder_id, file_id=file_id)
         id_online.append(task.id)
         task.callback = None
         db[task.id] = task
