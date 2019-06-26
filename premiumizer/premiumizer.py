@@ -1200,7 +1200,7 @@ def process_dir(dir_content, path):
         type = x['type']
         if type == 'folder':
             logger.debug('Processing subfolder: %s', x['name'])
-            subdir_path = os.path.join(subdir_path, clean_name(x['name']))
+            subdir_path = os.path.join(path, clean_name(x['name']))
             if not os.path.exists(subdir_path):
                 logger.debug('Creating subfolder: %s', x['name'])
                 os.makedirs(subdir_path)
