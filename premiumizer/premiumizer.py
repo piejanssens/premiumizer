@@ -1199,35 +1199,29 @@ def process_dir(dir_content, path):
     for x in dir_content:
         type = x['type']
         if type == 'folder':
+            logger.debug('Processing subfolder: %s', x['name'])
+            subdir_path = os.path.join(subdir_path, clean_name(x['name']))
+            if not os.path.exists(subdir_path):
+                logger.debug('Creating subfolder: %s', x['name'])
+                os.makedirs(subdir_path)
             r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
-                                {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'id': x['id']})
-            new_dir_content = json.loads(r.content)['content']
-            new_path = os.path.join(path, clean_name(x['name']))
-            while new_dir_content[0]['type'] == 'folder':
-                r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
-                                    {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
-                                     'id': new_dir_content[0]['id']})
-                new_dir_content = json.loads(r.content)['content']
-                if new_dir_content[0]['type'] == 'folder':
-                    new_path = os.path.join(new_path, clean_name(new_dir_content[0]['name']))
-            if os.path.basename(os.path.normpath(path)) == os.path.basename(os.path.normpath(new_path)):
-                process_dir(new_dir_content, path)
-            else:
-                process_dir(new_dir_content, new_path)
+                            {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'id': x['id']})
+            subdir_content = json.loads(r.content)['content']
+            process_dir(subdir_content, subdir_path)
         elif type == 'file':
             if x['link'].lower().endswith(tuple(greenlet.task.dlext)):
                 if greenlet.task.delsample:
                     sample = is_sample(x)
                     if sample:
                         continue
-                if cfg.download_enabled:
-                    if not os.path.exists(path):
-                        os.makedirs(path)
-                    download = {'path': os.path.join(path, clean_name(x['name'])), 'url': x['link']}
-                    download_list.append(download)
-                    total_size = greenlet.task.size
-                    total_size += x['size']
-                    greenlet.task.update(download_list=download_list, size=total_size)
+                logger.debug('Starting download of file %s to directory %s', x['name'], path)
+                download = {'path': os.path.join(path, clean_name(x['name'])), 'url': x['link']}
+                download_list.append(download)
+                total_size = greenlet.task.size
+                total_size += x['size']
+                greenlet.task.update(download_list=download_list, size=total_size)
+            else
+                logger.debug('Skipping download of file %s because extension is not whitelisted', x['name'])
 
 
 def download_process():
