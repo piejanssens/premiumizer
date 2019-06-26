@@ -1220,7 +1220,7 @@ def process_dir(dir_content, path):
                 total_size = greenlet.task.size
                 total_size += x['size']
                 greenlet.task.update(download_list=download_list, size=total_size)
-            else
+            else:
                 logger.debug('Skipping download of file %s because extension is not whitelisted', x['name'])
 
 
