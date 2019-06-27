@@ -753,11 +753,12 @@ def email(subject, text=None):
         text += '\n\nStatistics:'
         text += '\nDownloaded size: %s' % utils.sizeof_human(greenlet.task.size)
         text += '\nDownload time: %s' % utils.time_human(greenlet.task.dltime, fmt_short=True)
-        text += '\nAverage download speed: %s' % greenlet.avgspeed
+        text += '\nDownload speed: %s' % greenlet.avgspeed
         text += '\n\nFiles:'
         for download in greenlet.task.download_list:
             text += '\n' + os.path.basename(download['path'])
-        text += '\n\nLocation: %s' % greenlet.task.dldir
+        text += '\n\nLocation:'
+        text += '\n' + greenlet.task.dldir
 
     elif subject == 'download failed':
         subject = 'Failure for "%s"' % greenlet.task.name
