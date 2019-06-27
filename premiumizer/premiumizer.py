@@ -727,9 +727,9 @@ def notify_nzbtomedia():
                  greenlet.task.id, 'generic'],
                 stderr=subprocess.STDOUT, shell=False, encoding='utf8').rstrip('\n')
             returncode = 0
-            logger.info('Send to nzbToMedia: %s', greenlet.task.name)
+            logger.info('Send to nzbToMedia: %s -- id: %s', greenlet.task.name, greenlet.task.id)
         except subprocess.CalledProcessError as e:
-            logger.error('nzbToMedia failed for: %s', greenlet.task.name)
+            logger.error('nzbToMedia failed for: %s -- id: %s', greenlet.task.name, greenlet.task.id)
             errorstr = ''
             tmp = str.splitlines(e.output)
             for line in tmp:
@@ -753,11 +753,12 @@ def email(subject, text=None):
         text += '\n\nStatistics:'
         text += '\nDownloaded size: %s' % utils.sizeof_human(greenlet.task.size)
         text += '\nDownload time: %s' % utils.time_human(greenlet.task.dltime, fmt_short=True)
-        text += '\nAverage download speed: %s' % greenlet.avgspeed
+        text += '\nDownload speed: %s' % greenlet.avgspeed
         text += '\n\nFiles:'
         for download in greenlet.task.download_list:
             text += '\n' + os.path.basename(download['path'])
-        text += '\n\nLocation: %s' % greenlet.task.dldir
+        text += '\n\nLocation:'
+        text += '\n' + greenlet.task.dldir
 
     elif subject == 'download failed':
         subject = 'Failure for "%s"' % greenlet.task.name
@@ -807,13 +808,13 @@ def email(subject, text=None):
 
         smtp.quit()
         try:
-            log = 'Email send for: %s' % greenlet.task.name
+            log = 'Email send for: %s -- id: %s' % (greenlet.task.name, greenlet.task.id)
         except:
             log = 'Email send for: %s' % subject
         logger.info(log)
     except Exception as err:
         try:
-            log = 'Email error for: %s error: %s' % (greenlet.task.name, err)
+            log = 'Email error for: %s -- id: %s -- error: %s' % (greenlet.task.name, greenlet.task.id, err)
         except:
             log = 'Email error for: %s' % subject
             logger.info(log)
@@ -1205,7 +1206,7 @@ def process_dir(dir_content, path):
                 logger.debug('Creating subfolder: %s', x['name'])
                 os.makedirs(subdir_path)
             r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
-                            {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'id': x['id']})
+                                {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'id': x['id']})
             subdir_content = json.loads(r.content)['content']
             process_dir(subdir_content, subdir_path)
         elif type == 'file':
@@ -1252,7 +1253,7 @@ def download_process():
             return 1
         process_dir(dir_content, greenlet.task.dldir)
     if greenlet.task.download_list:
-        logger.info('Downloading: %s', greenlet.task.name)
+        logger.info('Downloading: %s -- id: %s', greenlet.task.name, greenlet.task.id)
         returncode = download_file()
     else:
         logger.error('Error for %s: Nothing to download .. Filtered out or bad torrent/nzb ?', greenlet.task.name)
@@ -1276,7 +1277,7 @@ def download_task(task):
         failed = download_process()
         if failed:
             task.update(local_status='failed: download')
-            logger.error('Download failed for: %s', task.name)
+            logger.error('Download failed for: %s -- id: %s', task.name, task.id)
     elif task.local_status == 'stopped':
         logger.warning('Download stopped for: %s', greenlet.task.name)
         gevent.sleep(3)
@@ -1294,7 +1295,7 @@ def download_task(task):
             greenlet.avgspeed = str(utils.sizeof_human((task.size / task.dltime)) + '/s')
         except:
             greenlet.avgspeed = "0"
-        logger.info('Download finished: %s -- info: %s --  %s --  %s -- location: %s', task.name,
+        logger.info('Download finished: %s -- id: %s -- info: %s --  %s --  %s -- location: %s', task.name, task.id,
                     utils.sizeof_human(task.size), greenlet.avgspeed, utils.time_human(task.dltime, fmt_short=True),
                     task.dldir)
         if task.dlnzbtomedia:
@@ -1622,7 +1623,7 @@ def add_task(id, size, name, category, type='', folder_id=None):
                             delsample, dlnzbtomedia, type)
         tasks.append(task)
         if not task.type == 'Filehost':
-            logger.info('Added: %s -- Category: %s -- Type: %s', task.name, task.category, task.type)
+            logger.info('Added: %s -- Category: %s -- Type: %s -- id: %s', task.name, task.category, task.type, task.id)
     else:
         task = 'duplicate'
     return task
@@ -1712,7 +1713,7 @@ def upload_filehost(urls):
             except:
                 logger.error('Filehost error for %s', urls)
             break
-    logger.info('Added: %s -- Category: %s -- Type: %s', name, task.category, task.type)
+    logger.info('Added: %s -- Category: %s -- Type: %s -- id: %s', name, task.category, task.type, task.id)
     if failed:
         try:
             eta = r.text
@@ -1941,19 +1942,18 @@ def upload():
 def history_update(history, line, status, success):
     if status == 'check_name':
         try:
-            taskname = line.split("Downloading: ", 1)[1].splitlines()[0]
+            id = line.split("id: ", 1)[1].splitlines()[0]
+            taskname = line.split("Downloading: ", 1)[1].splitlines()[0].split(" --", 1)[0]
         except:
-            try:
-                taskname = line.split("Deleted from the cloud: ", 1)[1].splitlines()[0]
-            except:
-                return
+            return
         for item in history:
-            if item['name'] == 'Loading name' or taskname[:-7] in item['name']:
-                item['name'] = taskname
+            if item['id'] == id:
+                if item['name'] != taskname:
+                    item['name'] = taskname
                 return
     else:
         for item in history:
-            if item['name'] in line:
+            if item['id'] in line:
                 item[status] = success
                 return
 
@@ -1976,10 +1976,11 @@ def history():
                     else:
                         taskdate = line.split(": INFO ", 1)[0].splitlines()[0]
                     taskcat = line.split("Category: ", 1)[1].splitlines()[0].split(" --", 1)[0]
-                    tasktype = line.split("Type: ", 1)[1].splitlines()[0]
+                    tasktype = line.split("Type: ", 1)[1].splitlines()[0].split(" --", 1)[0]
+                    id = line.split("id: ", 1)[1].splitlines()[0]
                     history.append(
-                        {'date': taskdate, 'name': taskname, 'category': taskcat, 'type': tasktype, 'downloaded': '',
-                         'deleted': '', 'nzbtomedia': '', 'email': '', 'info': '', })
+                        {'id': id, 'date': taskdate, 'name': taskname, 'category': taskcat, 'type': tasktype,
+                         'downloaded': '', 'deleted': '', 'nzbtomedia': '', 'email': '', 'info': '', })
                 elif 'Downloading:' in line:
                     history_update(history, line, 'check_name', '')
                 elif 'Download finished:' in line:
@@ -1987,8 +1988,6 @@ def history():
                     history_update(history, line, 'downloaded', '1')
                     history_update(history, line, 'info', taskinfo)
                 elif 'Deleted' in line:
-                    if 'Automatically Deleted:' not in line:
-                        history_update(history, line, 'check_name', '1')
                     history_update(history, line, 'deleted', '1')
                 elif 'Send to nzbToMedia:' in line:
                     history_update(history, line, 'nzbtomedia', '1')
@@ -2282,11 +2281,11 @@ def delete_task(message):
         if 'failed' not in r:
             responsedict = json.loads(r.content)
             if responsedict['status'] == "success":
-                logger.info('Deleted from the cloud: %s', task.name)
+                logger.info('Deleted from the cloud: %s -- id: %s', task.name, task.id)
                 socketio.emit('delete_success', {'data': id})
             else:
-                msg = 'Download could not be deleted from the cloud for: %s, message: %s' % (
-                    task.name, responsedict['message'])
+                msg = 'Download could not be deleted from the cloud for: %s -- id: %s -- message: %s' % (
+                    task.name, task.id, responsedict['message'])
                 logger.error(msg)
                 if cfg.email_enabled:
                     email('Download could not be deleted', msg)
@@ -2359,7 +2358,7 @@ def change_category(message):
     else:
         task.update(local_status=None, process=None, speed=None, category=data['category'], dldir=dldir, dlext=dlext,
                     delsample=delsample, dlnzbtomedia=dlnzbtomedia)
-        logger.info('Task: %s -- Category set to: %s', task.name, task.category)
+        logger.info('Task: %s -- id: %s -- Category set to: %s', task.name, task.id, task.category)
         scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
 
 
