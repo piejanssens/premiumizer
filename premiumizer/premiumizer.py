@@ -1206,7 +1206,7 @@ def process_dir(dir_content, path):
                 logger.debug('Creating subfolder: %s', x['name'])
                 os.makedirs(subdir_path)
             r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
-                            {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'id': x['id']})
+                                {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'id': x['id']})
             subdir_content = json.loads(r.content)['content']
             process_dir(subdir_content, subdir_path)
         elif type == 'file':
@@ -1970,7 +1970,6 @@ def history():
         with open(os.path.join(LogsDir, log), 'r') as f:
             for line in f:
                 if 'Added:' in line:
-
                     taskname = line.split("Added: ", 1)[1].splitlines()[0].split(" --", 1)[0]
                     if debug_enabled:
                         taskdate = line.split("root", 1)[0].splitlines()[0]
@@ -1980,8 +1979,8 @@ def history():
                     tasktype = line.split("Type: ", 1)[1].splitlines()[0].split(" --", 1)[0]
                     id = line.split("id: ", 1)[1].splitlines()[0]
                     history.append(
-                        {'id': id, 'date': taskdate, 'name': taskname, 'category': taskcat, 'type': tasktype, 'downloaded': '',
-                         'deleted': '', 'nzbtomedia': '', 'email': '', 'info': '', })
+                        {'id': id, 'date': taskdate, 'name': taskname, 'category': taskcat, 'type': tasktype,
+                         'downloaded': '', 'deleted': '', 'nzbtomedia': '', 'email': '', 'info': '', })
                 elif 'Downloading:' in line:
                     history_update(history, line, 'check_name', '')
                 elif 'Download finished:' in line:
