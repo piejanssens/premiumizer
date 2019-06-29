@@ -1640,6 +1640,14 @@ def upload_torrent(torrent):
         if response_content['status'] == "success":
             logger.debug('Upload successful: %s', torrent)
             return response_content['id']
+        elif response_content['message'] == 'An error occured. Please try again and contact customer service if the problem persists.':
+            gevent.sleep(10)
+            r = prem_connection("postfile", "https://www.premiumize.me/api/transfer/create", payload, files)
+            if 'failed' not in r:
+                response_content = json.loads(r.content)
+                if response_content['status'] == "success" or response_content['message'] == 'You already have this job added.':
+                    logger.debug('Upload successful: %s', torrent)
+                    return response_content['id']
         else:
             msg = 'Upload of torrent: %s failed, message: %s' % (torrent, response_content['message'])
             logger.error(msg)
@@ -1661,6 +1669,14 @@ def upload_magnet(magnet):
         if response_content['status'] == "success":
             logger.debug('Upload magnet successful')
             return response_content['id']
+        elif response_content['message'] == 'An error occured. Please try again and contact customer service if the problem persists.':
+            gevent.sleep(10)
+            r = prem_connection("post", "https://www.premiumize.me/api/transfer/create", payload)
+            if 'failed' not in r:
+                response_content = json.loads(r.content)
+                if response_content['status'] == "success" or response_content['message'] == 'You already have this job added.':
+                    logger.debug('Upload magnet successful')
+                    return response_content['id']
         else:
             msg = 'Upload of magnet: %s failed, message: %s' % (magnet, response_content['message'])
             logger.error(msg)
@@ -1736,6 +1752,14 @@ def upload_nzb(filename):
         if response_content['status'] == "success":
             logger.debug('Upload nzb successful: %s', filename)
             return response_content['id']
+        elif response_content['message'] == 'An error occured. Please try again and contact customer service if the problem persists.':
+            gevent.sleep(10)
+            r = prem_connection("postfile", "https://www.premiumize.me/api/transfer/create", payload, files)
+            if 'failed' not in r:
+                response_content = json.loads(r.content)
+                if response_content['status'] == "success" or response_content['message'] == 'You already have this job added.':
+                    logger.debug('Upload nzb successful: %s', filename)
+                    return response_content['id']
         else:
             msg = 'Upload of nzb: %s failed, message: %s' % (filename, response_content['message'])
             logger.error(msg)
