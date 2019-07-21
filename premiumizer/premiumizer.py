@@ -2266,6 +2266,16 @@ def page_not_found(e):
 def load_user(userid):
     return User(cfg.web_username, cfg.web_password)
 
+@socketio.on('delete_all_failed_tasks')
+def delete_all_failed_tasks():
+    # get all tasks based on cloud status
+    failed_tasks = []
+    for task in tasks:
+        if task.cloud_status == 'error':
+            failed_tasks.append(task)
+    # delete all failed tasks
+    for task in failed_tasks:
+        delete_task(task.id)
 
 @socketio.on('delete_task')
 def delete_task(message):
