@@ -71,6 +71,8 @@ cat_nzbtomedia[6] = 0
 [upload]
 watchdir_enabled = 0
 watchdir_location =
+watchdir_walk_enabled = 0
+watchdir_walk_interval = 60
 
 [notifications]
 email_enabled = 0
