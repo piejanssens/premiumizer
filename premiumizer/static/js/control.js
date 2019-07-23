@@ -417,6 +417,14 @@ function delete_task(e) {
     });
 }
 
+function delete_all_failed_tasks() {
+    var confirmationResult = confirm('Are you sure, you want to delete all failed tasks?')
+    if(confirmationResult == true)
+    {
+        socket.emit('delete_all_failed_tasks');
+    }
+}
+
 function pause_resume_task(e) {
     var elem = $(e.target);
     var id = elem.closest('.panel').attr('id');
