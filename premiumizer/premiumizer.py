@@ -1922,7 +1922,12 @@ def watchdir():
         observer.schedule(watchdog_handler, path=cfg.watchdir_location, recursive=True)
         observer.start()
         logger.debug('Initializing watchdog complete')
-        walk_watchdir()
+        if cfg.watchdir_walk_enabled:
+            scheduler.scheduler.add_job(walk_watchdir, 'interval', id='walk_watchdir', 	seconds=active_interval,
+                                        replace_existing=True, max_instances=1, coalesce=True)
+        else:
+            walk_watchdir()
+
     except:
         raise
 
@@ -2434,9 +2439,6 @@ if __name__ == '__main__':
                                         max_instances=1, coalesce=True)
         if cfg.watchdir_enabled:
             gevent.spawn_later(2, watchdir)
-            if cfg.watchdir_walk_enabled:
-                scheduler.scheduler.add_job(walk_watchdir, 'interval', id='walk_watchdir',
-                                            seconds=active_interval, replace_existing=True, max_instances=1, coalesce=True)
         socketio.run(app, host=prem_config.get('global', 'bind_ip'), port=prem_config.getint('global', 'server_port'),
                      use_reloader=False)
     except:
