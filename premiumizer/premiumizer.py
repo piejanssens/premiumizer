@@ -405,6 +405,8 @@ class PremConfig:
         self.watchdir_enabled = prem_config.getboolean('upload', 'watchdir_enabled')
         self.watchdir_location = prem_config.get('upload', 'watchdir_location')
         if self.watchdir_enabled:
+            self.watchdir_walk_enabled = prem_config.getboolean('upload', 'watchdir_walk_enabled')
+            self.watchdir_walk_interval = prem_config.getint('upload', 'watchdir_walk_interval')
             logger.info('Watchdir is enabled at: %s', self.watchdir_location)
             if not os.path.exists(self.watchdir_location):
                 os.makedirs(self.watchdir_location)
@@ -649,6 +651,113 @@ else:
     db = shelve.open(os.path.join(ConfDir, 'database.db'))
 logger.debug('Initializing Database complete')
 
+
+class MyHandler(events.PatternMatchingEventHandler):
+    patterns = ["*.torrent", "*.magnet", "*.nzb"]
+
+    # noinspection PyMethodMayBeStatic
+    def process(self, event):
+        failed = 0
+        if event.event_type == 'created' and event.is_directory is False:
+            gevent.sleep(10)
+            watchdir_file = event.src_path
+            if not os.path.isfile(watchdir_file):
+                logger.error(
+                    'watchdir file %s no longer exists', watchdir_file)
+                return
+            logger.debug('New file detected at: %s', watchdir_file)
+            dirname = os.path.basename(
+                os.path.normpath(os.path.dirname(watchdir_file)))
+            if dirname in cfg.download_categories:
+                category = dirname
+            else:
+                category = ''
+            if watchdir_file.endswith('.torrent'):
+                id = upload_torrent(watchdir_file)
+                if id == 'duplicate':
+                    failed = 1
+                    logger.debug(
+                        'Deleting duplicate file from watchdir: %s', watchdir_file)
+                    try:
+                        gevent.sleep(3)
+                        os.remove(watchdir_file)
+                    except Exception as err:
+                        logger.error('Could not remove duplicate file from watchdir: %s --- error: %s', watchdir_file,
+                                     err)
+                elif id == 'failed':
+                    failed = 1
+                else:
+                    name = torrent_metainfo(watchdir_file)
+                    type = 'Torrent'
+                    add_task(id, 0, name, category, type=type)
+            elif watchdir_file.endswith('.magnet'):
+                with open(watchdir_file) as f:
+                    magnet = f.read()
+                    if not magnet:
+                        logger.error(
+                            'Magnet file empty? for: %s', watchdir_file)
+                        return
+                    else:
+                        try:
+                            name = re.search(
+                                '&dn=(.+?)(&|.torrent)', magnet).group(1)
+                            name = name.replace('+', '%20')
+                        except AttributeError:
+                            logger.error(
+                                'Extracting id / name from .magnet failed for: %s', watchdir_file)
+                            return
+                        id = upload_magnet(magnet)
+                        if id == 'duplicate':
+                            failed = 1
+                            logger.debug(
+                                'Deleting duplicate file from watchdir: %s', watchdir_file)
+                            try:
+                                f.close()
+                                gevent.sleep(3)
+                                os.remove(watchdir_file)
+                            except Exception as err:
+                                logger.error('Could not remove duplicate file from watchdir: %s --- error: %s',
+                                             watchdir_file,
+                                             err)
+                        elif id == 'failed':
+                            failed = 1
+                        else:
+                            type = 'Torrent'
+                            add_task(id, 0, name, category, type=type)
+
+            elif watchdir_file.endswith('.nzb'):
+                id = upload_nzb(watchdir_file)
+                if id == 'duplicate':
+                    failed = 1
+                    logger.debug(
+                        'Deleting duplicate file from watchdir: %s', watchdir_file)
+                    try:
+                        gevent.sleep(3)
+                        os.remove(watchdir_file)
+                    except Exception as err:
+                        logger.error('Could not remove duplicate file from watchdir: %s --- error: %s', watchdir_file,
+                                     err)
+                elif id == 'failed':
+                    failed = 1
+                else:
+                    name = os.path.basename(watchdir_file)
+                    name = os.path.splitext(name)[0]
+                    type = 'NZB'
+                    add_task(id, 0, name, category, type=type)
+            if not failed:
+                gevent.sleep(3)
+                logger.debug('Deleting file from watchdir: %s', watchdir_file)
+                try:
+                    os.remove(watchdir_file)
+                except Exception as err:
+                    logger.error(
+                        'Could not remove file from watchdir: %s --- error: %s', watchdir_file, err)
+                scheduler.scheduler.reschedule_job(
+                    'update', trigger='interval', seconds=1)
+
+    def on_created(self, event):
+        self.process(event)
+
 # Initialise Globals
 tasks = []
 greenlet = local.local()
@@ -656,6 +765,7 @@ client_connected = 0
 prem_session = requests.Session()
 last_email = {'time': datetime.now() - timedelta(days=1), 'subject': ""}
 jd_packages = {'time': datetime.now(), 'packages': []}
+watchdog_handler = MyHandler()
 
 
 #
@@ -1772,101 +1882,16 @@ def upload_nzb(filename):
         return 'failed'
 
 
-class MyHandler(events.PatternMatchingEventHandler):
-    patterns = ["*.torrent", "*.magnet", "*.nzb"]
-
-    # noinspection PyMethodMayBeStatic
-    def process(self, event):
-        failed = 0
-        if event.event_type == 'created' and event.is_directory is False:
-            gevent.sleep(10)
-            watchdir_file = event.src_path
-            if not os.path.isfile(watchdir_file):
-                logger.error('watchdir file %s no longer exists', watchdir_file)
-                return
-            logger.debug('New file detected at: %s', watchdir_file)
-            dirname = os.path.basename(os.path.normpath(os.path.dirname(watchdir_file)))
-            if dirname in cfg.download_categories:
-                category = dirname
-            else:
-                category = ''
-            if watchdir_file.endswith('.torrent'):
-                id = upload_torrent(watchdir_file)
-                if id == 'duplicate':
-                    failed = 1
-                    logger.debug('Deleting duplicate file from watchdir: %s', watchdir_file)
-                    try:
-                        gevent.sleep(3)
-                        os.remove(watchdir_file)
-                    except Exception as err:
-                        logger.error('Could not remove duplicate file from watchdir: %s --- error: %s', watchdir_file,
-                                     err)
-                elif id == 'failed':
-                    failed = 1
-                else:
-                    name = torrent_metainfo(watchdir_file)
-                    type = 'Torrent'
-                    add_task(id, 0, name, category, type=type)
-            elif watchdir_file.endswith('.magnet'):
-                with open(watchdir_file) as f:
-                    magnet = f.read()
-                    if not magnet:
-                        logger.error('Magnet file empty? for: %s', watchdir_file)
-                        return
-                    else:
-                        try:
-                            name = re.search('&dn=(.+?)(&|.torrent)', magnet).group(1)
-                            name = name.replace('+', '%20')
-                        except AttributeError:
-                            logger.error('Extracting id / name from .magnet failed for: %s', watchdir_file)
-                            return
-                        id = upload_magnet(magnet)
-                        if id == 'duplicate':
-                            failed = 1
-                            logger.debug('Deleting duplicate file from watchdir: %s', watchdir_file)
-                            try:
-                                f.close()
-                                gevent.sleep(3)
-                                os.remove(watchdir_file)
-                            except Exception as err:
-                                logger.error('Could not remove duplicate file from watchdir: %s --- error: %s',
-                                             watchdir_file,
-                                             err)
-                        elif id == 'failed':
-                            failed = 1
-                        else:
-                            type = 'Torrent'
-                            add_task(id, 0, name, category, type=type)
-
-            elif watchdir_file.endswith('.nzb'):
-                id = upload_nzb(watchdir_file)
-                if id == 'duplicate':
-                    failed = 1
-                    logger.debug('Deleting duplicate file from watchdir: %s', watchdir_file)
-                    try:
-                        gevent.sleep(3)
-                        os.remove(watchdir_file)
-                    except Exception as err:
-                        logger.error('Could not remove duplicate file from watchdir: %s --- error: %s', watchdir_file,
-                                     err)
-                elif id == 'failed':
-                    failed = 1
-                else:
-                    name = os.path.basename(watchdir_file)
-                    name = os.path.splitext(name)[0]
-                    type = 'NZB'
-                    add_task(id, 0, name, category, type=type)
-            if not failed:
-                gevent.sleep(3)
-                logger.debug('Deleting file from watchdir: %s', watchdir_file)
-                try:
-                    os.remove(watchdir_file)
-                except Exception as err:
-                    logger.error('Could not remove file from watchdir: %s --- error: %s', watchdir_file, err)
-                scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
-
-    def on_created(self, event):
-        self.process(event)
+def walk_watchdir():
+    global watchdog_handler
+    logger.debug('def walk_watchdir started')
+    for dirpath, dirs, files in os.walk(cfg.watchdir_location):
+        for file in files:
+            filepath = os.path.join(dirpath, file)
+            watchdog_handler.on_created(events.FileCreatedEvent(filepath))
+    if cfg.watchdir_walk_enabled:
+        interval = cfg.watchdir_walk_interval
+        scheduler.scheduler.reschedule_job('walk_watchdir', trigger='interval', seconds=interval)
 
 
 def torrent_metainfo(torrent):
@@ -1891,16 +1916,18 @@ def load_tasks():
 
 def watchdir():
     try:
+        global watchdog_handler
         logger.debug('Initializing watchdog')
         observer = Observer()
-        watchdog_handler = MyHandler()
         observer.schedule(watchdog_handler, path=cfg.watchdir_location, recursive=True)
         observer.start()
         logger.debug('Initializing watchdog complete')
-        for dirpath, dirs, files in os.walk(cfg.watchdir_location):
-            for file in files:
-                filepath = os.path.join(dirpath, file)
-                watchdog_handler.on_created(events.FileCreatedEvent(filepath))
+        if cfg.watchdir_walk_enabled:
+            scheduler.scheduler.add_job(walk_watchdir, 'interval', id='walk_watchdir', 	seconds=active_interval,
+                                        replace_existing=True, max_instances=1, coalesce=True)
+        else:
+            walk_watchdir()
+
     except:
         raise
 
@@ -2105,7 +2132,11 @@ def settings():
                     enable_watchdir = 1
             else:
                 prem_config.set('upload', 'watchdir_enabled', '0')
-
+            if request.form.get('watchdir_walk_enabled'):
+                prem_config.set('upload', 'watchdir_walk_enabled', '1')
+            else:
+                prem_config.set('upload', 'watchdir_walk_enabled', '0')
+            prem_config.set('upload', 'watchdir_walk_interval', request.form.get('watchdir_walk_interval'))
             if request.form.get('email_enabled'):
                 prem_config.set('notifications', 'email_enabled', '1')
             else:

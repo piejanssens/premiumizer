@@ -180,6 +180,20 @@
                         <input type="checkbox" class="form-control bootstrap_switch" name="watchdir_enabled"
                                data-size="small">
                     {% endif %}
+                    <label for="watchdir_walk_enabled">Scan Watchdir/Blackhole regularly:</label>
+                    {% if settings.get('upload', 'watchdir_walk_enabled') == '1' %}
+                        <input type="checkbox" class="form-control bootstrap_switch" name="watchdir_walk_enabled"
+                               data-size="small"
+                               checked>
+                    {% else %}
+                        <input type="checkbox" class="form-control bootstrap_switch" name="watchdir_walk_enabled"
+                               data-size="small">
+                    {% endif %}
+                    <p>Enable when watching is not possible (for example with network file systems). Changing requires restart.</p>
+                    <br/>
+                    <label for="watchdir_walk_interval">Interval in seconds:</label>
+                    <input type="number" class="form-control" name="watchdir_walk_interval" aria-describedby="basic-addon1"
+                           value="{{ settings.get('upload', 'watchdir_walk_interval') }}">
                     <p>&nbsp;</p>
                     <p>Subfolders will be created based on categories names</p>
                     <p>Downloads will automatically set category based on subfolder name</p>

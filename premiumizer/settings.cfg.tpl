@@ -71,6 +71,8 @@ cat_nzbtomedia[6] = 0
 [upload]
 watchdir_enabled = 0
 watchdir_location =
+watchdir_walk_enabled = 0
+watchdir_walk_interval = 60
 
 [notifications]
 email_enabled = 0
@@ -88,5 +90,5 @@ email_password =
 updated = 1
 auto_update = 0
 update_date = Never
-config_version = 2.2
+config_version = 2.3
 req_version = 9.3
