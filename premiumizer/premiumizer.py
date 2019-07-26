@@ -757,6 +757,7 @@ class MyHandler(events.PatternMatchingEventHandler):
     def on_created(self, event):
         self.process(event)
 
+
 # Initialise Globals
 tasks = []
 greenlet = local.local()
@@ -1314,7 +1315,8 @@ def process_dir(dir_content, path):
             if not os.path.exists(subdir_path):
                 logger.debug('Creating subfolder: %s', x['name'])
                 os.makedirs(subdir_path)
-            r = prem_connection("post", "https://www.premiumize.me/api/folder/list", {'apikey': cfg.prem_apikey, 'id': x['id']})
+            r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
+                                {'apikey': cfg.prem_apikey, 'id': x['id']})
             subdir_content = json.loads(r.content)['content']
             process_dir(subdir_content, subdir_path)
         elif type == 'file':
@@ -1352,7 +1354,8 @@ def download_process():
                     dir_content.append(x)
                     break
         else:
-            r = prem_connection("post", "https://www.premiumize.me/api/folder/list", {'apikey': cfg.prem_apikey, 'id': greenlet.task.folder_id})
+            r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
+                                {'apikey': cfg.prem_apikey, 'id': greenlet.task.folder_id})
             dir_content = json.loads(r.content)['content']
         if 'failed' in r:
             return 1
@@ -1583,7 +1586,9 @@ def parse_tasks(transfers):
                     if task.category == '':
                         if cfg.download_rss and transfer['folder_id']:
                             try:
-                                r = prem_connection("post", "https://www.premiumize.me/api/folder/list", {'apikey': cfg.prem_apikey, 'id': transfer['folder_id'], 'includebreadcrumbs': 1})
+                                r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
+                                                    {'apikey': cfg.prem_apikey, 'id': transfer['folder_id'],
+                                                     'includebreadcrumbs': 1})
                                 breadcrumbs = json.loads(r.content)['breadcrumbs']
                                 if len(breadcrumbs) > 1:
                                     if breadcrumbs[1]['name'] == 'Feed Downloads':
@@ -1743,12 +1748,14 @@ def upload_torrent(torrent):
         if response_content['status'] == "success":
             logger.debug('Upload successful: %s', torrent)
             return response_content['id']
-        elif response_content['message'] == 'An error occured. Please try again and contact customer service if the problem persists.':
+        elif response_content['message'] == \
+                'An error occured. Please try again and contact customer service if the problem persists.':
             gevent.sleep(10)
             r = prem_connection("postfile", "https://www.premiumize.me/api/transfer/create", payload, files)
             if 'failed' not in r:
                 response_content = json.loads(r.content)
-                if response_content['status'] == "success" or response_content['message'] == 'You already have this job added.':
+                if response_content['status'] == \
+                        "success" or response_content['message'] == 'You already have this job added.':
                     logger.debug('Upload successful: %s', torrent)
                     return response_content['id']
         else:
@@ -1772,12 +1779,14 @@ def upload_magnet(magnet):
         if response_content['status'] == "success":
             logger.debug('Upload magnet successful')
             return response_content['id']
-        elif response_content['message'] == 'An error occured. Please try again and contact customer service if the problem persists.':
+        elif response_content[
+            'message'] == 'An error occured. Please try again and contact customer service if the problem persists.':
             gevent.sleep(10)
             r = prem_connection("post", "https://www.premiumize.me/api/transfer/create", payload)
             if 'failed' not in r:
                 response_content = json.loads(r.content)
-                if response_content['status'] == "success" or response_content['message'] == 'You already have this job added.':
+                if response_content['status'] == "success" or response_content[
+                    'message'] == 'You already have this job added.':
                     logger.debug('Upload magnet successful')
                     return response_content['id']
         else:
@@ -1855,12 +1864,14 @@ def upload_nzb(filename):
         if response_content['status'] == "success":
             logger.debug('Upload nzb successful: %s', filename)
             return response_content['id']
-        elif response_content['message'] == 'An error occured. Please try again and contact customer service if the problem persists.':
+        elif response_content[
+            'message'] == 'An error occured. Please try again and contact customer service if the problem persists.':
             gevent.sleep(10)
             r = prem_connection("postfile", "https://www.premiumize.me/api/transfer/create", payload, files)
             if 'failed' not in r:
                 response_content = json.loads(r.content)
-                if response_content['status'] == "success" or response_content['message'] == 'You already have this job added.':
+                if response_content['status'] == "success" or response_content[
+                    'message'] == 'You already have this job added.':
                     logger.debug('Upload nzb successful: %s', filename)
                     return response_content['id']
         else:
@@ -1916,7 +1927,7 @@ def watchdir():
         observer.start()
         logger.debug('Initializing watchdog complete')
         if cfg.watchdir_walk_enabled:
-            scheduler.scheduler.add_job(walk_watchdir, 'interval', id='walk_watchdir', 	seconds=active_interval,
+            scheduler.scheduler.add_job(walk_watchdir, 'interval', id='walk_watchdir', seconds=active_interval,
                                         replace_existing=True, max_instances=1, coalesce=True)
         else:
             walk_watchdir()
@@ -2288,6 +2299,7 @@ def page_not_found(e):
 def load_user(userid):
     return User(cfg.web_username, cfg.web_password)
 
+
 @socketio.on('delete_all_failed_tasks')
 def delete_all_failed_tasks():
     # get all tasks based on cloud status
@@ -2298,6 +2310,7 @@ def delete_all_failed_tasks():
     # delete all failed tasks
     for task in failed_tasks:
         delete_task(task.id)
+
 
 @socketio.on('delete_task')
 def delete_task(message):
