@@ -2178,7 +2178,6 @@ def settings():
             prem_config.set('downloads', 'download_max', request.form.get('download_max'))
             prem_config.set('downloads', 'download_threads', request.form.get('download_threads'))
             prem_config.set('downloads', 'download_speed', request.form.get('download_speed'))
-            prem_config.set('downloads', 'download_speed', request.form.get('download_speed'))
             prem_config.set('downloads', 'remove_cloud_delay', request.form.get('remove_cloud_delay'))
             prem_config.set('upload', 'watchdir_location', request.form.get('watchdir_location'))
             prem_config.set('downloads', 'nzbtomedia_location', request.form.get('nzbtomedia_location'))
