@@ -321,8 +321,7 @@ class PremConfig:
             self.update_status = ''
         self.update_date = prem_config.get('update', 'update_date')
         self.auto_update = prem_config.getboolean('update', 'auto_update')
-        self.prem_customer_id = prem_config.get('premiumize', 'customer_id')
-        self.prem_pin = prem_config.get('premiumize', 'pin')
+        self.prem_apikey = prem_config.get('premiumize', 'apikey')
         self.remove_cloud = prem_config.getboolean('downloads', 'remove_cloud')
         self.remove_cloud_delay = prem_config.getint('downloads', 'remove_cloud_delay')
         self.seed_torrent = prem_config.getboolean('downloads', 'seed_torrent')
@@ -1180,7 +1179,7 @@ def download_file():
 
     for download in greenlet.task.download_list:
         if greenlet.task.type == 'Filehost':
-            payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'src': download['url']}
+            payload = {'apikey': cfg.prem_apikey, 'src': download['url']}
             r = prem_connection("post", "https://www.premiumize.me/api/transfer/directdl", payload)
             response_content = json.loads(r.content)
             try:
@@ -1315,8 +1314,7 @@ def process_dir(dir_content, path):
             if not os.path.exists(subdir_path):
                 logger.debug('Creating subfolder: %s', x['name'])
                 os.makedirs(subdir_path)
-            r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
-                                {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'id': x['id']})
+            r = prem_connection("post", "https://www.premiumize.me/api/folder/list", {'apikey': cfg.prem_apikey, 'id': x['id']})
             subdir_content = json.loads(r.content)['content']
             process_dir(subdir_content, subdir_path)
         elif type == 'file':
@@ -1347,17 +1345,14 @@ def download_process():
         greenlet.task.dldir = os.path.join(greenlet.task.dldir, name)
     if not greenlet.task.type == 'Filehost':
         if greenlet.task.file_id:
-            r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
-                                {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin})
+            r = prem_connection("post", "https://www.premiumize.me/api/folder/list", {'apikey': cfg.prem_apikey})
             dir_content = []
             for x in json.loads(r.content)['content']:
                 if x['id'] == greenlet.task.file_id:
                     dir_content.append(x)
                     break
         else:
-            r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
-                                {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
-                                 'id': greenlet.task.folder_id})
+            r = prem_connection("post", "https://www.premiumize.me/api/folder/list", {'apikey': cfg.prem_apikey, 'id': greenlet.task.folder_id})
             dir_content = json.loads(r.content)['content']
         if 'failed' in r:
             return 1
@@ -1492,7 +1487,7 @@ def update():
         update_interval = 10
     else:
         update_interval = idle_interval
-    payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
+    payload = {'apikey': cfg.prem_apikey}
     r = prem_connection("post", "https://www.premiumize.me/api/transfer/list", payload)
     if 'failed' not in r:
         response_content = json.loads(r.content)
@@ -1588,9 +1583,7 @@ def parse_tasks(transfers):
                     if task.category == '':
                         if cfg.download_rss and transfer['folder_id']:
                             try:
-                                r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
-                                                    {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin,
-                                                     'id': transfer['folder_id'], 'includebreadcrumbs': 1})
+                                r = prem_connection("post", "https://www.premiumize.me/api/folder/list", {'apikey': cfg.prem_apikey, 'id': transfer['folder_id'], 'includebreadcrumbs': 1})
                                 breadcrumbs = json.loads(r.content)['breadcrumbs']
                                 if len(breadcrumbs) > 1:
                                     if breadcrumbs[1]['name'] == 'Feed Downloads':
@@ -1741,7 +1734,7 @@ def add_task(id, size, name, category, type='', folder_id=None):
 
 def upload_torrent(torrent):
     logger.debug('def upload_torrent started')
-    payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
+    payload = {'apikey': cfg.prem_apikey}
     files = {'src': open(torrent, 'rb')}
     logger.debug('Uploading torrent to the cloud: %s', torrent)
     r = prem_connection("postfile", "https://www.premiumize.me/api/transfer/create", payload, files)
@@ -1772,7 +1765,7 @@ def upload_torrent(torrent):
 
 def upload_magnet(magnet):
     logger.debug('def upload_magnet started')
-    payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'src': magnet}
+    payload = {'apikey': cfg.prem_apikey, 'src': magnet}
     r = prem_connection("post", "https://www.premiumize.me/api/transfer/create", payload)
     if 'failed' not in r:
         response_content = json.loads(r.content)
@@ -1810,7 +1803,7 @@ def upload_filehost(urls):
     if task == 'duplicate':
         return
     for url in urls.splitlines():
-        payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'src': url}
+        payload = {'apikey': cfg.prem_apikey, 'src': url}
         r = prem_connection("post", "https://www.premiumize.me/api/transfer/directdl", payload)
         try:
             response_content = json.loads(r.content)
@@ -1853,7 +1846,7 @@ def upload_filehost(urls):
 
 def upload_nzb(filename):
     logger.debug('def upload_nzb started')
-    payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
+    payload = {'apikey': cfg.prem_apikey}
     files = {'src': open(filename, 'rb')}
     logger.debug('Uploading nzb to the cloud: %s', filename)
     r = prem_connection("postfile", "https://www.premiumize.me/api/transfer/create", payload, files)
@@ -2172,8 +2165,7 @@ def settings():
             prem_config.set('global', 'idle_interval', request.form.get('idle_interval'))
             prem_config.set('security', 'username', request.form.get('username'))
             prem_config.set('security', 'password', request.form.get('password'))
-            prem_config.set('premiumize', 'customer_id', request.form.get('customer_id'))
-            prem_config.set('premiumize', 'pin', request.form.get('pin'))
+            prem_config.set('premiumize', 'apikey', request.form.get('apikey'))
             prem_config.set('downloads', 'download_location', request.form.get('download_location'))
             prem_config.set('downloads', 'download_max', request.form.get('download_max'))
             prem_config.set('downloads', 'download_threads', request.form.get('download_threads'))
@@ -2277,7 +2269,7 @@ def about():
 @app.route('/list')
 @login_required
 def list():
-    payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin}
+    payload = {'apikey': cfg.prem_apikey}
     r = prem_connection("get", "https://www.premiumize.me/api/transfer/list", payload)
     return r.text
 
@@ -2340,7 +2332,7 @@ def delete_task(message):
                 email('Download could not be deleted', msg)
                 socketio.emit('delete_failed', {'data': id})
     else:
-        payload = {'customer_id': cfg.prem_customer_id, 'pin': cfg.prem_pin, 'id': task.id}
+        payload = {'apikey': cfg.prem_apikey, 'id': task.id}
         r = prem_connection("post", "https://www.premiumize.me/api/transfer/delete", payload)
         if 'failed' not in r:
             responsedict = json.loads(r.content)
