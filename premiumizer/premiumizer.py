@@ -414,14 +414,14 @@ class PremConfig:
         self.download_categories = ''
         try:
             for x in range(1, 99):
-                y = prem_config.get('categories', ('cat_name' + str([x])))
-                z = prem_config.get('categories', ('cat_dir' + str([x])))
-                if y != '':
-                    cat_name = y
-                    if z == '':
-                        cat_dir = os.path.join(self.download_location, y)
-                    else:
-                        cat_dir = z
+                cat_name = prem_config.get('categories', ('cat_name' + str([x])))
+                cat_dir = prem_config.get('categories', ('cat_dir' + str([x])))
+                if cat_name != '':
+                    if cat_dir == '':
+                        cat_dir = os.path.join(self.download_location, cat_name)
+                        prem_config.set('categories', ('cat_dir' + str([x])), cat_dir)
+                        with open(os.path.join(ConfDir, 'settings.cfg'), 'w') as configfile:
+                            prem_config.write(configfile)
                     cat_ext = prem_config.get('categories', ('cat_ext' + str([x]))).split(',')
                     cat_delsample = prem_config.getboolean('categories', ('cat_delsample' + str([x])))
                     cat_nzbtomedia = prem_config.getboolean('categories', ('cat_nzbtomedia' + str([x])))
