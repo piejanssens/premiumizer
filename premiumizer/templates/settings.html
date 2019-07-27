@@ -165,7 +165,7 @@
                                data-size="small">
                     {% endif %}
                     <label for="remove_cloud_delay">Delay in hours:</label>
-                    <input type="number" min="1" class="form-control" name="remove_cloud_delay"
+                    <input type="number" min="0" class="form-control" name="remove_cloud_delay"
                            aria-describedby="basic-addon1"
                            value="{{ settings.get('downloads', 'remove_cloud_delay') }}">
                     <p>&nbsp;</p>
