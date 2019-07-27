@@ -76,10 +76,10 @@ watchdir_walk_interval = 60
 [notifications]
 email_enabled = 0
 email_on_failure = 0
-email_from = "Premiumizer" <premiumizer@gmail.com>
-email_to = myaccount@gmail.com
+email_from =
+email_to =
 email_server =
-email_port = 25
+email_port =
 email_encryption = 0
 email_username =
 email_password =

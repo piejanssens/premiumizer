@@ -95,16 +95,21 @@
                         <legend>Start-Up</legend>
                         <div class="form-group">
                             <label for="idle_interval">Idle interval:</label>
-                            <input type="number" class="form-control" aria-describedby="basic-addon1"
+                            <input type="number" min="0" class="form-control" aria-describedby="basic-addon1"
                                    name="idle_interval" value="{{ settings.get('global', 'idle_interval') }}">
                             <label for="server_port">Server Port:</label>
-                            <input type="number" class="form-control" aria-describedby="basic-addon1"
+                            <input type="number" min="1024" max="65535" class="form-control"
+                                   aria-describedby="basic-addon1"
                                    name="server_port" value="{{ settings.get('global', 'server_port') }}">
-                            <label for="bind_port">Bind to ip:</label>
-                            <input type="text" class="form-control" aria-describedby="basic-addon1"
+                            <label for="bind_ip">Bind to ip:</label>
+                            <input type="text" minlength="7" maxlength="15" size="15"
+                                   pattern="^((\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.){3}(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])$"
+                                   title="Please enter a valid IP-address" class="form-control"
+                                   aria-describedby="basic-addon1"
                                    name="bind_ip" value="{{ settings.get('global', 'bind_ip') }}">
                             <label for="reverse_proxy_path">Reverse proxy URL base:</label>
-                            <input type="text" class="form-control" aria-describedby="basic-addon1"
+                            <input type="text" pattern="^\/[a-z0-9]*" title="Proxy path should start with /"
+                                   class="form-control" aria-describedby="basic-addon1"
                                    name="reverse_proxy_path" value="{{ settings.get('global', 'reverse_proxy_path') }}">
                         </div>
                     </fieldset>
@@ -160,7 +165,7 @@
                                data-size="small">
                     {% endif %}
                     <label for="remove_cloud_delay">Delay in hours:</label>
-                    <input type="number" class="form-control" name="remove_cloud_delay"
+                    <input type="number" min="1" class="form-control" name="remove_cloud_delay"
                            aria-describedby="basic-addon1"
                            value="{{ settings.get('downloads', 'remove_cloud_delay') }}">
                     <p>&nbsp;</p>
@@ -202,14 +207,15 @@
                             restart.</p>
                         <br/>
                         <label for="watchdir_walk_interval">Interval in seconds:</label>
-                        <input type="number" class="form-control" name="watchdir_walk_interval"
+                        <input type="number" min="1" class="form-control" name="watchdir_walk_interval"
                                aria-describedby="basic-addon1"
                                value="{{ settings.get('upload', 'watchdir_walk_interval') }}">
                         <p>&nbsp;</p>
                         <p>Subfolders will be created based on categories names</p>
                         <p>Downloads will automatically set category based on subfolder name</p>
                         <label for="watchdir_location">Folder to Watch:</label>
-                        <input type="text" class="form-control" name="watchdir_location"
+                        <input type="text" placeholder="e.g. C:\premiumizer\watchdir - /home/premiumizer\watchdir"
+                               class="form-control" name="watchdir_location"
                                aria-describedby="basic-addon1"
                                value="{{ settings.get('upload', 'watchdir_location') }}">
                     </div>
@@ -220,18 +226,20 @@
             <div class="tab-pane" id="6a">
                 <div class="form-group">
                     <label for="download_max">Max Simultaneous downloads: (Restart required)</label>
-                    <input type="number" class="form-control" name="download_max"
+                    <input type="number" min="1" class="form-control" name="download_max"
                            aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_max') }}">
                     <label for="download_threads">Download threads: (built in downloader only)</label>
-                    <input type="number" class="form-control" name="download_threads"
+                    <input type="number" min="1" class="form-control" name="download_threads"
                            aria-describedby="basic-addon1"
                            value="{{ settings.get('downloads', 'download_threads') }}">
                     <label for="download_speed">Speed limit in MegaBytes/s (-1 = no limit)</label>
-                    <input type="text" class="form-control" name="download_speed"
+                    <input type="number" step="0.01" pattern="[0-9]*[.][0-9]" title="Only dots are allowed e.g. 1.5"
+                           class="form-control" name="download_speed"
                            aria-describedby="basic-addon1"
                            value="{{ settings.get('downloads', 'download_speed') }}">
                     <label for="download_location">Download Location:</label>
-                    <input type="text" class="form-control" name="download_location"
+                    <input type="text" placeholder="e.g. C:\premiumizer\downloads  /home/premiumizer/downloads"
+                           class="form-control" name="download_location"
                            aria-describedby="basic-addon1"
                            value="{{ settings.get('downloads', 'download_location') }}">
                     <label for="nzbtomedia_location">path to nzbToMedia.py in the nzbtomedia folder:</label>
@@ -281,10 +289,10 @@
                             --rpc-listen-port=6800 --rpc-secret=premiumizer --max-connection-per-server=16
                             --file-allocation=none --disk-cache=0</p>
                         <label for="aria2_host">aria2 host:</label>
-                        <input type="text" class="form-control" name="aria2_host"
-                               aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'aria2_host') }}">
+                        <input type="text" class="form-control" name="aria2_host" aria-describedby="basic-addon1"
+                               value="{{ settings.get('downloads', 'aria2_host') }}">
                         <label for="aria2_port">aria2 port:</label>
-                        <input type="number" class="form-control" name="aria2_port"
+                        <input type="number" min="1024" max="65535" class="form-control" name="aria2_port"
                                aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'aria2_port') }}">
                         <label for="jd_password">aria2 RPC secret:</label>
                         <input type="password" class="form-control" name="aria2_secret"
@@ -372,16 +380,18 @@
                     {% endif %}
                     <p>&nbsp;</p>
                     <label for="email_from">From:</label>
-                    <input type="text" class="form-control" name="email_from"
+                    <input type="text" placeholder=" &quot;Premiumizer&quot; <example@domain.com>" class="form-control"
+                           name="email_from"
                            aria-describedby="basic-addon1" value="{{ settings.get('notifications', 'email_from') }}">
                     <label for="email_to">To:</label>
-                    <input type="email" class="form-control" name="email_to"
+                    <input type="email" placeholder="example@domain.com" class="form-control" name="email_to"
                            aria-describedby="basic-addon1" value="{{ settings.get('notifications', 'email_to') }}">
                     <label for="email_server">Server:</label>
                     <input type="text" class="form-control" name="email_server"
                            aria-describedby="basic-addon1" value="{{ settings.get('notifications', 'email_server') }}">
                     <label for="email_port">Port:</label>
-                    <input type="number" class="form-control" name="email_port"
+                    <input type="number" min="1" max="65535" placeholder="e.g. 25 456 587" class="form-control"
+                           name="email_port"
                            aria-describedby="basic-addon1" value="{{ settings.get('notifications', 'email_port') }}">
                     <label for="email_username">Username (if required):</label>
                     <input type="text" class="form-control" name="email_username"
