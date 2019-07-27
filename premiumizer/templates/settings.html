@@ -19,7 +19,7 @@
 
         <ul class="nav nav-tabs">
             <li class="active"><a href="#1a" data-toggle="tab">Global</a></li>
-            <li><a href="#4a" data-toggle="tab">Premiumize</a></li>
+            <li><a href="#4a" data-toggle="tab">Premiumize.me</a></li>
             <li><a href="#5a" data-toggle="tab">Automation</a></li>
             <li><a href="#6a" data-toggle="tab">Downloader</a></li>
             <li><a href="#8a" data-toggle="tab">Categories</a></li>
@@ -45,71 +45,76 @@
                         <p>Pressing Update will restart JDownloader.</p>
                         <input type="submit" class="btn-danger" name="submit" value="Update JDownloader">
                     {% endif %}
-                    <label for="login_enabled">Login enabled:</label>
-                    {% if settings.get('security', 'login_enabled') == '1' %}
-                        <input type="checkbox" class="form-control bootstrap_switch" name="login_enabled"
-                               data-size="small" checked>
-                    {% else %}
-                        <input type="checkbox" class="form-control bootstrap_switch" name="login_enabled"
-                               data-size="small">
-                    {% endif %}
+                    <div class="form-group">
+                        <label for="auto_update">Enable automatic updates (checks every 6 hours):</label>
+                        {% if settings.get('update', 'auto_update') == '1' %}
+                            <input type="checkbox" class="form-control bootstrap_switch" name="auto_update"
+                                   data-size="small" checked>
+                        {% else %}
+                            <input type="checkbox" class="form-control bootstrap_switch" name="auto_update"
+                                   data-size="small">
+                        {% endif %}
+                    </div>
                     <p>&nbsp;</p>
-                    <label for="username">Username:</label>
-                    <input type="text" class="form-control" aria-describedby="basic-addon1"
-                           name="username" value="{{ settings.get('security', 'username') }}">
-                    <label for="password">Password:</label>
-                    <input type="password" class="form-control" placeholder="Password" aria-describedby="basic-addon1"
-                           name="password" value="{{ settings.get('security', 'password') }}">
+                    <fieldset>
+                        <legend>Logging:</legend>
+                        <div class="form-group">
+                            <label for="debug_enabled">Debug mode:</label>
+                            {% if settings.get('global', 'debug_enabled') == '1' %}
+                                <input type="checkbox" class="form-control bootstrap_switch" name="debug_enabled"
+                                       data-size="small"
+                                       checked>
+                            {% else %}
+                                <input type="checkbox" class="form-control bootstrap_switch" name="debug_enabled"
+                                       data-size="small">
+                            {% endif %}
+                        </div>
+                    </fieldset>
+                    <p>&nbsp;</p>
+                    <fieldset>
+                        <legend>Security:</legend>
+                        <label for="login_enabled">Login enabled:</label>
+                        {% if settings.get('security', 'login_enabled') == '1' %}
+                            <input type="checkbox" class="form-control bootstrap_switch" name="login_enabled"
+                                   data-size="small" checked>
+                        {% else %}
+                            <input type="checkbox" class="form-control bootstrap_switch" name="login_enabled"
+                                   data-size="small">
+                        {% endif %}
+                        <p>&nbsp;</p>
+                        <label for="username">Username:</label>
+                        <input type="text" class="form-control" aria-describedby="basic-addon1"
+                               name="username" value="{{ settings.get('security', 'username') }}">
+                        <label for="password">Password:</label>
+                        <input type="password" class="form-control" placeholder="Password"
+                               aria-describedby="basic-addon1"
+                               name="password" value="{{ settings.get('security', 'password') }}">
+                    </fieldset>
+                    <p>&nbsp;</p>
+                    <fieldset>
+                        <legend>Start-Up</legend>
+                        <div class="form-group">
+                            <label for="idle_interval">Idle interval:</label>
+                            <input type="number" class="form-control" aria-describedby="basic-addon1"
+                                   name="idle_interval" value="{{ settings.get('global', 'idle_interval') }}">
+                            <label for="server_port">Server Port:</label>
+                            <input type="number" class="form-control" aria-describedby="basic-addon1"
+                                   name="server_port" value="{{ settings.get('global', 'server_port') }}">
+                            <label for="bind_port">Bind to ip:</label>
+                            <input type="text" class="form-control" aria-describedby="basic-addon1"
+                                   name="bind_ip" value="{{ settings.get('global', 'bind_ip') }}">
+                            <label for="reverse_proxy_path">Reverse proxy URL base:</label>
+                            <input type="text" class="form-control" aria-describedby="basic-addon1"
+                                   name="reverse_proxy_path" value="{{ settings.get('global', 'reverse_proxy_path') }}">
+                        </div>
+                    </fieldset>
                 </div>
-
-                <div class="form-group">
-                    <label for="auto_update">Enable automatic updates (checks every 6 hours):</label>
-                    {% if settings.get('update', 'auto_update') == '1' %}
-                        <input type="checkbox" class="form-control bootstrap_switch" name="auto_update"
-                               data-size="small" checked>
-                    {% else %}
-                        <input type="checkbox" class="form-control bootstrap_switch" name="auto_update"
-                               data-size="small">
-                    {% endif %}
-                </div>
-
-                <div class="form-group">
-                    <label for="debug_enabled">Debug mode:</label>
-                    {% if settings.get('global', 'debug_enabled') == '1' %}
-                        <input type="checkbox" class="form-control bootstrap_switch" name="debug_enabled"
-                               data-size="small"
-                               checked>
-                    {% else %}
-                        <input type="checkbox" class="form-control bootstrap_switch" name="debug_enabled"
-                               data-size="small">
-                    {% endif %}
-                </div>
-
-                <div class="form-group">
-                    <label for="idle_interval">Idle interval:</label>
-                    <input type="number" class="form-control" aria-describedby="basic-addon1"
-                           name="idle_interval" value="{{ settings.get('global', 'idle_interval') }}">
-                    <label for="server_port">Server Port:</label>
-                    <input type="number" class="form-control" aria-describedby="basic-addon1"
-                           name="server_port" value="{{ settings.get('global', 'server_port') }}">
-                    <label for="bind_port">Bind to ip:</label>
-                    <input type="text" class="form-control" aria-describedby="basic-addon1"
-                           name="bind_ip" value="{{ settings.get('global', 'bind_ip') }}">
-                    <label for="reverse_proxy_path">Reverse proxy URL base:</label>
-                    <input type="text" class="form-control" aria-describedby="basic-addon1"
-                           name="reverse_proxy_path" value="{{ settings.get('global', 'reverse_proxy_path') }}">
-                </div>
-
             </div>
-
             <div class="tab-pane" id="4a">
                 <div class="form-group">
-                    <label for="customer_id">Customer ID:</label>
-                    <input type="number" class="form-control" aria-describedby="basic-addon1"
-                           name="customer_id" value="{{ settings.get('premiumize', 'customer_id') }}">
-                    <label for="pin">PIN:</label>
-                    <input type="password" class="form-control" aria-describedby="basic-addon1" name="pin"
-                           value="{{ settings.get('premiumize', 'pin') }}">
+                    <label for="apikey">API Key:</label>
+                    <input type="password" class="form-control" aria-describedby="basic-addon1" name="apikey"
+                           value="{{ settings.get('premiumize', 'apikey') }}">
                 </div>
             </div>
 
@@ -169,38 +174,47 @@
                                data-size="small">
                     {% endif %}
                 </div>
-                <div class="form-group">
-                    <label for="watchdir_enabled">Enable Watchdir/Blackhole:</label>
-                    {% if settings.get('upload', 'watchdir_enabled') == '1' %}
-                        <input type="checkbox" class="form-control bootstrap_switch" name="watchdir_enabled"
-                               data-size="small"
-                               checked>
-                        <p>Disabling will require restart</p>
-                    {% else %}
-                        <input type="checkbox" class="form-control bootstrap_switch" name="watchdir_enabled"
-                               data-size="small">
-                    {% endif %}
-                    <label for="watchdir_walk_enabled">Scan Watchdir/Blackhole regularly:</label>
-                    {% if settings.get('upload', 'watchdir_walk_enabled') == '1' %}
-                        <input type="checkbox" class="form-control bootstrap_switch" name="watchdir_walk_enabled"
-                               data-size="small"
-                               checked>
-                    {% else %}
-                        <input type="checkbox" class="form-control bootstrap_switch" name="watchdir_walk_enabled"
-                               data-size="small">
-                    {% endif %}
-                    <p>Enable when watching is not possible (for example with network file systems). Changing requires restart.</p>
-                    <br/>
-                    <label for="watchdir_walk_interval">Interval in seconds:</label>
-                    <input type="number" class="form-control" name="watchdir_walk_interval" aria-describedby="basic-addon1"
-                           value="{{ settings.get('upload', 'watchdir_walk_interval') }}">
-                    <p>&nbsp;</p>
-                    <p>Subfolders will be created based on categories names</p>
-                    <p>Downloads will automatically set category based on subfolder name</p>
-                    <label for="watchdir_location">Folder to Watch:</label>
-                    <input type="text" class="form-control" name="watchdir_location"
-                           aria-describedby="basic-addon1" value="{{ settings.get('upload', 'watchdir_location') }}">
-                </div>
+                <p>&nbsp;</p>
+                <fieldset>
+                    <legend>Watchdir / Blackhole</legend>
+                    <div class="form-group">
+                        <label for="watchdir_enabled">Enable Watchdir/Blackhole:</label>
+                        {% if settings.get('upload', 'watchdir_enabled') == '1' %}
+                            <input type="checkbox" class="form-control bootstrap_switch" name="watchdir_enabled"
+                                   data-size="small"
+                                   checked>
+                            <p>Disabling will require restart</p>
+                        {% else %}
+                            <input type="checkbox" class="form-control bootstrap_switch" name="watchdir_enabled"
+                                   data-size="small">
+                        {% endif %}
+                        <label for="watchdir_walk_enabled">Alternative scan Watchdir/Blackhole on interval</label>
+                        {% if settings.get('upload', 'watchdir_walk_enabled') == '1' %}
+                            <input type="checkbox" class="form-control bootstrap_switch" name="watchdir_walk_enabled"
+                                   data-size="small"
+                                   checked>
+                        {% else %}
+                            <input type="checkbox" class="form-control bootstrap_switch" name="watchdir_walk_enabled"
+                                   data-size="small">
+                        {% endif %}
+                        <p>Enable when watching is not possible (for example with network file systems). Changing
+                            requires
+                            restart.</p>
+                        <br/>
+                        <label for="watchdir_walk_interval">Interval in seconds:</label>
+                        <input type="number" class="form-control" name="watchdir_walk_interval"
+                               aria-describedby="basic-addon1"
+                               value="{{ settings.get('upload', 'watchdir_walk_interval') }}">
+                        <p>&nbsp;</p>
+                        <p>Subfolders will be created based on categories names</p>
+                        <p>Downloads will automatically set category based on subfolder name</p>
+                        <label for="watchdir_location">Folder to Watch:</label>
+                        <input type="text" class="form-control" name="watchdir_location"
+                               aria-describedby="basic-addon1"
+                               value="{{ settings.get('upload', 'watchdir_location') }}">
+                    </div>
+                </fieldset>
+
             </div>
 
             <div class="tab-pane" id="6a">
@@ -210,73 +224,87 @@
                            aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_max') }}">
                     <label for="download_threads">Download threads: (built in downloader only)</label>
                     <input type="number" class="form-control" name="download_threads"
-                           aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_threads') }}">
+                           aria-describedby="basic-addon1"
+                           value="{{ settings.get('downloads', 'download_threads') }}">
                     <label for="download_speed">Speed limit in MegaBytes/s (-1 = no limit)</label>
                     <input type="text" class="form-control" name="download_speed"
-                           aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_speed') }}">
+                           aria-describedby="basic-addon1"
+                           value="{{ settings.get('downloads', 'download_speed') }}">
                     <label for="download_location">Download Location:</label>
                     <input type="text" class="form-control" name="download_location"
-                           aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_location') }}">
+                           aria-describedby="basic-addon1"
+                           value="{{ settings.get('downloads', 'download_location') }}">
                     <label for="nzbtomedia_location">path to nzbToMedia.py in the nzbtomedia folder:</label>
                     <input type="text" class="form-control" name="nzbtomedia_location"
                            aria-describedby="basic-addon1"
                            value="{{ settings.get('downloads', 'nzbtomedia_location') }}">
                 </div>
+                <p>&nbsp;</p>
+                <fieldset>
+                    <legend>JDownloader</legend>
+                    <div class="form-group">
+                        <label for="jd_enabled">Use JDownloader:</label>
+                        {% if settings.get('downloads', 'jd_enabled') == '1' %}
+                            <input type="checkbox" class="form-control bootstrap_switch" name="jd_enabled"
+                                   data-size="small" checked>
+                        {% else %}
+                            <input type="checkbox" class="form-control bootstrap_switch" name="jd_enabled"
+                                   data-size="small">
+                        {% endif %}
+                        <p>WARNING: directories will be flattened</p>
+                        <label for="jd_username">JD Username:</label>
+                        <input type="email" class="form-control" name="jd_username"
+                               aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'jd_username') }}">
+                        <label for="jd_password">JD Password:</label>
+                        <input type="password" class="form-control" name="jd_password"
+                               aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'jd_password') }}">
+                        <label for="jd_device_name">Device Name:</label>
+                        <input type="text" class="form-control" name="jd_device_name"
+                               aria-describedby="basic-addon1"
+                               value="{{ settings.get('downloads', 'jd_device_name') }}">
+                    </div>
+                </fieldset>
+                <p>&nbsp;</p>
+                <fieldset>
+                    <legend>Aria2</legend>
+                    <div class="form-group">
+                        <label for="aria2_enabled">Use Aria2:</label>
+                        {% if settings.get('downloads', 'aria2_enabled') == '1' %}
+                            <input type="checkbox" class="form-control bootstrap_switch" name="aria2_enabled"
+                                   data-size="small" checked>
+                        {% else %}
+                            <input type="checkbox" class="form-control bootstrap_switch" name="aria2_enabled"
+                                   data-size="small">
+                        {% endif %}
+                        <p>Start aria2 with: aria2c --disable-ipv6=true --enable-rpc --rpc-allow-origin-all
+                            --rpc-listen-all
+                            --rpc-listen-port=6800 --rpc-secret=premiumizer --max-connection-per-server=16
+                            --file-allocation=none --disk-cache=0</p>
+                        <label for="aria2_host">aria2 host:</label>
+                        <input type="text" class="form-control" name="aria2_host"
+                               aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'aria2_host') }}">
+                        <label for="aria2_port">aria2 port:</label>
+                        <input type="number" class="form-control" name="aria2_port"
+                               aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'aria2_port') }}">
+                        <label for="jd_password">aria2 RPC secret:</label>
+                        <input type="password" class="form-control" name="aria2_secret"
+                               aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'aria2_secret') }}">
+                    </div>
+                </fieldset>
 
-                <div class="form-group">
-                    <label for="jd_enabled">Use JDownloader:</label>
-                    {% if settings.get('downloads', 'jd_enabled') == '1' %}
-                        <input type="checkbox" class="form-control bootstrap_switch" name="jd_enabled"
-                               data-size="small" checked>
-                    {% else %}
-                        <input type="checkbox" class="form-control bootstrap_switch" name="jd_enabled"
-                               data-size="small">
-                    {% endif %}
-                    <p>WARNING: directories will be flattened</p>
-                    <label for="jd_username">JD Username:</label>
-                    <input type="email" class="form-control" name="jd_username"
-                           aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'jd_username') }}">
-                    <label for="jd_password">JD Password:</label>
-                    <input type="password" class="form-control" name="jd_password"
-                           aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'jd_password') }}">
-                    <label for="jd_device_name">Device Name:</label>
-                    <input type="text" class="form-control" name="jd_device_name"
-                           aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'jd_device_name') }}">
-                </div>
-
-                <div class="form-group">
-                    <label for="aria2_enabled">Use Aria2:</label>
-                    {% if settings.get('downloads', 'aria2_enabled') == '1' %}
-                        <input type="checkbox" class="form-control bootstrap_switch" name="aria2_enabled"
-                               data-size="small" checked>
-                    {% else %}
-                        <input type="checkbox" class="form-control bootstrap_switch" name="aria2_enabled"
-                               data-size="small">
-                    {% endif %}
-                    <p>Start aria2 with: aria2c --disable-ipv6=true --enable-rpc --rpc-allow-origin-all --rpc-listen-all
-                        --rpc-listen-port=6800 --rpc-secret=premiumizer --max-connection-per-server=16
-                        --file-allocation=none --disk-cache=0</p>
-                    <label for="aria2_host">aria2 host:</label>
-                    <input type="text" class="form-control" name="aria2_host"
-                           aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'aria2_host') }}">
-                    <label for="aria2_port">aria2 port:</label>
-                    <input type="number" class="form-control" name="aria2_port"
-                           aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'aria2_port') }}">
-                    <label for="jd_password">aria2 RPC secret:</label>
-                    <input type="password" class="form-control" name="aria2_secret"
-                           aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'aria2_secret') }}">
-                </div>
             </div>
 
             <div class="tab-pane" id="8a">
-
-                <h5>Download Location: overwrite default download location + subdirectory based on category name</h5>
-                <h5>Delete samples: Will not download any media file &lt; 150MB with sample or rarbg.com.mp4 in url</h5>
+                <h5>Download Location: overwrite default download location + subdirectory based on category
+                    name</h5>
+                <h5>Delete samples: Will not download any media file &lt; 150MB with sample or rarbg.com.mp4 in
+                    url</h5>
                 <h5>Extensions: Only download the following files; example mkv,mp4,srt</h5>
                 <p>&nbsp;</p>
                 {% for x in range(1,categories_amount) %}
                     <div class="form-inline">
-                        <input type="text" class="form-control" placeholder="Name" name="{{ "cat_name["+x|string+"]" }}"
+                        <input type="text" class="form-control" placeholder="Name"
+                               name="{{ "cat_name["+x|string+"]" }}"
                                aria-describedby="basic-addon1"
                                value="{{ settings.get('categories', 'cat_name['+x|string+']') }}">
                         <input type="text" class="form-control" placeholder="Download Location"
@@ -310,56 +338,64 @@
             </div>
 
             <div class="tab-pane" id="10a">
-                <h4>Email</h4>
-                <label for="email_enabled">Enabled:</label>
-                {% if settings.get('notifications', 'email_enabled') == '1' %}
-                    <input type="checkbox" class="form-control bootstrap_switch" name="email_enabled" data-size="small"
-                           checked>
-                {% else %}
-                    <input type="checkbox" class="form-control bootstrap_switch" name="email_enabled" data-size="small">
-                {% endif %}
                 <p>&nbsp;</p>
-                <label for="email_on_failure">Only on failure:</label>
-                {% if settings.get('notifications', 'email_on_failure') == '1' %}
-                    <input type="checkbox" class="form-control bootstrap_switch" name="email_on_failure"
-                           data-size="small"
-                           checked>
-                {% else %}
-                    <input type="checkbox" class="form-control bootstrap_switch" name="email_on_failure"
-                           data-size="small">
-                {% endif %}
-                <p>&nbsp;</p>
-                <label for="email_encryption">Use encryption SSL/TLS:</label>
-                {% if settings.get('notifications', 'email_encryption') == '1' %}
-                    <input type="checkbox" class="form-control bootstrap_switch" name="email_encryption"
-                           data-size="small"
-                           checked>
-                {% else %}
-                    <input type="checkbox" class="form-control bootstrap_switch" name="email_encryption"
-                           data-size="small">
-                {% endif %}
-                <p>&nbsp;</p>
-                <label for="email_from">From:</label>
-                <input type="text" class="form-control" name="email_from"
-                       aria-describedby="basic-addon1" value="{{ settings.get('notifications', 'email_from') }}">
-                <label for="email_to">To:</label>
-                <input type="email" class="form-control" name="email_to"
-                       aria-describedby="basic-addon1" value="{{ settings.get('notifications', 'email_to') }}">
-                <label for="email_server">Server:</label>
-                <input type="text" class="form-control" name="email_server"
-                       aria-describedby="basic-addon1" value="{{ settings.get('notifications', 'email_server') }}">
-                <label for="email_port">Port:</label>
-                <input type="number" class="form-control" name="email_port"
-                       aria-describedby="basic-addon1" value="{{ settings.get('notifications', 'email_port') }}">
-                <label for="email_username">Username (if required):</label>
-                <input type="text" class="form-control" name="email_username"
-                       aria-describedby="basic-addon1" value="{{ settings.get('notifications', 'email_username') }}">
-                <label for="email_password">Password (if required):</label>
-                <input type="password" class="form-control" name="email_password"
-                       aria-describedby="basic-addon1" value="{{ settings.get('notifications', 'email_password') }}">
-                <p>&nbsp;</p>
-                <input type="submit" class="btn btn-info" name="submit" value="Send Test Email">
+                <fieldset>
+                    <legend>Email</legend>
+                    <label for="email_enabled">Enabled:</label>
+                    {% if settings.get('notifications', 'email_enabled') == '1' %}
+                        <input type="checkbox" class="form-control bootstrap_switch" name="email_enabled"
+                               data-size="small"
+                               checked>
+                    {% else %}
+                        <input type="checkbox" class="form-control bootstrap_switch" name="email_enabled"
+                               data-size="small">
+                    {% endif %}
+                    <p>&nbsp;</p>
+                    <label for="email_on_failure">Only on failure:</label>
+                    {% if settings.get('notifications', 'email_on_failure') == '1' %}
+                        <input type="checkbox" class="form-control bootstrap_switch" name="email_on_failure"
+                               data-size="small"
+                               checked>
+                    {% else %}
+                        <input type="checkbox" class="form-control bootstrap_switch" name="email_on_failure"
+                               data-size="small">
+                    {% endif %}
+                    <p>&nbsp;</p>
+                    <label for="email_encryption">Use encryption SSL/TLS:</label>
+                    {% if settings.get('notifications', 'email_encryption') == '1' %}
+                        <input type="checkbox" class="form-control bootstrap_switch" name="email_encryption"
+                               data-size="small"
+                               checked>
+                    {% else %}
+                        <input type="checkbox" class="form-control bootstrap_switch" name="email_encryption"
+                               data-size="small">
+                    {% endif %}
+                    <p>&nbsp;</p>
+                    <label for="email_from">From:</label>
+                    <input type="text" class="form-control" name="email_from"
+                           aria-describedby="basic-addon1" value="{{ settings.get('notifications', 'email_from') }}">
+                    <label for="email_to">To:</label>
+                    <input type="email" class="form-control" name="email_to"
+                           aria-describedby="basic-addon1" value="{{ settings.get('notifications', 'email_to') }}">
+                    <label for="email_server">Server:</label>
+                    <input type="text" class="form-control" name="email_server"
+                           aria-describedby="basic-addon1" value="{{ settings.get('notifications', 'email_server') }}">
+                    <label for="email_port">Port:</label>
+                    <input type="number" class="form-control" name="email_port"
+                           aria-describedby="basic-addon1" value="{{ settings.get('notifications', 'email_port') }}">
+                    <label for="email_username">Username (if required):</label>
+                    <input type="text" class="form-control" name="email_username"
+                           aria-describedby="basic-addon1"
+                           value="{{ settings.get('notifications', 'email_username') }}">
+                    <label for="email_password">Password (if required):</label>
+                    <input type="password" class="form-control" name="email_password"
+                           aria-describedby="basic-addon1"
+                           value="{{ settings.get('notifications', 'email_password') }}">
+                    <p>&nbsp;</p>
+                    <input type="submit" class="btn btn-info" name="submit" value="Send Test Email">
             </div>
+            </fieldset>
+            <p>&nbsp;</p>
         </div>
     </form>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/1000hz-bootstrap-validator/0.11.9/validator.min.js"
