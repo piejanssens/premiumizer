@@ -566,7 +566,7 @@ def check_update(auto_update=cfg.auto_update):
                     cfg.jd_update_available = cfg.jd_device.update.update_available()
                 except:
                     logger.error('JDownloader update check failed')
-        scheduler.scheduler.reschedule_job('check_update', trigger='interval', hours=6)
+    scheduler.scheduler.reschedule_job('check_update', trigger='interval', hours=6)
 
 
 # noinspection PyProtectedMember
