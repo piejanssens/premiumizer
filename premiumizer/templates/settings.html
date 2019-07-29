@@ -27,6 +27,7 @@
         </ul>
         <div class="tab-content clearfix">
             <div class="tab-pane active" id="1a">
+                <p>&nbsp;</p>
                 <p>Changing these settings requires a restart.</p>
                 <div class="form-group">
                     <p class="text-primary">{{ cfg.update_status }}</p>
@@ -116,6 +117,7 @@
                 </div>
             </div>
             <div class="tab-pane" id="4a">
+                <p>&nbsp;</p>
                 <div class="form-group">
                     <label for="apikey">API Key:</label>
                     <input type="password" class="form-control" aria-describedby="basic-addon1" name="apikey"
@@ -124,6 +126,7 @@
             </div>
 
             <div class="tab-pane" id="5a">
+                <p>&nbsp;</p>
                 <div class="form-group">
                     <label for="download_enabled">Downloads enabled:</label>
                     {% if settings.get('downloads', 'download_enabled') == '1' %}
@@ -178,6 +181,11 @@
                         <input type="checkbox" class="form-control bootstrap_switch" name="seed_torrent"
                                data-size="small">
                     {% endif %}
+                    <p>&nbsp;</p>
+                    <label for="nzbtomedia_location">path to nzbToMedia.py in the nzbtomedia folder:</label>
+                    <input type="text" class="form-control" name="nzbtomedia_location"
+                           aria-describedby="basic-addon1"
+                           value="{{ settings.get('downloads', 'nzbtomedia_location') }}">
                 </div>
                 <p>&nbsp;</p>
                 <fieldset>
@@ -220,33 +228,46 @@
                                value="{{ settings.get('upload', 'watchdir_location') }}">
                     </div>
                 </fieldset>
-
             </div>
-
             <div class="tab-pane" id="6a">
-                <div class="form-group">
-                    <label for="download_max">Max Simultaneous downloads: (Restart required)</label>
-                    <input type="number" min="1" class="form-control" name="download_max"
-                           aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_max') }}">
-                    <label for="download_threads">Download threads: (built in downloader only)</label>
-                    <input type="number" min="1" class="form-control" name="download_threads"
-                           aria-describedby="basic-addon1"
-                           value="{{ settings.get('downloads', 'download_threads') }}">
-                    <label for="download_speed">Speed limit in MegaBytes/s (-1 = no limit)</label>
-                    <input type="number" step="0.01" pattern="[0-9]*[.][0-9]" title="Only dots are allowed e.g. 1.5"
-                           class="form-control" name="download_speed"
-                           aria-describedby="basic-addon1"
-                           value="{{ settings.get('downloads', 'download_speed') }}">
-                    <label for="download_location">Download Location:</label>
-                    <input type="text" placeholder="e.g. C:\premiumizer\downloads  /home/premiumizer/downloads"
-                           class="form-control" name="download_location"
-                           aria-describedby="basic-addon1"
-                           value="{{ settings.get('downloads', 'download_location') }}">
-                    <label for="nzbtomedia_location">path to nzbToMedia.py in the nzbtomedia folder:</label>
-                    <input type="text" class="form-control" name="nzbtomedia_location"
-                           aria-describedby="basic-addon1"
-                           value="{{ settings.get('downloads', 'nzbtomedia_location') }}">
-                </div>
+                <p>&nbsp;</p>
+                <fieldset>
+                    <legend>General</legend>
+                    <div class="form-group">
+                        <label for="download_location">Download Location:</label>
+                        <input type="text" placeholder="e.g. C:\premiumizer\downloads  /home/premiumizer/downloads"
+                               class="form-control" name="download_location"
+                               aria-describedby="basic-addon1"
+                               value="{{ settings.get('downloads', 'download_location') }}">
+                        <label for="download_max">Max Simultaneous downloads: (Restart required)</label>
+                        <input type="number" min="1" class="form-control" name="download_max"
+                               aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'download_max') }}">
+                        <label for="download_speed">Speed limit in MegaBytes/s (-1 = no limit) (JD only enable/disable
+                            speed set in JD itself)</label>
+                        <input type="number" step="0.01" pattern="[0-9]*[.][0-9]" title="Only dots are allowed e.g. 1.5"
+                               class="form-control" name="download_speed"
+                               aria-describedby="basic-addon1"
+                               value="{{ settings.get('downloads', 'download_speed') }}">
+                    </div>
+                </fieldset>
+                <p>&nbsp;</p>
+                <fieldset>
+                    <legend>PysmartDL (default)</legend>
+                    <div class="form-group">
+                        {% if cfg.download_builtin == 1 and cfg.download_enabled == 1 %}
+                            <TD class="c7 vert-align text-center"><span
+                                    class="label label-status label-success">Enabled</span></TD>
+                        {% else %}
+                            <TD class="c7 vert-align text-center"><span
+                                    class="label label-status label-danger">Disabled</span></TD>
+                        {% endif %}
+                        <p>&nbsp;</p>
+                        <label for="download_threads">Download threads:</label>
+                        <input type="number" min="1" class="form-control" name="download_threads"
+                               aria-describedby="basic-addon1"
+                               value="{{ settings.get('downloads', 'download_threads') }}">
+                    </div>
+                </fieldset>
                 <p>&nbsp;</p>
                 <fieldset>
                     <legend>JDownloader</legend>
@@ -303,6 +324,7 @@
             </div>
 
             <div class="tab-pane" id="8a">
+                <p>&nbsp;</p>
                 <h5>Download Location: overwrite default download location + subdirectory based on category
                     name</h5>
                 <h5>Delete samples: Will not download any media file &lt; 150MB with sample or rarbg.com.mp4 in
