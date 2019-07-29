@@ -334,8 +334,12 @@ class PremConfig:
         self.download_rss = prem_config.getboolean('downloads', 'download_rss')
         self.jd_enabled = prem_config.getboolean('downloads', 'jd_enabled')
         self.aria2_enabled = prem_config.getboolean('downloads', 'aria2_enabled')
+        if self.download_location == '':
+            self.download_enabled = 0
+            logger.error('Downloads disabled because download location is empty')
         if self.download_speed == '0':
             self.download_enabled = 0
+            logger.error('Downloads disabled because download speed is 0')
         elif self.download_speed == '-1':
             self.download_speed = int(self.download_speed)
         else:
@@ -435,7 +439,7 @@ class PremConfig:
                             try:
                                 os.makedirs(cat_dir)
                             except Exception as e:
-                                logger.error('Cannot Create download directory: %s --- error: %s', cat_dir, e)
+                                logger.error('Downloads disabled cannot Create download directory: %s --- error: %s', cat_dir, e)
                                 self.download_enabled = 0
                     if self.watchdir_enabled:
                         sub = os.path.join(self.watchdir_location, cat_name)

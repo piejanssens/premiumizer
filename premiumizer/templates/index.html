@@ -56,6 +56,14 @@
             Download speed is limited to {{ download_speed }}/s
         </div>
     {% endif %}
+    {% if download_enabled != 1 %}
+        <p>&nbsp;</p>
+        <div id="download_enabled" class="alert alert-info" role="alert" style="display:inline;">
+            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+            <span class="sr-only">Info:</span>
+            Downloads are disabled
+        </div>
+    {% endif %}
 
     <div class="row">
         <div class="col-lg-12">
@@ -106,7 +114,8 @@
         <div class="col-lg-12">
             <h3>
                 <i class="fa fa-server fa-2x"></i>
-                <a class="btn btn-xs delete_btn pointer" onclick="delete_all_failed_tasks()" style="font-size:30px;vertical-align: top;float: right"><i class="fa fa-trash-o fa-lg"></i></a>
+                <a class="btn btn-xs delete_btn pointer" onclick="delete_all_failed_tasks()"
+                   style="font-size:30px;vertical-align: top;float: right"><i class="fa fa-trash-o fa-lg"></i></a>
             </h3>
         </div>
     </div>
