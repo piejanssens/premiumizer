@@ -296,8 +296,9 @@ class PremConfig:
                 for section in prem_config.sections():
                     if section in default_config.sections() and section != 'update':
                         for key in prem_config.options(section):
-                            if key in default_config.options(section):
-                                default_config.set(section, key, (prem_config.get(section, key)))
+                            value = prem_config.get(section, key)
+                            if key in default_config.options(section) and value:
+                                default_config.set(section, key, value)
                 with open(os.path.join(ConfDir, 'settings.cfg'), 'w') as configfile:
                     default_config.write(configfile)
                 prem_config.read(os.path.join(ConfDir, 'settings.cfg'))
@@ -334,8 +335,12 @@ class PremConfig:
         self.download_rss = prem_config.getboolean('downloads', 'download_rss')
         self.jd_enabled = prem_config.getboolean('downloads', 'jd_enabled')
         self.aria2_enabled = prem_config.getboolean('downloads', 'aria2_enabled')
+        if self.download_location == '':
+            self.download_enabled = 0
+            logger.error('Downloads disabled because download location is empty')
         if self.download_speed == '0':
             self.download_enabled = 0
+            logger.error('Downloads disabled because download speed is 0')
         elif self.download_speed == '-1':
             self.download_speed = int(self.download_speed)
         else:
@@ -417,8 +422,11 @@ class PremConfig:
                 cat_name = prem_config.get('categories', ('cat_name' + str([x])))
                 cat_dir = prem_config.get('categories', ('cat_dir' + str([x])))
                 if cat_name != '':
-                    if cat_dir == '':
-                        cat_dir = os.path.join(self.download_location, cat_name)
+                    if cat_dir == '' or ('//' not in cat_dir and '\\' not in cat_dir):
+                        if cat_name == 'default':
+                            cat_dir = self.download_location
+                        else:
+                            cat_dir = os.path.join(self.download_location, cat_name)
                         prem_config.set('categories', ('cat_dir' + str([x])), cat_dir)
                         with open(os.path.join(ConfDir, 'settings.cfg'), 'w') as configfile:
                             prem_config.write(configfile)
@@ -435,7 +443,7 @@ class PremConfig:
                             try:
                                 os.makedirs(cat_dir)
                             except Exception as e:
-                                logger.error('Cannot Create download directory: %s --- error: %s', cat_dir, e)
+                                logger.error('Downloads disabled cannot Create download directory: %s --- error: %s', cat_dir, e)
                                 self.download_enabled = 0
                     if self.watchdir_enabled:
                         sub = os.path.join(self.watchdir_location, cat_name)
@@ -558,7 +566,7 @@ def check_update(auto_update=cfg.auto_update):
                     cfg.jd_update_available = cfg.jd_device.update.update_available()
                 except:
                     logger.error('JDownloader update check failed')
-        scheduler.scheduler.reschedule_job('check_update', trigger='interval', hours=6)
+    scheduler.scheduler.reschedule_job('check_update', trigger='interval', hours=6)
 
 
 # noinspection PyProtectedMember
