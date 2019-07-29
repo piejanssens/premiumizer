@@ -417,7 +417,7 @@ class PremConfig:
                 cat_name = prem_config.get('categories', ('cat_name' + str([x])))
                 cat_dir = prem_config.get('categories', ('cat_dir' + str([x])))
                 if cat_name != '':
-                    if cat_dir == '':
+                    if cat_dir == '' or ('//' not in cat_dir and '\\' not in cat_dir):
                         cat_dir = os.path.join(self.download_location, cat_name)
                         prem_config.set('categories', ('cat_dir' + str([x])), cat_dir)
                         with open(os.path.join(ConfDir, 'settings.cfg'), 'w') as configfile:
