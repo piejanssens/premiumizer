@@ -56,7 +56,7 @@
             Download speed is limited to {{ download_speed }}/s
         </div>
     {% endif %}
-    {% if download_enabled != 1 %}
+    {% if cfg.download_enabled != 1 %}
         <p>&nbsp;</p>
         <div id="download_enabled" class="alert alert-info" role="alert" style="display:inline;">
             <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
