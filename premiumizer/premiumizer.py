@@ -296,8 +296,9 @@ class PremConfig:
                 for section in prem_config.sections():
                     if section in default_config.sections() and section != 'update':
                         for key in prem_config.options(section):
-                            if key in default_config.options(section):
-                                default_config.set(section, key, (prem_config.get(section, key)))
+                            value = prem_config.get(section, key)
+                            if key in default_config.options(section) and value:
+                                default_config.set(section, key, value)
                 with open(os.path.join(ConfDir, 'settings.cfg'), 'w') as configfile:
                     default_config.write(configfile)
                 prem_config.read(os.path.join(ConfDir, 'settings.cfg'))
@@ -422,7 +423,10 @@ class PremConfig:
                 cat_dir = prem_config.get('categories', ('cat_dir' + str([x])))
                 if cat_name != '':
                     if cat_dir == '' or ('//' not in cat_dir and '\\' not in cat_dir):
-                        cat_dir = os.path.join(self.download_location, cat_name)
+                        if cat_name == 'default':
+                            cat_dir = self.download_location
+                        else:
+                            cat_dir = os.path.join(self.download_location, cat_name)
                         prem_config.set('categories', ('cat_dir' + str([x])), cat_dir)
                         with open(os.path.join(ConfDir, 'settings.cfg'), 'w') as configfile:
                             prem_config.write(configfile)
