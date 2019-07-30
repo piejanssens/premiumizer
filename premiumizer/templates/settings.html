@@ -111,10 +111,12 @@
                                    name="bind_ip" value="{{ settings.get('global', 'bind_ip') }}">
                             <label for="reverse_proxy_path">Reverse proxy URL base:</label>
                             <input type="text" autocomplete="off" class="form-control" aria-describedby="basic-addon1"
-                                   name="reverse_proxy_path" placeholder="e.g. /premiumizer" value="{{ settings.get('global', 'reverse_proxy_path') }}">
+                                   name="reverse_proxy_path" placeholder="e.g. /premiumizer"
+                                   value="{{ settings.get('global', 'reverse_proxy_path') }}">
                             <label for="custom_domain">Custom host and domain:</label>
                             <input type="text" autocomplete="off" class="form-control" aria-describedby="basic-addon1"
-                                   name="custom_domain" placeholder="e.g. host.domain.com" value="{{ settings.get('global', 'custom_domain') }}">
+                                   name="custom_domain" placeholder="e.g. host.domain.com"
+                                   value="{{ settings.get('global', 'custom_domain') }}">
                         </div>
                     </fieldset>
                 </div>
@@ -288,6 +290,13 @@
                             <input type="checkbox" class="form-control bootstrap_switch" name="jd_enabled"
                                    data-size="small">
                         {% endif %}
+                        {% if cfg.jd_connected == 1 and cfg.download_enabled == 1 %}
+                            <TD class="c7 vert-align text-center"><span
+                                    class="label label-status label-success">Enabled</span></TD>
+                        {% else %}
+                            <TD class="c7 vert-align text-center"><span
+                                    class="label label-status label-danger">Disabled</span></TD>
+                        {% endif %}
                         <p>WARNING: directories will be flattened</p>
                         <label for="jd_username">JD Username:</label>
                         <input type="email" class="form-control" name="jd_username"
@@ -312,6 +321,13 @@
                         {% else %}
                             <input type="checkbox" class="form-control bootstrap_switch" name="aria2_enabled"
                                    data-size="small">
+                        {% endif %}
+                        {% if cfg.aria2_connected == 1 and cfg.download_enabled == 1 %}
+                            <TD class="c7 vert-align text-center"><span
+                                    class="label label-status label-success">Enabled</span></TD>
+                        {% else %}
+                            <TD class="c7 vert-align text-center"><span
+                                    class="label label-status label-danger">Disabled</span></TD>
                         {% endif %}
                         <p>Start aria2 with: aria2c --disable-ipv6=true --enable-rpc --rpc-allow-origin-all
                             --rpc-listen-all
