@@ -111,7 +111,10 @@
                                    name="bind_ip" value="{{ settings.get('global', 'bind_ip') }}">
                             <label for="reverse_proxy_path">Reverse proxy URL base:</label>
                             <input type="text" autocomplete="off" class="form-control" aria-describedby="basic-addon1"
-                                   name="reverse_proxy_path" value="{{ settings.get('global', 'reverse_proxy_path') }}">
+                                   name="reverse_proxy_path" placeholder="e.g. /premiumizer" value="{{ settings.get('global', 'reverse_proxy_path') }}">
+                            <label for="custom_domain">Custom host and domain:</label>
+                            <input type="text" autocomplete="off" class="form-control" aria-describedby="basic-addon1"
+                                   name="custom_domain" placeholder="e.g. host.domain.com" value="{{ settings.get('global', 'custom_domain') }}">
                         </div>
                     </fieldset>
                 </div>
