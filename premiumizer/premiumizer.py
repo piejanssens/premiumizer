@@ -2086,6 +2086,9 @@ def settings():
         elif 'Shutdown' in request.form.values():
             gevent.spawn_later(1, shutdown)
             return 'Shutting down...'
+        elif 'Check for update' in request.form.values():
+            if not os_arg == '--docker':
+                check_update(0)
         elif 'Update Premiumizer' in request.form.values():
             gevent.spawn_later(1, update_self)
             return 'Updating, please try and refresh the page in a few seconds...'
@@ -2217,8 +2220,6 @@ def settings():
             if enable_watchdir:
                 watchdir()
             flash('settings saved', 'info')
-    if not os_arg == '--docker':
-        check_update(0)
     categories_amount = len(cfg.download_categories) + 1
     if categories_amount < 7:
         categories_amount = 7

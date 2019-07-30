@@ -29,33 +29,41 @@
             <div class="tab-pane active" id="1a">
                 <p>&nbsp;</p>
                 <p>Changing these settings requires a restart.</p>
-                <div class="form-group">
-                    <p class="text-primary">{{ cfg.update_status }}</p>
-                    <p class="text-primary">Premiumizer is running on commit: <a
-                            href="https://github.com/piejanssens/premiumizer/commits/master"
-                            target="_blank">{{ cfg.update_localcommit }}</a></p>
-                    {% if cfg.update_available %}
-                        <p>Pressing Update will restart Premiumizer.</p>
-                        <input type="submit" class="btn-danger" name="submit" value="Update Premiumizer">
-
-                        <p class="text-primary">Changes:</p>
-                        <pre>{{ cfg.update_diffcommit }}</pre>
-                        <p>&nbsp;</p>
-                    {% endif %}
-                    {% if cfg.jd_update_available %}
-                        <p>Pressing Update will restart JDownloader.</p>
-                        <input type="submit" class="btn-danger" name="submit" value="Update JDownloader">
-                    {% endif %}
+                <p>&nbsp;</p>
+                <fieldset>
+                    <legend>Updates:</legend>
                     <div class="form-group">
-                        <label for="auto_update">Enable automatic updates (checks every 6 hours):</label>
-                        {% if settings.get('update', 'auto_update') == '1' %}
-                            <input type="checkbox" class="form-control bootstrap_switch" name="auto_update"
-                                   data-size="small" checked>
-                        {% else %}
-                            <input type="checkbox" class="form-control bootstrap_switch" name="auto_update"
-                                   data-size="small">
+                        <input type="submit" class="btn btn-info" name="submit" value="Check for update">
+                        <p class="text-primary">{{ cfg.update_status }}</p>
+                        <p class="text-primary">Premiumizer is running on commit: <a
+                                href="https://github.com/piejanssens/premiumizer/commits/master"
+                                target="_blank">{{ cfg.update_localcommit }}</a></p>
+                        {% if cfg.update_available %}
+                            <p>Pressing Update will restart Premiumizer.</p>
+                            <input type="submit" class="btn-danger" name="submit" value="Update Premiumizer">
+
+                            <p class="text-primary">Changes:</p>
+                            <pre>{{ cfg.update_diffcommit }}</pre>
+                            <p>&nbsp;</p>
                         {% endif %}
+                        {% if cfg.jd_update_available %}
+                            <p>Pressing Update will restart JDownloader.</p>
+                            <input type="submit" class="btn-danger" name="submit" value="Update JDownloader">
+                        {% endif %}
+                        <div class="form-group">
+                            <label for="auto_update">Enable automatic updates (checks every 6 hours):</label>
+                            {% if settings.get('update', 'auto_update') == '1' %}
+                                <input type="checkbox" class="form-control bootstrap_switch" name="auto_update"
+                                       data-size="small" checked>
+                            {% else %}
+                                <input type="checkbox" class="form-control bootstrap_switch" name="auto_update"
+                                       data-size="small">
+                            {% endif %}
+                        </div>
                     </div>
+                </fieldset>
+                <div class="form-group">
+
                     <p>&nbsp;</p>
                     <fieldset>
                         <legend>Logging:</legend>
