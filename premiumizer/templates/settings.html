@@ -115,7 +115,8 @@
                                    value="{{ settings.get('global', 'reverse_proxy_path') }}">
                             <label for="custom_domain">Custom host and domain:</label>
                             <input type="text" autocomplete="off" class="form-control" aria-describedby="basic-addon1"
-                                   name="custom_domain" placeholder="e.g. host.domain.com"
+                                   pattern="^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.){2,}([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9]){2,}$"
+                                   name="custom_domain" placeholder="e.g. host.domain.com" title="Please insert FQDN"
                                    value="{{ settings.get('global', 'custom_domain') }}">
                         </div>
                     </fieldset>
