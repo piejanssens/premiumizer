@@ -336,10 +336,10 @@ class PremConfig:
         self.download_rss = prem_config.getboolean('downloads', 'download_rss')
         self.jd_enabled = prem_config.getboolean('downloads', 'jd_enabled')
         self.aria2_enabled = prem_config.getboolean('downloads', 'aria2_enabled')
-        if self.download_location == '':
+        if self.download_location == '' and self.download_enabled:
             self.download_enabled = 0
             logger.error('Downloads disabled because download location is empty')
-        if self.download_speed == '0':
+        if self.download_speed == '0' and self.download_enabled:
             self.download_enabled = 0
             logger.error('Downloads disabled because download speed is 0')
         elif self.download_speed == '-1':
