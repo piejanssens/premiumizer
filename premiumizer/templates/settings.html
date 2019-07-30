@@ -29,33 +29,41 @@
             <div class="tab-pane active" id="1a">
                 <p>&nbsp;</p>
                 <p>Changing these settings requires a restart.</p>
-                <div class="form-group">
-                    <p class="text-primary">{{ cfg.update_status }}</p>
-                    <p class="text-primary">Premiumizer is running on commit: <a
-                            href="https://github.com/piejanssens/premiumizer/commits/master"
-                            target="_blank">{{ cfg.update_localcommit }}</a></p>
-                    {% if cfg.update_available %}
-                        <p>Pressing Update will restart Premiumizer.</p>
-                        <input type="submit" class="btn-danger" name="submit" value="Update Premiumizer">
-
-                        <p class="text-primary">Changes:</p>
-                        <pre>{{ cfg.update_diffcommit }}</pre>
-                        <p>&nbsp;</p>
-                    {% endif %}
-                    {% if cfg.jd_update_available %}
-                        <p>Pressing Update will restart JDownloader.</p>
-                        <input type="submit" class="btn-danger" name="submit" value="Update JDownloader">
-                    {% endif %}
+                <p>&nbsp;</p>
+                <fieldset>
+                    <legend>Updates:</legend>
                     <div class="form-group">
-                        <label for="auto_update">Enable automatic updates (checks every 6 hours):</label>
-                        {% if settings.get('update', 'auto_update') == '1' %}
-                            <input type="checkbox" class="form-control bootstrap_switch" name="auto_update"
-                                   data-size="small" checked>
-                        {% else %}
-                            <input type="checkbox" class="form-control bootstrap_switch" name="auto_update"
-                                   data-size="small">
+                        <input type="submit" class="btn btn-info" name="submit" value="Check for update">
+                        <p class="text-primary">{{ cfg.update_status }}</p>
+                        <p class="text-primary">Premiumizer is running on commit: <a
+                                href="https://github.com/piejanssens/premiumizer/commits/master"
+                                target="_blank">{{ cfg.update_localcommit }}</a></p>
+                        {% if cfg.update_available %}
+                            <p>Pressing Update will restart Premiumizer.</p>
+                            <input type="submit" class="btn-danger" name="submit" value="Update Premiumizer">
+
+                            <p class="text-primary">Changes:</p>
+                            <pre>{{ cfg.update_diffcommit }}</pre>
+                            <p>&nbsp;</p>
                         {% endif %}
+                        {% if cfg.jd_update_available %}
+                            <p>Pressing Update will restart JDownloader.</p>
+                            <input type="submit" class="btn-danger" name="submit" value="Update JDownloader">
+                        {% endif %}
+                        <div class="form-group">
+                            <label for="auto_update">Enable automatic updates (checks every 6 hours):</label>
+                            {% if settings.get('update', 'auto_update') == '1' %}
+                                <input type="checkbox" class="form-control bootstrap_switch" name="auto_update"
+                                       data-size="small" checked>
+                            {% else %}
+                                <input type="checkbox" class="form-control bootstrap_switch" name="auto_update"
+                                       data-size="small">
+                            {% endif %}
+                        </div>
                     </div>
+                </fieldset>
+                <div class="form-group">
+
                     <p>&nbsp;</p>
                     <fieldset>
                         <legend>Logging:</legend>
@@ -111,7 +119,14 @@
                                    name="bind_ip" value="{{ settings.get('global', 'bind_ip') }}">
                             <label for="reverse_proxy_path">Reverse proxy URL base:</label>
                             <input type="text" autocomplete="off" class="form-control" aria-describedby="basic-addon1"
-                                   name="reverse_proxy_path" value="{{ settings.get('global', 'reverse_proxy_path') }}">
+                                   pattern="^\/[a-zA-Z0-9$\-_.+!*'(),,]*" name="reverse_proxy_path"
+                                   placeholder="e.g. /premiumizer"
+                                   value="{{ settings.get('global', 'reverse_proxy_path') }}">
+                            <label for="custom_domain">Custom host and domain:</label>
+                            <input type="text" autocomplete="off" class="form-control" aria-describedby="basic-addon1"
+                                   pattern="^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.){2,}([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9]){2,}$"
+                                   name="custom_domain" placeholder="e.g. host.domain.com" title="Please insert FQDN"
+                                   value="{{ settings.get('global', 'custom_domain') }}">
                         </div>
                     </fieldset>
                 </div>
@@ -257,7 +272,7 @@
                 </fieldset>
                 <p>&nbsp;</p>
                 <fieldset>
-                    <legend>PysmartDL (default)</legend>
+                    <legend>pySmartDL (default)</legend>
                     <div class="form-group">
                         {% if cfg.download_builtin == 1 and cfg.download_enabled == 1 %}
                             <TD class="c7 vert-align text-center"><span
@@ -285,6 +300,13 @@
                             <input type="checkbox" class="form-control bootstrap_switch" name="jd_enabled"
                                    data-size="small">
                         {% endif %}
+                        {% if cfg.jd_connected == 1 and cfg.download_enabled == 1 %}
+                            <TD class="c7 vert-align text-center"><span
+                                    class="label label-status label-success">Enabled</span></TD>
+                        {% else %}
+                            <TD class="c7 vert-align text-center"><span
+                                    class="label label-status label-danger">Disabled</span></TD>
+                        {% endif %}
                         <p>WARNING: directories will be flattened</p>
                         <label for="jd_username">JD Username:</label>
                         <input type="email" class="form-control" name="jd_username"
@@ -309,6 +331,13 @@
                         {% else %}
                             <input type="checkbox" class="form-control bootstrap_switch" name="aria2_enabled"
                                    data-size="small">
+                        {% endif %}
+                        {% if cfg.aria2_connected == 1 and cfg.download_enabled == 1 %}
+                            <TD class="c7 vert-align text-center"><span
+                                    class="label label-status label-success">Enabled</span></TD>
+                        {% else %}
+                            <TD class="c7 vert-align text-center"><span
+                                    class="label label-status label-danger">Disabled</span></TD>
                         {% endif %}
                         <p>Start aria2 with: aria2c --disable-ipv6=true --enable-rpc --rpc-allow-origin-all
                             --rpc-listen-all

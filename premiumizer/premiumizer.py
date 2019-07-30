@@ -309,6 +309,7 @@ class PremConfig:
         self.aria2_connected = 0
         self.bind_ip = prem_config.get('global', 'bind_ip')
         self.reverse_proxy_path = prem_config.get('global', 'reverse_proxy_path')
+        self.custom_domain = prem_config.get('global', 'custom_domain')
         self.web_login_enabled = prem_config.getboolean('security', 'login_enabled')
         self.web_username = prem_config.get('security', 'username')
         self.web_password = prem_config.get('security', 'password')
@@ -335,10 +336,10 @@ class PremConfig:
         self.download_rss = prem_config.getboolean('downloads', 'download_rss')
         self.jd_enabled = prem_config.getboolean('downloads', 'jd_enabled')
         self.aria2_enabled = prem_config.getboolean('downloads', 'aria2_enabled')
-        if self.download_location == '':
+        if self.download_location == '' and self.download_enabled:
             self.download_enabled = 0
             logger.error('Downloads disabled because download location is empty')
-        if self.download_speed == '0':
+        if self.download_speed == '0' and self.download_enabled:
             self.download_enabled = 0
             logger.error('Downloads disabled because download speed is 0')
         elif self.download_speed == '-1':
@@ -443,7 +444,8 @@ class PremConfig:
                             try:
                                 os.makedirs(cat_dir)
                             except Exception as e:
-                                logger.error('Downloads disabled cannot Create download directory: %s --- error: %s', cat_dir, e)
+                                logger.error('Downloads disabled cannot Create download directory: %s --- error: %s',
+                                             cat_dir, e)
                                 self.download_enabled = 0
                     if self.watchdir_enabled:
                         sub = os.path.join(self.watchdir_location, cat_name)
@@ -623,7 +625,9 @@ Compress(app)
 app.config['SECRET_KEY'] = uuid.uuid4().hex
 app.config.update(DEBUG=debug_enabled)
 app.logger.addHandler(handler)
-socketio = SocketIO(app, async_mode='gevent')
+socketio = SocketIO(app, async_mode='gevent',
+                    cors_allowed_origins=['http://' + cfg.custom_domain, 'https://' + cfg.custom_domain,
+                                          'http://localhost'])
 
 app.config['LOGIN_DISABLED'] = not cfg.web_login_enabled
 login_manager = LoginManager()
@@ -2082,6 +2086,9 @@ def settings():
         elif 'Shutdown' in request.form.values():
             gevent.spawn_later(1, shutdown)
             return 'Shutting down...'
+        elif 'Check for update' in request.form.values():
+            if not os_arg == '--docker':
+                check_update(0)
         elif 'Update Premiumizer' in request.form.values():
             gevent.spawn_later(1, update_self)
             return 'Updating, please try and refresh the page in a few seconds...'
@@ -2181,6 +2188,7 @@ def settings():
             prem_config.set('global', 'server_port', request.form.get('server_port'))
             prem_config.set('global', 'bind_ip', request.form.get('bind_ip'))
             prem_config.set('global', 'reverse_proxy_path', request.form.get('reverse_proxy_path'))
+            prem_config.set('global', 'custom_domain', request.form.get('custom_domain'))
             prem_config.set('global', 'idle_interval', request.form.get('idle_interval'))
             prem_config.set('security', 'username', request.form.get('username'))
             prem_config.set('security', 'password', request.form.get('password'))
@@ -2212,8 +2220,6 @@ def settings():
             if enable_watchdir:
                 watchdir()
             flash('settings saved', 'info')
-    if not os_arg == '--docker':
-        check_update(0)
     categories_amount = len(cfg.download_categories) + 1
     if categories_amount < 7:
         categories_amount = 7
