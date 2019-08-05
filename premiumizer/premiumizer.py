@@ -1589,7 +1589,13 @@ def parse_tasks(transfers):
             task.update(name=name, progress=progress, cloud_status=transfer['status'], dlsize=size + ' --- ',
                         speed=speed + ' --- ', eta=eta, file_id=file_id)
         if task.local_status is None:
-            if task.cloud_status != 'finished' and task.cloud_status != 'seeding':
+            if task.cloud_status == 'error':
+                msg = 'Cloud error for: %s -- message: %s' % (task.name, eta)
+                logger.error(msg)
+                if cfg.email_enabled:
+                    msg = 'Cloud error for: %s -- message: %s' % (task.name, eta)
+                    email('Cloud error', msg)
+            elif task.cloud_status != 'finished' and task.cloud_status != 'seeding':
                 task.update(name=name, progress=progress, cloud_status=transfer['status'], dlsize=size + ' --- ',
                             speed=speed + ' --- ', eta=eta, folder_id=folder_id, file_id=file_id)
                 idle = False
