@@ -625,9 +625,12 @@ Compress(app)
 app.config['SECRET_KEY'] = uuid.uuid4().hex
 app.config.update(DEBUG=debug_enabled)
 app.logger.addHandler(handler)
-socketio = SocketIO(app, async_mode='gevent',
-                    cors_allowed_origins=['http://' + cfg.custom_domain, 'https://' + cfg.custom_domain,
-                                          'http://localhost'])
+if cfg.custom_domain:
+    socketio = SocketIO(app, async_mode='gevent',
+                        cors_allowed_origins=['http://' + cfg.custom_domain, 'https://' + cfg.custom_domain,
+                                              'http://localhost'])
+else:
+    socketio = SocketIO(app, async_mode='gevent', cors_allowed_origins='*')
 
 app.config['LOGIN_DISABLED'] = not cfg.web_login_enabled
 login_manager = LoginManager()
