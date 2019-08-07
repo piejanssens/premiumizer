@@ -679,7 +679,7 @@ class MyHandler(events.PatternMatchingEventHandler):
                 logger.error(
                     'watchdir file %s no longer exists', watchdir_file)
                 return
-            logger.debug('New file detected at: %s', watchdir_file)
+            logger.info('New watchdir file detected: %s', watchdir_file)
             dirname = os.path.basename(
                 os.path.normpath(os.path.dirname(watchdir_file)))
             if dirname in cfg.download_categories:
@@ -703,7 +703,7 @@ class MyHandler(events.PatternMatchingEventHandler):
                 else:
                     name = torrent_metainfo(watchdir_file)
                     type = 'Torrent'
-                    add_task(id, 0, name, category, type=type)
+                    task = add_task(id, 0, name, category, type=type)
             elif watchdir_file.endswith('.magnet'):
                 with open(watchdir_file) as f:
                     magnet = f.read()
@@ -737,7 +737,7 @@ class MyHandler(events.PatternMatchingEventHandler):
                             failed = 1
                         else:
                             type = 'Torrent'
-                            add_task(id, 0, name, category, type=type)
+                            task = add_task(id, 0, name, category, type=type)
 
             elif watchdir_file.endswith('.nzb'):
                 id = upload_nzb(watchdir_file)
@@ -757,20 +757,65 @@ class MyHandler(events.PatternMatchingEventHandler):
                     name = os.path.basename(watchdir_file)
                     name = os.path.splitext(name)[0]
                     type = 'NZB'
-                    add_task(id, 0, name, category, type=type)
+                    task = add_task(id, 0, name, category, type=type)
             if not failed:
-                gevent.sleep(3)
-                logger.debug('Deleting file from watchdir: %s', watchdir_file)
-                try:
-                    os.remove(watchdir_file)
-                except Exception as err:
-                    logger.error(
-                        'Could not remove file from watchdir: %s --- error: %s', watchdir_file, err)
-                scheduler.scheduler.reschedule_job(
-                    'update', trigger='interval', seconds=1)
+                gevent.sleep(5)
+                failed = check_cloud_fail(id)
+                if failed:
+                    try:
+                        if debug_enabled:
+                            log = 'premiumizerDEBUG.log'
+                        else:
+                            log = 'premiumizer.log'
+                        with open(os.path.join(LogsDir, log), 'r') as f:
+                            for line in f:
+                                if 'Retrying cloud upload in 10 minutes for: ' + name in line:
+                                    scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
+                                    return
+                    except:
+                        scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
+                        return
+                    logger.warning('Retrying cloud upload in 10 minutes for: %s', name)
+                    scheduler.scheduler.add_job(retry_cloud, args=('watchdir', task), id=id, ame=(name + ' reupload'),
+                                                misfire_grace_time=7200, jobstore='reupload', replace_existing=True,
+                                                coalesce=True, next_run_time=(datetime.now() + timedelta(minutes=10)))
+                else:
+                    gevent.sleep(3)
+                    logger.debug('Deleting file from watchdir: %s', watchdir_file)
+                    try:
+                        os.remove(watchdir_file)
+                    except Exception as err:
+                        logger.error(
+                            'Could not remove file from watchdir: %s --- error: %s', watchdir_file, err)
+                scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
 
     def on_created(self, event):
         self.process(event)
+
+
+def retry_cloud(method, task):
+    delete_task(task)
+    if method == 'watchdir':
+        walk_watchdir()
+
+
+def check_cloud_fail(id):
+    payload = {'apikey': cfg.prem_apikey}
+    r = prem_connection("post", "https://www.premiumize.me/api/transfer/list", payload)
+    if 'failed' not in r:
+        response_content_transfer = json.loads(r.content)
+        if response_content_transfer['status'] == "success":
+            transfers = response_content_transfer['transfers']
+            for transfer in transfers:
+                if transfer['id'] == id:
+                    if transfer['status'] == 'error':
+                        msg = 'Cloud error for: %s -- message: %s' % (transfer['name'], transfer['message'])
+                        logger.error(msg)
+                        if cfg.email_enabled:
+                            msg = 'Cloud error for: %s -- message: %s' % (transfer['name'], transfer['message'])
+                            email('Cloud error', msg)
+                        return 1
+    return 0
 
 
 # Initialise Globals
@@ -1592,13 +1637,7 @@ def parse_tasks(transfers):
             task.update(name=name, progress=progress, cloud_status=transfer['status'], dlsize=size + ' --- ',
                         speed=speed + ' --- ', eta=eta, file_id=file_id)
         if task.local_status is None:
-            if task.cloud_status == 'error':
-                msg = 'Cloud error for: %s -- message: %s' % (task.name, eta)
-                logger.error(msg)
-                if cfg.email_enabled:
-                    msg = 'Cloud error for: %s -- message: %s' % (task.name, eta)
-                    email('Cloud error', msg)
-            elif task.cloud_status != 'finished' and task.cloud_status != 'seeding':
+            if task.cloud_status != 'finished' and task.cloud_status != 'seeding':
                 task.update(name=name, progress=progress, cloud_status=transfer['status'], dlsize=size + ' --- ',
                             speed=speed + ' --- ', eta=eta, folder_id=folder_id, file_id=file_id)
                 idle = False
@@ -2005,7 +2044,7 @@ def upload():
             try:
                 os.remove(upload_file)
             except Exception as err:
-                logger.error('Could not remove file from watchdir: %s --- error: %s', upload_file, err)
+                logger.error('Could not remove file from tmp: %s --- error: %s', upload_file, err)
     elif request.data:
         if request.data.decode('utf-8').startswith('magnet:'):
             upload_magnet(request.data.decode('utf-8'))
@@ -2467,6 +2506,7 @@ if __name__ == '__main__':
         scheduler.scheduler.add_jobstore('memory', alias='downloads')
         scheduler.scheduler.add_jobstore('memory', alias='check_downloads')
         scheduler.scheduler.add_jobstore('memory', alias='remove_cloud')
+        scheduler.scheduler.add_jobstore('memory', alias='reupload')
         scheduler.scheduler.add_executor('threadpool', alias='downloads', max_workers=cfg.download_max)
         scheduler.start()
         scheduler.scheduler.add_job(update, 'interval', id='update',
