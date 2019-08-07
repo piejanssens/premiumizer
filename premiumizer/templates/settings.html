@@ -122,7 +122,7 @@
                                    pattern="^\/[a-zA-Z0-9$\-_.+!*'(),,]*" name="reverse_proxy_path"
                                    placeholder="e.g. /premiumizer"
                                    value="{{ settings.get('global', 'reverse_proxy_path') }}">
-                            <label for="custom_domain">Custom host and/or domain:</label>
+                            <label for="custom_domain">Enter custom host and/or domain to protect against CORS vulnerability:</label>
                             <input type="text" autocomplete="off" class="form-control" aria-describedby="basic-addon1"
                                    name="custom_domain" placeholder="e.g. hostname or host.domain.com"
                                    value="{{ settings.get('global', 'custom_domain') }}">
