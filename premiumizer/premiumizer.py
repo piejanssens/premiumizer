@@ -712,14 +712,16 @@ class MyHandler(events.PatternMatchingEventHandler):
                             'Magnet file empty? for: %s', watchdir_file)
                         return
                     else:
-                        try:
-                            name = re.search(
+                        try:        
+                            name = re.search(   
                                 '&dn=(.+?)(&|.torrent)', magnet).group(1)
                             name = name.replace('+', '%20')
                         except AttributeError:
-                            logger.error(
-                                'Extracting id / name from .magnet failed for: %s', watchdir_file)
-                            return
+                            #logger.error(
+                            #    'Extracting id / name from .magnet failed for: %s', watchdir_file)
+                            #return
+                            name = os.path.basename(watchdir_file).replace(".magnet", "")
+                            name = name.replace('+', '%20')   
                         id = upload_magnet(magnet)
                         if id == 'duplicate':
                             failed = 1
