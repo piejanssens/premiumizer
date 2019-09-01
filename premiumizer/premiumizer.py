@@ -720,7 +720,7 @@ class MyHandler(events.PatternMatchingEventHandler):
                             #logger.error(
                             #    'Extracting id / name from .magnet failed for: %s', watchdir_file)
                             #return
-                            name = os.path.basename(watchdir_file).replace(".magnet", "").replace(".torrent", "")
+                            name = os.path.basename(watchdir_file).replace(".magnet", "")
                             name = name.replace('+', '%20')   
                         id = upload_magnet(magnet)
                         if id == 'duplicate':
