@@ -111,3 +111,85 @@ Want to contribute? Great!
 Just fork the github repo, do some awesome stuff and create a pull request.
 
 Report issues or feature enhancements/requests on the [Issues](https://github.com/piejanssens/premiumizer/issues) page
+
+# Setting up Sonarr/Couchpotato to use Premiumizer
+
+To utilize premiumizer as a downloader for [Sonar](https://sonarr.tv) or [CouchPotato](https://couchpota.to) style projects, configure these projects to use the Black Holes that premiumizer monitors.  For example, consider the following excerpt from a `docker-compose.yml` file:
+
+```yml
+# CouchPotato – Movie Download and Management 
+  couchpotato:
+    image: "linuxserver/couchpotato"
+    hostname: couchpotato
+    container_name: "couchpotato"
+    volumes:
+      - ./docker/couchpotato:/config
+      - ./docker/Downloads/blackhole/movies:/blackhole
+      - ./docker/Downloads/completed/movies:/downloads
+      - ./NAS/Movies:/movies
+      - ./docker/shared:/shared
+    ports:
+      - "5050:5050"
+    expose: 
+      - 5050
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - UMASK_SET=002
+      - TZ=America/New_York
+      - VIRTUAL_HOST=couchpotato.${HOST_DOMAIN}
+      - VIRTUAL_PORT=5050
+
+# Sonarr – TV Show Download and Management
+  sonarr:
+    image: "linuxserver/sonarr"
+    hostname: sonarr
+    container_name: "sonarr"
+    volumes:
+      - ./docker/sonarr:/config
+      - ./docker/Downloads/blackhole/tv:/blackhole
+      - ./docker/Downloads/completed:/downloads
+      - ./NAS/TV:/tv
+      - "/etc/localtime:/etc/localtime:ro"
+      - ./docker/shared:/shared
+    ports:
+        - "8989:8989"
+    expose: 
+      - 8989
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+      - VIRTUAL_HOST=sonarr.${HOST_DOMAIN}
+      - VIRTUAL_PORT=8989
+
+# Premiumizer -- Generic Downloader
+  premiumizer:
+    image: "piejanssens/premiumizer"
+    hostname: premiumizer
+    container_name: "premiumizer"
+    volumes:
+      - ./docker/premiumizer:/premiumizer/conf
+      - ./docker/Downloads/blackhole:/blackhole
+      - ./docker/Downloads/completed:/downloads
+      - "/etc/localtime:/etc/localtime:ro"
+      - ./docker/shared:/shared
+    ports:
+      - "5000:5000"
+    expose: 
+      - 5000
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+      - VIRTUAL_HOST=premiumizer.${HOST_DOMAIN}
+```
+
+## Couchpotato
+
+Configure CouchPotato as follows:
+
+![CouchPotato Config](https://tinyurl.com/y3owybuw)
