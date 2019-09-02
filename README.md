@@ -14,15 +14,15 @@ Get your account [right here](https://www.premiumize.me/ref/198754075).
 
 ## How does this thing work?
 This tool will monitor your download tasks on premiumize.me.
-Once the download in the cloud finishes and the download task has a category that needs to be automatically downloaded premiumizer will start downloading all the files to your local premiumizer server. Download tasks without a category will not be automatically downloaded to the local server. 
-You can add/change a category whilst it's downloading through the web interface, but third party tools like CouchPotato and SickRage will automatically submit download tasks with a specific category. 
+Once the download in the cloud finishes and the download task has a category that needs to be automatically downloaded premiumizer will start downloading all the files to your local premiumizer server. Download tasks without a category will not be automatically downloaded to the local server.
+You can add/change a category whilst it's downloading through the web interface, but third party tools like CouchPotato and SickRage will automatically submit download tasks with a specific category.
 
 When enabled, premiumizer can inform nzbToMedia whenever the local download is finished.
 Categories can be setup through the web interface's setup page.
 
 ## Web Interface
 By default, premiumizer's web interface listens on port 5000.
-When premiumizer is running you can access it at http://localhost:5000/ 
+When premiumizer is running you can access it at http://localhost:5000/
 
 ## Installation
 
@@ -97,7 +97,7 @@ docker run -d -p 5000:5000 -e TZ=Europe/London -e PUID=1000 -e PGID=1000 -v <hos
 1. Under 'Container': Stop the container
 2. Under 'Container': Action -> Clear
 2. Under 'Registry': Download the piejanssens/premiumizer image (this will pull in the latest image)
-3. Under 'Container': Start the container 
+3. Under 'Container': Start the container
 
 ## Updating
 Update from the settings page / enable automatic updates
@@ -114,10 +114,10 @@ Report issues or feature enhancements/requests on the [Issues](https://github.co
 
 # Setting up Sonarr/Couchpotato to use Premiumizer
 
-To utilize premiumizer as a downloader for [Sonar](https://sonarr.tv) or [CouchPotato](https://couchpota.to) style projects, configure these projects to use the Black Holes that premiumizer monitors.  For example, consider the following excerpt from a `docker-compose.yml` file:
+To utilize premiumizer as a downloader for [Sonar](https://sonarr.tv) or [CouchPotato](https://couchpota.to) style projects, configure these projects to use the Black Holes that premiumizer monitors.  For example, consider the following excerpt from a [docker-compose.yml](https://gist.github.com/drmikecrowe/43929be99a22a083aaf6421460d52d19) file:
 
 ```yml
-# CouchPotato – Movie Download and Management 
+# CouchPotato – Movie Download and Management
   couchpotato:
     image: "linuxserver/couchpotato"
     hostname: couchpotato
@@ -127,10 +127,9 @@ To utilize premiumizer as a downloader for [Sonar](https://sonarr.tv) or [CouchP
       - ./docker/Downloads/blackhole/movies:/blackhole
       - ./docker/Downloads/completed/movies:/downloads
       - ./NAS/Movies:/movies
-      - ./docker/shared:/shared
     ports:
       - "5050:5050"
-    expose: 
+    expose:
       - 5050
     restart: unless-stopped
     environment:
@@ -152,10 +151,9 @@ To utilize premiumizer as a downloader for [Sonar](https://sonarr.tv) or [CouchP
       - ./docker/Downloads/completed:/downloads
       - ./NAS/TV:/tv
       - "/etc/localtime:/etc/localtime:ro"
-      - ./docker/shared:/shared
     ports:
         - "8989:8989"
-    expose: 
+    expose:
       - 8989
     restart: unless-stopped
     environment:
@@ -175,10 +173,9 @@ To utilize premiumizer as a downloader for [Sonar](https://sonarr.tv) or [CouchP
       - ./docker/Downloads/blackhole:/blackhole
       - ./docker/Downloads/completed:/downloads
       - "/etc/localtime:/etc/localtime:ro"
-      - ./docker/shared:/shared
     ports:
       - "5000:5000"
-    expose: 
+    expose:
       - 5000
     restart: unless-stopped
     environment:
@@ -188,8 +185,40 @@ To utilize premiumizer as a downloader for [Sonar](https://sonarr.tv) or [CouchP
       - VIRTUAL_HOST=premiumizer.${HOST_DOMAIN}
 ```
 
-## Couchpotato
+## Premiumizer
 
-Configure CouchPotato as follows:
+Premiumizer is downloading from `blackhole` inputs to a `completed` directory structure.  For example, in the above setup, this would map to the following directories:
 
-![CouchPotato Config](https://tinyurl.com/y3owybuw)
+```
+docker/Downloads/completed
+docker/Downloads/completed/movies
+docker/Downloads/completed/tv
+docker/Downloads/blackhole
+docker/Downloads/blackhole/movies
+docker/Downloads/blackhole/tv
+```
+
+Each searcher is files into the `docker/Downloads/blackhole/movies` or `docker/Downloads/blackhole/tv` directory respectively for Premiumizer to pick up.  Once downloaded, Premiumizer downloads the files into the appropriate `docker/Downloads/completed/movies` or `docker/Downloads/completed/tv` directory.
+
+Configure the Premiumizer blackhole settings as follows:
+
+![Premiumizer Black Hole](images/premiumizer-setup.png)
+
+Configure Premiumizer categories as follows:
+
+![Premiumizer Categories](images/premiumizer-categories.png)
+
+## CouchPotato
+
+Configure CouchPotato with a `blackhole` strategy.  Ensure each will download magnet files.
+
+![CouchPotato Config](images/CouchPotato.png)
+
+## Sonarr
+
+**NOTE**: Take note of the mapping of the `./docker/Downloads/completed:/downloads` directory for Sonarr.  For CouchPotato, we are directly mapping to `./docker/Downloads/completed/movies:/downloads`.  Lesson: Sonarr expects completed downloads to be in the `/downloads/tv` subdirectory (i.e. `tv` category), whereas CouchPotato simply expects completed movies to be in the `/downloads` directory.
+
+Add a `blackhole` downloader to Sonarr as follows:
+
+![Sonarr Blackhole Setup](images/Sonarr.png)
+
