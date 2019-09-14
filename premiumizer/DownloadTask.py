@@ -2,7 +2,7 @@ import time
 
 
 class DownloadTask:
-    def __init__(self, callback, id, folder_id, size, name, category, dldir, dlext, delsample, dlnzbtomedia, type):
+    def __init__(self, callback, id, folder_id, size, name, category, dldir, dlext, dlext_blacklist, delsample, dlnzbtomedia, type):
         self.progress = None
         self.speed = None
         self.size = size
@@ -21,6 +21,7 @@ class DownloadTask:
         self.callback = callback
         self.dldir = dldir
         self.dlext = dlext
+        self.dlext_blacklist = dlext_blacklist
         self.delsample = delsample
         self.dlnzbtomedia = dlnzbtomedia
         self.dltime = 0
@@ -53,6 +54,8 @@ class DownloadTask:
             self.dldir = kwargs.get('dldir')
         if 'dlext' in kwargs:
             self.dlext = kwargs.get('dlext')
+        if 'dlext_blacklist' in kwargs:
+            self.dlext = kwargs.get('dlext_blacklist')
         if 'delsample' in kwargs:
             self.delsample = kwargs.get('delsample')
         if 'dlnzbtomedia' in kwargs:
