@@ -106,8 +106,7 @@ if debug_enabled:
     logger.debug('----------------------------------')
     logger.debug('----------------------------------')
     logger.debug('DEBUG Logger Initialized')
-    handler = logging.handlers.RotatingFileHandler(os.path.join(LogsDir, 'premiumizerDEBUG.log'),
-                                                   maxBytes=(500 * 1024))
+    handler = logging.handlers.RotatingFileHandler(os.path.join(LogsDir, 'premiumizerDEBUG.log'), maxBytes=(500 * 1024))
     handler.setFormatter(formatterdebug)
     logger.addHandler(handler)
     logger.debug('DEBUG Logfile Initialized')
@@ -122,8 +121,7 @@ else:
     logger.debug('-------------------------------------------------------------------------------------')
     logger.debug('-------------------------------------------------------------------------------------')
     logger.debug('Logger Initialized')
-    handler = logging.handlers.RotatingFileHandler(os.path.join(LogsDir, 'premiumizer.log'),
-                                                   maxBytes=(500 * 1024))
+    handler = logging.handlers.RotatingFileHandler(os.path.join(LogsDir, 'premiumizer.log'), maxBytes=(500 * 1024))
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.debug('Logfile Initialized')
@@ -708,33 +706,25 @@ class MyHandler(events.PatternMatchingEventHandler):
                 with open(watchdir_file) as f:
                     magnet = f.read()
                     if not magnet:
-                        logger.error(
-                            'Magnet file empty? for: %s', watchdir_file)
+                        logger.error('Magnet file empty? for: %s', watchdir_file)
                         return
                     else:
-                        try:        
-                            name = re.search(   
-                                '&dn=(.+?)(&|.torrent)', magnet).group(1)
-                            name = name.replace('+', '%20')
+                        try:
+                            name = re.search('&dn=(.+?)(&|.torrent)', magnet).group(1)
                         except AttributeError:
-                            #logger.error(
-                            #    'Extracting id / name from .magnet failed for: %s', watchdir_file)
-                            #return
                             name = os.path.basename(watchdir_file).replace(".magnet", "")
-                            name = name.replace('+', '%20')   
+                        name = name.replace('+', '%20')
                         id = upload_magnet(magnet)
                         if id == 'duplicate':
                             failed = 1
-                            logger.debug(
-                                'Deleting duplicate file from watchdir: %s', watchdir_file)
+                            logger.debug('Deleting duplicate file from watchdir: %s', watchdir_file)
                             try:
                                 f.close()
                                 gevent.sleep(3)
                                 os.remove(watchdir_file)
                             except Exception as err:
                                 logger.error('Could not remove duplicate file from watchdir: %s --- error: %s',
-                                             watchdir_file,
-                                             err)
+                                             watchdir_file, err)
                         elif id == 'failed':
                             failed = 1
                         else:
@@ -1133,9 +1123,7 @@ def get_download_stats_jd(package_name):
                     return 1
                 progress = round(float(package['bytesLoaded']) * 100 / package["bytesTotal"], 1)
                 greenlet.task.update(speed=(utils.sizeof_human(speed) + '/s --- '), dlsize=utils.sizeof_human(
-                    package['bytesLoaded']) + ' / ' + bytestotal + ' --- ',
-                                     progress=progress,
-                                     eta=eta)
+                    package['bytesLoaded']) + ' / ' + bytestotal + ' --- ', progress=progress, eta=eta)
                 gevent_sleep_time()
                 package = jd_query_packages(package_id)
             stop_time = time.time()
@@ -1157,8 +1145,7 @@ def get_download_stats_jd(package_name):
                 return 1
 
             try:
-                cfg.jd_device.downloads.cleanup("DELETE_FINISHED", "REMOVE_LINKS_ONLY", "ALL",
-                                                package_ids=[package_id])
+                cfg.jd_device.downloads.cleanup("DELETE_FINISHED", "REMOVE_LINKS_ONLY", "ALL", package_ids=[package_id])
             except BaseException as e:
                 logger.error('myjdapi : ' + str(e))
                 logger.error('Could not delete package in JD for: %s', greenlet.task.name)
@@ -1658,11 +1645,12 @@ def parse_tasks(transfers):
                                 if len(breadcrumbs) > 1:
                                     if breadcrumbs[1]['name'] == 'Feed Downloads':
                                         if breadcrumbs[2]['name'] in cfg.download_categories:
-                                            dldir, dlext, dlext_blacklist, delsample, dlnzbtomedia = get_cat_var(breadcrumbs[2]['name'])
+                                            dldir, dlext, dlext_blacklist, delsample, dlnzbtomedia = get_cat_var(
+                                                breadcrumbs[2]['name'])
                                             task.update(name=name, cloud_status=transfer['status'], local_status=None,
                                                         process=None, speed=None, category=breadcrumbs[2]['name'],
-                                                        dldir=dldir, dlext=dlext, dlext_blacklist=dlext_blacklist, delsample=delsample,
-                                                        dlnzbtomedia=dlnzbtomedia, type='RSS')
+                                                        dldir=dldir, dlext=dlext, dlext_blacklist=dlext_blacklist,
+                                                        delsample=delsample, dlnzbtomedia=dlnzbtomedia, type='RSS')
                                         else:
                                             logger.warning('RSS feed name not in categories: %s',
                                                            breadcrumbs[2]['name'])
@@ -1686,8 +1674,7 @@ def parse_tasks(transfers):
                                     folder_id=folder_id, file_id=file_id)
                 else:
                     task.update(name=name, cloud_status=transfer['status'], local_status='download_disabled',
-                                speed=None,
-                                folder_id=folder_id, file_id=file_id)
+                                speed=None, folder_id=folder_id, file_id=file_id)
         else:
             if task.local_status == 'downloading':
                 if task.name not in str(scheduler.scheduler.get_jobs('check_downloads')):
@@ -1794,7 +1781,8 @@ def add_task(id, size, name, category, type='', folder_id=None):
                 type = 'NZB'
         except:
             pass
-        task = DownloadTask(socketio.emit, id, folder_id, size, name, category, dldir, dlext, dlext_blacklist, delsample, dlnzbtomedia, type)
+        task = DownloadTask(socketio.emit, id, folder_id, size, name, category, dldir, dlext, dlext_blacklist,
+                            delsample, dlnzbtomedia, type)
         tasks.append(task)
         if not task.type == 'Filehost':
             logger.info('Added: %s -- Category: %s -- Type: %s -- id: %s', task.name, task.category, task.type, task.id)
