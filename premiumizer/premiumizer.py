@@ -1383,6 +1383,9 @@ def process_dir(dir_content, path):
             process_dir(subdir_content, subdir_path)
         elif type == 'file':
             if x['link'].lower().endswith(tuple(greenlet.task.dlext)):
+                if greenlet.task.dlext_blacklist:
+                    logger.debug('Skipping download of file %s because extension is blacklisted', x['name'])
+                    continue
                 if greenlet.task.delsample:
                     sample = is_sample(x)
                     if sample:
@@ -1655,10 +1658,10 @@ def parse_tasks(transfers):
                                 if len(breadcrumbs) > 1:
                                     if breadcrumbs[1]['name'] == 'Feed Downloads':
                                         if breadcrumbs[2]['name'] in cfg.download_categories:
-                                            dldir, dlext, delsample, dlnzbtomedia = get_cat_var(breadcrumbs[2]['name'])
+                                            dldir, dlext, dlext_blacklist, delsample, dlnzbtomedia = get_cat_var(breadcrumbs[2]['name'])
                                             task.update(name=name, cloud_status=transfer['status'], local_status=None,
                                                         process=None, speed=None, category=breadcrumbs[2]['name'],
-                                                        dldir=dldir, dlext=dlext, delsample=delsample,
+                                                        dldir=dldir, dlext=dlext, dlext_blacklist=dlext_blacklist, delsample=delsample,
                                                         dlnzbtomedia=dlnzbtomedia, type='RSS')
                                         else:
                                             logger.warning('RSS feed name not in categories: %s',
@@ -1756,6 +1759,7 @@ def get_cat_var(category):
     logger.debug('def get_cat_var started')
     dldir = None
     dlext = None
+    dlext_blacklist = None
     delsample = 0
     dlnzbtomedia = 0
     if any(cat['name'] == category for cat in cfg.categories):
@@ -1763,19 +1767,20 @@ def get_cat_var(category):
             if cat['name'] == category:
                 dldir = cat['dir']
                 dlext = cat['ext']
+                dlext = cat['ext_blacklist']
                 delsample = cat['delsample']
                 dlnzbtomedia = cat['nzb']
     else:
         if category != '':
             logger.debug('%s not found in categories', category)
-    return dldir, dlext, delsample, dlnzbtomedia
+    return dldir, dlext, dlext_blacklist, delsample, dlnzbtomedia
 
 
 def add_task(id, size, name, category, type='', folder_id=None):
     logger.debug('def add_task started')
     exists = get_task(id)
     if not exists:
-        dldir, dlext, delsample, dlnzbtomedia = get_cat_var(category)
+        dldir, dlext, dlext_blacklist, delsample, dlnzbtomedia = get_cat_var(category)
         try:
             name = urllib.parse.unquote(name)
             name = clean_name(name)
@@ -1789,8 +1794,7 @@ def add_task(id, size, name, category, type='', folder_id=None):
                 type = 'NZB'
         except:
             pass
-        task = DownloadTask(socketio.emit, id, folder_id, size, name, category, dldir, dlext,
-                            delsample, dlnzbtomedia, type)
+        task = DownloadTask(socketio.emit, id, folder_id, size, name, category, dldir, dlext, dlext_blacklist, delsample, dlnzbtomedia, type)
         tasks.append(task)
         if not task.type == 'Filehost':
             logger.info('Added: %s -- Category: %s -- Type: %s -- id: %s', task.name, task.category, task.type, task.id)
@@ -2475,11 +2479,11 @@ def handle_json(json):
 def change_category(message):
     data = message['data']
     task = get_task(data['id'])
-    dldir, dlext, delsample, dlnzbtomedia = get_cat_var(data['category'])
+    dldir, dlext, dlext_blacklist, delsample, dlnzbtomedia = get_cat_var(data['category'])
     if task.type == 'Filehost':
         if task.local_status != 'failed: Filehost':
             task.update(local_status=None, process=None, speed=None, category=data['category'], dldir=dldir,
-                        dlext=dlext, delsample=delsample, dlnzbtomedia=dlnzbtomedia)
+                        dlext=dlext, dlext_blacklist=dlext_blacklist, delsample=delsample, dlnzbtomedia=dlnzbtomedia)
             if cfg.download_enabled:
                 if task.category in cfg.download_categories:
                     if not task.local_status == ('queued' or 'downloading'):
@@ -2490,7 +2494,7 @@ def change_category(message):
                                                     jobstore='downloads', executor='downloads', replace_existing=True)
     else:
         task.update(local_status=None, process=None, speed=None, category=data['category'], dldir=dldir, dlext=dlext,
-                    delsample=delsample, dlnzbtomedia=dlnzbtomedia)
+                    dlext_blacklist=dlext_blacklist, delsample=delsample, dlnzbtomedia=dlnzbtomedia)
         logger.info('Task: %s -- id: %s -- Category set to: %s', task.name, task.id, task.category)
         scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
 
