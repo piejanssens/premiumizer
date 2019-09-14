@@ -2246,6 +2246,10 @@ def settings():
                 prem_config.set('categories', ('cat_name' + str([x])), request.form.get('cat_name' + str([x])))
                 prem_config.set('categories', ('cat_dir' + str([x])), request.form.get('cat_dir' + str([x])))
                 prem_config.set('categories', ('cat_ext' + str([x])), request.form.get('cat_ext' + str([x])))
+                if request.form.get('cat_ext_blacklist' + str([x])):
+                    prem_config.set('categories', ('cat_ext_blacklist' + str([x])), '1')
+                else:
+                    prem_config.set('categories', ('cat_ext_blacklist' + str([x])), '0')
                 if request.form.get('cat_delsample' + str([x])):
                     prem_config.set('categories', ('cat_delsample' + str([x])), '1')
                 else:
