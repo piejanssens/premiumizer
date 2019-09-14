@@ -750,6 +750,9 @@ class MyHandler(events.PatternMatchingEventHandler):
                     name = os.path.splitext(name)[0]
                     type = 'NZB'
                     task = add_task(id, 0, name, category, type=type)
+            else:
+                logger.error('Watchdir file: %s --- is not a torrent/magnet/nzb', watchdir_file)
+                failed = 1
             if not failed:
                 gevent.sleep(5)
                 failed = check_cloud_fail(id)
