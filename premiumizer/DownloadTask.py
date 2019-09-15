@@ -55,7 +55,7 @@ class DownloadTask:
         if 'dlext' in kwargs:
             self.dlext = kwargs.get('dlext')
         if 'dlext_blacklist' in kwargs:
-            self.dlext = kwargs.get('dlext_blacklist')
+            self.dlext_blacklist = kwargs.get('dlext_blacklist')
         if 'delsample' in kwargs:
             self.delsample = kwargs.get('delsample')
         if 'dlnzbtomedia' in kwargs:
