@@ -430,10 +430,11 @@ class PremConfig:
                         with open(os.path.join(ConfDir, 'settings.cfg'), 'w') as configfile:
                             prem_config.write(configfile)
                     cat_ext = prem_config.get('categories', ('cat_ext' + str([x]))).split(',')
+                    cat_ext_blacklist = prem_config.getboolean('categories', ('cat_ext_blacklist' + str([x])))
                     cat_delsample = prem_config.getboolean('categories', ('cat_delsample' + str([x])))
                     cat_nzbtomedia = prem_config.getboolean('categories', ('cat_nzbtomedia' + str([x])))
-                    cat = {'name': cat_name, 'dir': cat_dir, 'ext': cat_ext, 'delsample': cat_delsample,
-                           'nzb': cat_nzbtomedia}
+                    cat = {'name': cat_name, 'dir': cat_dir, 'ext': cat_ext, 'ext_blacklist': cat_ext_blacklist,
+                           'delsample': cat_delsample, 'nzb': cat_nzbtomedia}
                     self.categories.append(cat)
                     self.download_categories += str(cat_name + ',')
                     if self.download_enabled:
@@ -1757,7 +1758,7 @@ def get_cat_var(category):
             if cat['name'] == category:
                 dldir = cat['dir']
                 dlext = cat['ext']
-                dlext = cat['ext_blacklist']
+                dlext_blacklist = cat['ext_blacklist']
                 delsample = cat['delsample']
                 dlnzbtomedia = cat['nzb']
     else:
