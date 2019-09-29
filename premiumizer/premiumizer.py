@@ -1361,6 +1361,7 @@ def process_dir(dir_content, path):
     if not dir_content:
         return None
     for x in dir_content:
+        download_file_continue = 0
         type = x['type']
         if type == 'folder':
             logger.debug('Processing subfolder: %s', x['name'])
@@ -1373,10 +1374,17 @@ def process_dir(dir_content, path):
             subdir_content = json.loads(r.content)['content']
             process_dir(subdir_content, subdir_path)
         elif type == 'file':
-            if x['link'].lower().endswith(tuple(greenlet.task.dlext)):
-                if greenlet.task.dlext_blacklist:
+            if greenlet.task.dlext_blacklist:
+                if greenlet.task.dlext[0] == '' or not x['link'].lower().endswith(tuple(greenlet.task.dlext)):
+                    download_file_continue = 1
+                else:
                     logger.debug('Skipping download of file %s because extension is blacklisted', x['name'])
-                    continue
+            else:
+                if x['link'].lower().endswith(tuple(greenlet.task.dlext)):
+                    download_file_continue = 1
+                else:
+                    logger.debug('Skipping download of file %s because extension is not whitelisted', x['name'])
+            if download_file_continue:
                 if greenlet.task.delsample:
                     sample = is_sample(x)
                     if sample:
@@ -1387,8 +1395,6 @@ def process_dir(dir_content, path):
                 total_size = greenlet.task.size
                 total_size += x['size']
                 greenlet.task.update(download_list=download_list, size=total_size)
-            else:
-                logger.debug('Skipping download of file %s because extension is not whitelisted', x['name'])
 
 
 def download_process():
@@ -2270,10 +2276,52 @@ def settings():
             if enable_watchdir:
                 watchdir()
             flash('settings saved', 'info')
+    #get_prem_folders()
     categories_amount = len(cfg.download_categories) + 1
     if categories_amount < 7:
         categories_amount = 7
     return render_template('settings.html', settings=prem_config, cfg=cfg, categories_amount=categories_amount)
+
+
+def get_prem_folders():
+    root = {}
+    r = prem_connection("post", "https://www.premiumize.me/api/folder/list", {'apikey': cfg.prem_apikey})
+    r = json.loads(r.content)
+    root = {'folder_id': r['folder_id']}
+    if len(r['content']):
+        if any(x['type'] == 'folder' for x in r['content']):
+            for x in r['content']:
+                r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
+                                    {'apikey': cfg.prem_apikey, 'id': x['id'], 'includebreadcrumbs': 1})
+                r = json.loads(r.content)
+                root[r['breadcrumbs'][1]['name']] = {'folder_id': r['folder_id']}
+                if len(r['content']):
+                    if any(x['type'] == 'folder' for x in r['content']):
+                        for x in r['content']:
+                            r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
+                                                {'apikey': cfg.prem_apikey, 'id': x['id'], 'includebreadcrumbs': 1})
+                            breadcrumbs = json.loads(r.content)['breadcrumbs']
+                            r = json.loads(r.content)
+                            root[breadcrumbs[1]['name']][breadcrumbs[2]['name']] = {'folder_id': r['folder_id']}
+                    if len(r['content']):
+                        if any(x['type'] == 'folder' for x in r['content']):
+                            for x in r['content']:
+                                r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
+                                                    {'apikey': cfg.prem_apikey, 'id': x['id'], 'includebreadcrumbs': 1})
+                                breadcrumbs = json.loads(r.content)['breadcrumbs']
+                                r = json.loads(r.content)
+                                root[breadcrumbs[1]['name']][breadcrumbs[2]['name']][breadcrumbs[3]['name']] = {
+                                    'folder_id': r['folder_id']}
+                        if len(r['content']):
+                            if any(x['type'] == 'folder' for x in r['content']):
+                                for x in r['content']:
+                                    r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
+                                                        {'apikey': cfg.prem_apikey, 'id': x['id'],
+                                                         'includebreadcrumbs': 1})
+                                    breadcrumbs = json.loads(r.content)['breadcrumbs']
+                                    r = json.loads(r.content)
+                                    root[breadcrumbs[1]['name']][breadcrumbs[2]['name']][breadcrumbs[3]['name']][
+                                        breadcrumbs[4]['name']] = {'folder_id': r['folder_id']}
 
 
 def redirect_dest(fallback):
