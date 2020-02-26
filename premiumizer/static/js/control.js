@@ -162,7 +162,7 @@ function update_task(task) {
     dropDown += '</ul></div>';
 
     var htmlString = '<div class="panel panel-default' + (!update ? ' animated fadeInDown' : "") + ' task_panel" id="' + task.id + '">' +
-        '<div class="panel-heading clearfix"><h3 class="panel-title pull-left" style="padding-top: 7.5px;">' + task.name + '</h3>' +
+        '<div class="panel-heading clearfix"><h3 class="panel-title pull-left" style="padding-top: 7.5px;" title="' + task.name + '">' + task.name.substring(0, 120) + '</h3>' +
         '<div class="btn-toolbar pull-right">' +
         '<a class="btn btn-xs btn-danger delete_btn pointer" onclick="delete_task(event)"><i class="fa fa-trash-o fa-lg"></i></a>'
         + (task.cloud_status == "finished" ? (!task.file_id ? '<a class="btn btn-xs btn-success" href="https://www.premiumize.me/files?folder_id=' + task.folder_id + '" target="_blank"><i class="fa fa-folder-open-o fa-lg"></i></a>' : "")
