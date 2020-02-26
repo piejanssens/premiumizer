@@ -95,6 +95,12 @@ body {
     vertical-align: middle;
 }
 
+.table tbody > tr > td.taskname {
+    word-wrap: break-word;
+    word-break: break-all;
+    white-space: normal;
+}
+
 .bootstrap-switch-container {
     white-space: nowrap;
 }
@@ -112,10 +118,6 @@ body {
 
 h4 {
     word-wrap: break-word;
-}
-
-pre {
-    display: inline-block;
 }
 
 .col:not(:first-child), .col:not(:last-child) {

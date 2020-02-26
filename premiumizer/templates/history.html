@@ -19,7 +19,7 @@
         {% for item in history|sort(attribute='date', reverse=True) %}
             <TR>
                 <TD class="c1 vert-align">{{ item.date }}</TD>
-                <TD class="c2 vert-align">{{ item.name }}</TD>
+                <TD class="c2 vert-align taskname">{{ item.name }}</TD>
                 <TD class="c3 vert-align">{{ item.category }}</TD>
                 <TD class="c4 vert-align">{{ item.type }}</TD>
                 {% if item.downloaded == '1' %}
