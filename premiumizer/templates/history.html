@@ -53,10 +53,11 @@
                     <TD class="c5 vert-align"><span class="label label-status label-default">N/A</span></TD>
                 {% endif %}
                 <TD class="c9">
-                    {% for line in item.info.splitlines() %}
-                        {{ line }}<br>
-                    {% endfor %}</TD>
-
+                    {% if item.info %}
+                        {% for line in item.info.splitlines() %}
+                            {{ line }}<br>
+                        {% endfor %}</TD>
+                    {% endif %}
             </TR>
         {% endfor %}
     </table>
