@@ -1549,7 +1549,7 @@ def update():
     logger.debug('def update started')
     idle = True
     if client_connected:
-        update_interval = 10
+        update_interval = 3
     else:
         update_interval = idle_interval
     payload = {'apikey': cfg.prem_apikey}
@@ -1558,7 +1558,7 @@ def update():
         response_content = json.loads(r.content)
         if response_content['status'] == "success":
             if not response_content['transfers']:
-                update_interval *= 3
+                update_interval = 30
             transfers = response_content['transfers']
             idle = parse_tasks(transfers)
         else:
