@@ -101,17 +101,17 @@ function update_task(task) {
         stateColor = 'success';
         stateStr = 'Finished';
         stateIcon = 'desktop';
-        categoryState = ' disabled';
+        categoryState = '';
     } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'finished_waiting') {
         stateColor = 'success';
         stateStr = 'Waiting to delete';
         stateIcon = 'desktop';
-        categoryState = ' disabled';
+        categoryState = '';
     } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'finished_seeding') {
         stateColor = 'success';
         stateStr = 'Waiting to delete / Seeding';
         stateIcon = 'desktop';
-        categoryState = ' disabled';
+        categoryState = '';
     } else if ((task.cloud_status == 'finished' || task.cloud_status == 'seeding') && task.local_status == 'stopped') {
         stateColor = 'warning';
         stateStr = 'Download stopped';
