@@ -2252,7 +2252,7 @@ def settings():
             prem_config.set('downloads', 'remove_cloud_delay', request.form.get('remove_cloud_delay'))
             prem_config.set('upload', 'watchdir_location', request.form.get('watchdir_location'))
             prem_config.set('downloads', 'nzbtomedia_location', request.form.get('nzbtomedia_location'))
-            for x in range(1, 6):
+            for x in range(1, 7):
                 prem_config.set('categories', ('cat_name' + str([x])), request.form.get('cat_name' + str([x])))
                 prem_config.set('categories', ('cat_dir' + str([x])), request.form.get('cat_dir' + str([x])))
                 prem_config.set('categories', ('cat_ext' + str([x])), request.form.get('cat_ext' + str([x])))
