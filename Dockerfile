@@ -17,5 +17,6 @@ COPY premiumizer /app
 
 WORKDIR /app
 
+VOLUME /conf
 EXPOSE 5000
 CMD ["python", "/app/premiumizer.py"]
