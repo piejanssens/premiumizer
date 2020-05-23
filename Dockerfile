@@ -12,6 +12,10 @@ RUN pip install --prefix /install -r requirements.txt
 
 FROM base
 
+RUN addgroup -S -g 1000 premiumizer \
+	&& adduser -S -D -u 1000 -G premiumizer -s /bin/sh premiumizer
+USER premiumizer
+
 COPY --from=builder /install /usr/local
 COPY premiumizer /app
 
