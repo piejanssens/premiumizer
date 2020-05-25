@@ -12,9 +12,9 @@ RUN pip install --prefix /install -r requirements.txt
 
 FROM base
 
-RUN addgroup -S -g 1000 premiumizer \
-	&& adduser -S -D -u 1000 -G premiumizer -s /bin/sh premiumizer
-USER premiumizer
+RUN apk add --update --no-cache su-exec shadow \
+	&& addgroup -S -g 6006 premiumizer \
+	&& adduser -S -D -u 6006 -G premiumizer -s /bin/sh premiumizer
 
 COPY --from=builder /install /usr/local
 COPY premiumizer /app
@@ -23,4 +23,6 @@ WORKDIR /app
 
 VOLUME /conf
 EXPOSE 5000
-CMD ["python", "/app/premiumizer.py"]
+
+ENTRYPOINT ["/bin/sh","/app/docker-entrypoint.sh"]
+CMD ["/usr/local/bin/python", "/app/premiumizer.py"]
