@@ -7,7 +7,7 @@ WORKDIR /install
 
 COPY requirements.txt ./premiumizer /install/
 
-RUN apk add --update --virtual build-dependencies libffi-dev openssl-dev python-dev py-pip build-base
+RUN apk add --update --no-cache libffi-dev openssl-dev python-dev py-pip build-base
 RUN pip install --prefix /install -r requirements.txt
 
 FROM base
