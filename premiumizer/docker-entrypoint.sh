@@ -3,7 +3,9 @@
 PUID=${PUID:-6006}
 PGID=${PGID:-6006}
 
-groupmod -o -g "$PGID" premiumizer
-usermod -o -u "$PUID" premiumizer
+groupmod -o -g "$PGID" premiumizer || true
+usermod -o -u "$PUID" premiumizer || true
 
-su - premiumizer -p -c 'python ./premiumizer/premiumizer.py'
+chown -R premiumizer:premiumizer /conf || true
+
+exec su-exec premiumizer "$@"
