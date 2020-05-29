@@ -3,6 +3,8 @@ conf/
 
 .vscode/
 
+**.DS_Store
+
 #PyCharm
 .idea/
 
