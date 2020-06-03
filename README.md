@@ -70,11 +70,53 @@ $ python premiumizer/premiumizer.py
 
 ### Docker
 
+### Supported Architectures
+Based on [this](https://github.com/cgiraldo/docker-hello-multiarch) approach, we support `amd64`, `arm32v7` & `arm64v8`.
+
+Our image has a multiarch manifest, so by pulling `piejanssens/premiumizer:latest` it should retrieve the correct image for your arch, but you can also pull specific arch via tags.
+
+| Architecture | Tag |
+| :----: | --- |
+| x86-64 | amd64 |
+| arm64 | arm64v8 |
+| armhf | arm32v7 |
+
 #### General
 You need to set the correct PUID and PGID equal to the user that has rw access to the mounted volumes.
 
+##### Command line
 ```
-docker run -d -p 5000:5000 -e TZ=Europe/London -e PUID=1000 -e PGID=1000 -v <host_path>:/conf -v <host_path>:/blackhole -v <host_path>:/downloads piejanssens/premiumizer:latest
+docker run \
+  --name premiumizer \
+  -e PUID=1000 \
+  -e PGID=1000 \
+  -e TZ=Europe/London \
+  -p 5000:5000 \
+  -v /path/to/conf:/conf \
+  -v /path/to/blackhole:/blackhole \
+  -v /path/to/downloads:/downloads \
+  --restart unless-stopped \
+  piejanssens/premiumizer
+```
+##### docker-compose
+```
+---
+version: "3.6"
+services:
+  premiumizer:
+    image: piejanssens/premiumizer
+    container_name: premiumizer
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/London
+    volumes:
+      - /path/to/conf:/conf
+      - /path/to/blackhole:/blackhole
+      - /path/to/downloads:/downloads
+    ports:
+      - 5000:5000
+    restart: unless-stopped
 ```
 
 #### Synology DSM
