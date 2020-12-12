@@ -5,7 +5,7 @@ RUN mkdir /install
 WORKDIR /install
 COPY requirements.txt ./premiumizer /install/
 
-RUN apk add --update --no-cache libffi-dev openssl-dev python-dev py-pip build-base tzdata
+RUN apk add --update --no-cache libffi-dev openssl-dev python3-dev py-pip build-base tzdata
 RUN pip install --prefix /install -r requirements.txt
 
 FROM base
