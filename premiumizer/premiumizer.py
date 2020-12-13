@@ -421,7 +421,7 @@ class PremConfig:
                 cat_name = prem_config.get('categories', ('cat_name' + str([x])))
                 cat_dir = prem_config.get('categories', ('cat_dir' + str([x])))
                 if cat_name != '':
-                    if cat_dir == '' or ('//' not in cat_dir and '\\' not in cat_dir):
+                    if cat_dir == '' or ('/' not in cat_dir and '\\' not in cat_dir):
                         if cat_name == 'default':
                             cat_dir = self.download_location
                         else:
