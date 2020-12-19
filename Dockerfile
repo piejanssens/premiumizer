@@ -10,7 +10,7 @@ RUN pip install --prefix /install -r requirements.txt
 
 FROM base
 
-RUN apk add --update --no-cache su-exec shadow \
+RUN apk add --update --no-cache su-exec shadow libstdc++ \
 	&& addgroup -S -g 6006 premiumizer \
 	&& adduser -S -D -u 6006 -G premiumizer -s /bin/sh premiumizer
 
