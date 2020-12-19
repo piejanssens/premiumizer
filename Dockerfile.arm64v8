@@ -16,7 +16,7 @@ FROM base
 # For cross building on amd64 host
 COPY qemu-aarch64-static /usr/bin
 
-RUN apk add --update --no-cache su-exec shadow \
+RUN apk add --update --no-cache su-exec shadow libstdc++ \
 	&& addgroup -S -g 6006 premiumizer \
 	&& adduser -S -D -u 6006 -G premiumizer -s /bin/sh premiumizer
 
