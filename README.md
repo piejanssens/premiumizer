@@ -27,7 +27,7 @@ When premiumizer is running you can access it at http://localhost:5000/
 ## Installation
 
 ### Requirements
-Required: Git & Python 3.7 (with pip)
+Required: Git & Python 3 (with pip)
 Optional: [virtualenv](https://pypi.python.org/pypi/virtualenv) & [NzbToMedia](https://github.com/clinton-hall/nzbToMedia) version 10.14 & higher
 
 ### Synology
@@ -55,7 +55,7 @@ $ python premiumizer.py
 
 ### Unix / macOS
 
-1. Install Python 3.7 (e.g. using [brew](http://brew.sh/))
+1. Install Python 3 (e.g. using [brew](http://brew.sh/))
 2. Open Terminal
 ```
 $ brew install python3
