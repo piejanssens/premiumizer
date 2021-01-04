@@ -97,4 +97,4 @@ updated = 1
 auto_update = 0
 update_date = Never
 config_version = 2.7
-req_version = 9.9
+req_version = 10.0
