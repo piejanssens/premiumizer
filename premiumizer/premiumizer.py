@@ -327,6 +327,9 @@ class PremConfig:
         self.seed_torrent = prem_config.getboolean('downloads', 'seed_torrent')
         self.download_all = prem_config.getboolean('downloads', 'download_all')
         self.download_enabled = prem_config.getboolean('downloads', 'download_enabled')
+        self.time_shed = prem_config.getboolean('downloads', 'time_shed')
+        self.time_shed_start = prem_config.get('downloads', 'time_shed_start')
+        self.time_shed_stop = prem_config.get('downloads', 'time_shed_stop')
         self.download_location = prem_config.get('downloads', 'download_location')
         self.download_max = prem_config.getint('downloads', 'download_max')
         self.download_threads = prem_config.getint('downloads', 'download_threads')
@@ -1551,6 +1554,15 @@ def update():
     if client_connected:
         update_interval = 3
     else:
+        if cfg.time_shed:
+            shed_start = datetime.strptime(cfg.time_shed_start, "%H:%M")
+            time_now = datetime.strptime((datetime.now().strftime("%H:%M")), "%H:%M")
+            shed_stop = datetime.strptime(cfg.time_shed_stop, "%H:%M")
+            if not shed_start <= time_now <= shed_stop:
+                tdelta = shed_start - time_now
+                tdelta = tdelta.seconds
+                scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=tdelta)
+                return
         update_interval = idle_interval
     payload = {'apikey': cfg.prem_apikey}
     r = prem_connection("post", "https://www.premiumize.me/api/transfer/list", payload)
@@ -2167,6 +2179,10 @@ def settings():
                 prem_config.set('security', 'login_enabled', '1')
             else:
                 prem_config.set('security', 'login_enabled', '0')
+            if request.form.get('time_shed'):
+                prem_config.set('downloads', 'time_shed', '1')
+            else:
+                prem_config.set('downloads', 'time_shed', '0')
             if request.form.get('download_enabled'):
                 prem_config.set('downloads', 'download_enabled', '1')
             else:
@@ -2245,6 +2261,8 @@ def settings():
             prem_config.set('security', 'username', request.form.get('username'))
             prem_config.set('security', 'password', request.form.get('password'))
             prem_config.set('premiumize', 'apikey', request.form.get('apikey'))
+            prem_config.set('downloads', 'time_shed_start', request.form.get('time_shed_start'))
+            prem_config.set('downloads', 'time_shed_stop', request.form.get('time_shed_stop'))
             prem_config.set('downloads', 'download_location', request.form.get('download_location'))
             prem_config.set('downloads', 'download_max', request.form.get('download_max'))
             prem_config.set('downloads', 'download_threads', request.form.get('download_threads'))
