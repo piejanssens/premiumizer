@@ -28,7 +28,7 @@ When premiumizer is running you can access it at http://localhost:5000/
 
 ### Requirements
 Required: Git & Python 3 (with pip)
-Optional: [virtualenv](https://pypi.python.org/pypi/virtualenv) & [NzbToMedia](https://github.com/clinton-hall/nzbToMedia) version 10.14 & higher
+Optional: [virtualenv](https://pypi.python.org/pypi/virtualenv) & [NzbToMedia](https://github.com/clinton-hall/nzbToMedia) version 10.14+
 
 ### Synology
 Follow Docker instructions.
@@ -41,16 +41,14 @@ Open services.msc & edit Premiumizer service to logon using your account that is
 
 #### Manual
 
-1. Install [Git](https://git-scm.com/download/win) & select: "Use git from the windows command prompt".
-2. Download [Python](https://www.python.org/downloads/)
-3. Open cmd.exe
+1. Install [Git](https://git-scm.com/download/win)
+2. Install [Python](https://www.python.org/downloads/) Check Add Python to PATH
+3. WIN+R cmd
 ```
-$ git clone https://github.com/piejanssens/premiumizer.git premiumizer
-$ pip.exe install virtualenv
-$ virtualenv premiumizer\env
-$ env\Scripts\activate.bat
-$ pip install -r requirements.txt
-$ python premiumizer.py
+git clone https://github.com/piejanssens/premiumizer.git C:\Premiumizer
+python -m pip install --upgrade pip
+python -m pip install -r c:\Premiumizer\requirements.txt
+python C:\Premiumizer\premiumizer\premiumizer.py
 ```
 
 ### Unix / macOS
