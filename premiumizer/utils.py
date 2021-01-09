@@ -5,11 +5,6 @@ import subprocess
 import sys
 import time
 
-try:
-    from pip import main as pipmain
-except:
-    from pip._internal import main as pipmain
-
 runningdir = os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0]
 rootdir = os.path.dirname(runningdir)
 ConfDir = os.path.join(rootdir, 'conf')
@@ -55,7 +50,8 @@ def update():
         prem_config.write(configfile)
     if prem_config.getfloat('update', 'req_version') < default_config.getfloat('update', 'req_version'):
         logging.info('updating pip requirements')
-        pipmain(['install', '-r', os.path.join(rootdir, 'requirements.txt')])
+        subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--upgrade', 'pip'])
+        subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', os.path.join(rootdir, 'requirements.txt')])
         prem_config.set('update', 'req_version', str(default_config.getfloat('update', 'req_version')))
         with open(os.path.join(ConfDir, 'settings.cfg'), 'w') as configfile:
             prem_config.write(configfile)

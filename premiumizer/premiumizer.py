@@ -273,8 +273,8 @@ class PremConfig:
         if prem_config.getfloat('update', 'req_version') < default_config.getfloat('update', 'req_version'):
             try:
                 logging.info('updating pip requirements')
-                from pip._internal import main as pipmain
-                pipmain(['install', '-r', os.path.join(rootdir, 'requirements.txt')])
+                subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--upgrade', 'pip'])
+                subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', os.path.join(rootdir, 'requirements.txt')])
                 prem_config.set('update', 'req_version', str(default_config.getfloat('update', 'req_version')))
                 with open(os.path.join(ConfDir, 'settings.cfg'), 'w') as configfile:
                     prem_config.write(configfile)
