@@ -274,7 +274,8 @@ class PremConfig:
             try:
                 logging.info('updating pip requirements')
                 subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--upgrade', 'pip'])
-                subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', os.path.join(rootdir, 'requirements.txt')])
+                subprocess.check_call(
+                    [sys.executable, '-m', 'pip', 'install', '-r', os.path.join(rootdir, 'requirements.txt')])
                 prem_config.set('update', 'req_version', str(default_config.getfloat('update', 'req_version')))
                 with open(os.path.join(ConfDir, 'settings.cfg'), 'w') as configfile:
                     prem_config.write(configfile)
@@ -1554,15 +1555,6 @@ def update():
     if client_connected:
         update_interval = 3
     else:
-        if cfg.time_shed:
-            shed_start = datetime.strptime(cfg.time_shed_start, "%H:%M")
-            time_now = datetime.strptime((datetime.now().strftime("%H:%M")), "%H:%M")
-            shed_stop = datetime.strptime(cfg.time_shed_stop, "%H:%M")
-            if not shed_start <= time_now <= shed_stop:
-                tdelta = shed_start - time_now
-                tdelta = tdelta.seconds
-                scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=tdelta)
-                return
         update_interval = idle_interval
     payload = {'apikey': cfg.prem_apikey}
     r = prem_connection("post", "https://www.premiumize.me/api/transfer/list", payload)
@@ -1687,10 +1679,26 @@ def parse_tasks(transfers):
                                         folder_id=folder_id,
                                         file_id=file_id, dlsize='')
                             gevent.sleep(3)
-                            scheduler.scheduler.add_job(download_task, args=(task,), name=task.name, id=task.id,
-                                                        misfire_grace_time=7200, coalesce=False, max_instances=1,
-                                                        jobstore='downloads', executor='downloads',
-                                                        replace_existing=True)
+                            if cfg.time_shed:
+                                shed_start = datetime.strptime(cfg.time_shed_start, "%H:%M")
+                                time_now = datetime.strptime((datetime.now().strftime("%H:%M")), "%H:%M")
+                                shed_stop = datetime.strptime(cfg.time_shed_stop, "%H:%M")
+                                if not shed_start <= time_now <= shed_stop:
+                                    tdelta = shed_start - time_now
+                                    tdelta = tdelta.seconds
+                                    runtime = datetime.now() + timedelta(seconds=tdelta)
+                                    scheduler.scheduler.add_job(download_task, args=(task,), name=task.name, id=task.id,
+                                                                misfire_grace_time=7200, coalesce=False,
+                                                                max_instances=1, jobstore='downloads',
+                                                                executor='downloads', replace_existing=True,
+                                                                next_run_time=runtime)
+                                    logger.info('Starting download task: %s -- id: %s -- at: %s ', task.name, task.id,
+                                                runtime)
+                            else:
+                                scheduler.scheduler.add_job(download_task, args=(task,), name=task.name, id=task.id,
+                                                            misfire_grace_time=7200, coalesce=False, max_instances=1,
+                                                            jobstore='downloads', executor='downloads',
+                                                            replace_existing=True)
                     elif task.category == '':
                         task.update(name=name, cloud_status=transfer['status'], local_status='waiting', progress=100,
                                     folder_id=folder_id, file_id=file_id)
@@ -2294,7 +2302,7 @@ def settings():
             if enable_watchdir:
                 watchdir()
             flash('settings saved', 'info')
-    #get_prem_folders()
+    # get_prem_folders()
     categories_amount = len(cfg.download_categories) + 1
     if categories_amount < 7:
         categories_amount = 7
