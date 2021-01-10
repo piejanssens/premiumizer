@@ -629,11 +629,12 @@ app.config['SECRET_KEY'] = uuid.uuid4().hex
 app.config.update(DEBUG=debug_enabled)
 app.logger.addHandler(handler)
 if cfg.custom_domain:
-    socketio = SocketIO(app, async_mode='gevent',
-                        cors_allowed_origins=['http://' + cfg.custom_domain, 'https://' + cfg.custom_domain,
-                                              'http://localhost'])
+    cors = ['http://' + cfg.custom_domain, 'https://' + cfg.custom_domain,
+            'http://localhost:' + str(prem_config.getint('global', 'server_port')),
+            'http://127.0.0.1:' + str(prem_config.getint('global', 'server_port'))]
 else:
-    socketio = SocketIO(app, async_mode='gevent', cors_allowed_origins='*')
+    cors = '*'
+socketio = SocketIO(app, async_mode='gevent', cors_allowed_origins=cors, path=cfg.reverse_proxy_path + '/socket.io')
 
 app.config['LOGIN_DISABLED'] = not cfg.web_login_enabled
 login_manager = LoginManager()
