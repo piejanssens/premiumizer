@@ -16,6 +16,9 @@ password =
 apikey =
 
 [downloads]
+time_shed = 0
+time_shed_start = 00:00
+time_shed_stop = 06:00
 download_enabled = 0
 download_all = 0
 download_rss = 0
@@ -96,5 +99,5 @@ email_password =
 updated = 1
 auto_update = 0
 update_date = Never
-config_version = 2.7
+config_version = 2.8
 req_version = 10.0

@@ -273,8 +273,9 @@ class PremConfig:
         if prem_config.getfloat('update', 'req_version') < default_config.getfloat('update', 'req_version'):
             try:
                 logging.info('updating pip requirements')
-                from pip._internal import main as pipmain
-                pipmain(['install', '-r', os.path.join(rootdir, 'requirements.txt')])
+                subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--upgrade', 'pip'])
+                subprocess.check_call(
+                    [sys.executable, '-m', 'pip', 'install', '-r', os.path.join(rootdir, 'requirements.txt')])
                 prem_config.set('update', 'req_version', str(default_config.getfloat('update', 'req_version')))
                 with open(os.path.join(ConfDir, 'settings.cfg'), 'w') as configfile:
                     prem_config.write(configfile)
@@ -327,6 +328,9 @@ class PremConfig:
         self.seed_torrent = prem_config.getboolean('downloads', 'seed_torrent')
         self.download_all = prem_config.getboolean('downloads', 'download_all')
         self.download_enabled = prem_config.getboolean('downloads', 'download_enabled')
+        self.time_shed = prem_config.getboolean('downloads', 'time_shed')
+        self.time_shed_start = prem_config.get('downloads', 'time_shed_start')
+        self.time_shed_stop = prem_config.get('downloads', 'time_shed_stop')
         self.download_location = prem_config.get('downloads', 'download_location')
         self.download_max = prem_config.getint('downloads', 'download_max')
         self.download_threads = prem_config.getint('downloads', 'download_threads')
@@ -625,11 +629,12 @@ app.config['SECRET_KEY'] = uuid.uuid4().hex
 app.config.update(DEBUG=debug_enabled)
 app.logger.addHandler(handler)
 if cfg.custom_domain:
-    socketio = SocketIO(app, async_mode='gevent',
-                        cors_allowed_origins=['http://' + cfg.custom_domain, 'https://' + cfg.custom_domain,
-                                              'http://localhost'])
+    cors = ['http://' + cfg.custom_domain, 'https://' + cfg.custom_domain,
+            'http://localhost:' + str(prem_config.getint('global', 'server_port')),
+            'http://127.0.0.1:' + str(prem_config.getint('global', 'server_port'))]
 else:
-    socketio = SocketIO(app, async_mode='gevent', cors_allowed_origins='*')
+    cors = '*'
+socketio = SocketIO(app, async_mode='gevent', cors_allowed_origins=cors, path=cfg.reverse_proxy_path + '/socket.io')
 
 app.config['LOGIN_DISABLED'] = not cfg.web_login_enabled
 login_manager = LoginManager()
@@ -1675,10 +1680,26 @@ def parse_tasks(transfers):
                                         folder_id=folder_id,
                                         file_id=file_id, dlsize='')
                             gevent.sleep(3)
-                            scheduler.scheduler.add_job(download_task, args=(task,), name=task.name, id=task.id,
-                                                        misfire_grace_time=7200, coalesce=False, max_instances=1,
-                                                        jobstore='downloads', executor='downloads',
-                                                        replace_existing=True)
+                            if cfg.time_shed:
+                                shed_start = datetime.strptime(cfg.time_shed_start, "%H:%M")
+                                time_now = datetime.strptime((datetime.now().strftime("%H:%M")), "%H:%M")
+                                shed_stop = datetime.strptime(cfg.time_shed_stop, "%H:%M")
+                                if not shed_start <= time_now <= shed_stop:
+                                    tdelta = shed_start - time_now
+                                    tdelta = tdelta.seconds
+                                    runtime = datetime.now() + timedelta(seconds=tdelta)
+                                    scheduler.scheduler.add_job(download_task, args=(task,), name=task.name, id=task.id,
+                                                                misfire_grace_time=7200, coalesce=False,
+                                                                max_instances=1, jobstore='downloads',
+                                                                executor='downloads', replace_existing=True,
+                                                                next_run_time=runtime)
+                                    logger.info('Starting download task: %s -- id: %s -- at: %s ', task.name, task.id,
+                                                runtime)
+                            else:
+                                scheduler.scheduler.add_job(download_task, args=(task,), name=task.name, id=task.id,
+                                                            misfire_grace_time=7200, coalesce=False, max_instances=1,
+                                                            jobstore='downloads', executor='downloads',
+                                                            replace_existing=True)
                     elif task.category == '':
                         task.update(name=name, cloud_status=transfer['status'], local_status='waiting', progress=100,
                                     folder_id=folder_id, file_id=file_id)
@@ -2167,6 +2188,10 @@ def settings():
                 prem_config.set('security', 'login_enabled', '1')
             else:
                 prem_config.set('security', 'login_enabled', '0')
+            if request.form.get('time_shed'):
+                prem_config.set('downloads', 'time_shed', '1')
+            else:
+                prem_config.set('downloads', 'time_shed', '0')
             if request.form.get('download_enabled'):
                 prem_config.set('downloads', 'download_enabled', '1')
             else:
@@ -2245,6 +2270,8 @@ def settings():
             prem_config.set('security', 'username', request.form.get('username'))
             prem_config.set('security', 'password', request.form.get('password'))
             prem_config.set('premiumize', 'apikey', request.form.get('apikey'))
+            prem_config.set('downloads', 'time_shed_start', request.form.get('time_shed_start'))
+            prem_config.set('downloads', 'time_shed_stop', request.form.get('time_shed_stop'))
             prem_config.set('downloads', 'download_location', request.form.get('download_location'))
             prem_config.set('downloads', 'download_max', request.form.get('download_max'))
             prem_config.set('downloads', 'download_threads', request.form.get('download_threads'))
@@ -2276,7 +2303,7 @@ def settings():
             if enable_watchdir:
                 watchdir()
             flash('settings saved', 'info')
-    #get_prem_folders()
+    # get_prem_folders()
     categories_amount = len(cfg.download_categories) + 1
     if categories_amount < 7:
         categories_amount = 7

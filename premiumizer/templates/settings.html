@@ -143,6 +143,25 @@
             <div class="tab-pane" id="5a">
                 <p>&nbsp;</p>
                 <div class="form-group">
+                    <label for="time_shed">Time Scheduler:</label>
+                    {% if settings.get('downloads', 'time_shed') == '1' %}
+                        <input type="checkbox" class="form-control bootstrap_switch" name="time_shed"
+                               data-size="small"
+                               checked>
+                    {% else %}
+                        <input type="checkbox" class="form-control bootstrap_switch" name="time_shed"
+                               data-size="small">
+                    {% endif %}
+                    <p>&nbsp;</p>
+                    <label for="time_shed_start">Start time:</label>
+                    <input type="text" autocomplete="off" min="0" class="form-control" name="time_shed_start"
+                           pattern="^[0-2]{1}[0-9]{1}:[0-2]{1}[0-9]{1}$" title="Please enter a valid time format HH:MM"
+                           aria-describedby="basic-addon1"  value="{{ settings.get('downloads', 'time_shed_start') }}">
+                    <label for="time_shed_stop">Stop time:</label>
+                    <input type="text" autocomplete="off" min="0" class="form-control" name="time_shed_stop"
+                           pattern="^[0-2]{1}[0-9]{1}:[0-2]{1}[0-9]{1}$" title="Please enter a valid time format HH:MM"
+                           aria-describedby="basic-addon1" value="{{ settings.get('downloads', 'time_shed_stop') }}">
+                    <p>&nbsp;</p>
                     <label for="download_enabled">Downloads enabled:</label>
                     {% if settings.get('downloads', 'download_enabled') == '1' %}
                         <input type="checkbox" class="form-control bootstrap_switch" name="download_enabled"

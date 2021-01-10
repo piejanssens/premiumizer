@@ -371,8 +371,9 @@ function update_task(task) {
     });
 
     // start up the SocketIO connection to the server
-    socket = io.connect('//' + document.domain + ':' + location.port);
-
+    socket = io.connect('//' + document.domain + ':' + location.port, {
+                        'path': window.location.pathname + 'socket.io'
+    });
     socket.on('download_categories', function (msg) {
         download_categories = msg.data;
     });

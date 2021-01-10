@@ -56,6 +56,14 @@
             Download speed is limited to {{ download_speed }}/s
         </div>
     {% endif %}
+    {% if cfg.time_shed == 1 %}
+        <p>&nbsp;</p>
+        <div id="time_shed" class="alert alert-info" role="alert" style="display:inline;">
+            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+            <span class="sr-only">Info:</span>
+            Time Scheduler enabled from {{ cfg.time_shed_start }} to {{ cfg.time_shed_stop }}
+        </div>
+    {% endif %}
     {% if cfg.download_enabled != 1 %}
         <p>&nbsp;</p>
         <div id="download_enabled" class="alert alert-info" role="alert" style="display:inline;">
@@ -144,5 +152,5 @@
 {% block js_footer %}
     {{ super() }}
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.4/socket.io.min.js"></script>
-    <script type="text/javascript" src="{{ url_for('static', filename='js/control.js') }}?v=21"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/control.js') }}?v=22"></script>
 {% endblock %}
