@@ -1,5 +1,6 @@
 APScheduler==3.6.3
 MarkupSafe==1.1.1
+apprise==0.9.0
 bencode.py==4.0.0
 chardet==4.0.0
 click==7.1.2
