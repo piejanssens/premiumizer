@@ -493,8 +493,8 @@
             </fieldset>
             <p>&nbsp;</p>
             <fieldset>
-                <legend>Apprise</legend>
-                <p><a href="https://github.com/caronc/apprise" rel="noreferer">Apprise</a> lets you send push notifications to various services.</p>
+                <legend>Push Notifications</legend>
+                <p>Push notifications are handled via <a href="https://github.com/caronc/apprise" rel="noreferer">Apprise</a>.</p>
                 <label for="email_enabled">Enabled:</label>
                 {% if settings.get('notifications', 'apprise_enabled') == '1' %}
                     <input type="checkbox" class="form-control bootstrap_switch" name="apprise_enabled"
@@ -515,9 +515,9 @@
                            data-size="small">
                 {% endif %}
                 <p>&nbsp;</p>
-                <label for="apprise_url">Notification URL:</label>
+                <label for="apprise_url"><a href="https://github.com/caronc/apprise#supported-notifications" rel="noreferer">Service URL</a>:</label>
                 <input type="text" autocomplete="off" class="form-control" name="apprise_url"
-                       placeholder="eg. discord://12345/abcde"
+                       placeholder="e.g. discord://12345/abcde"
                        value="{{ settings.get('notifications', 'apprise_url') }}">
         </fieldset>
             
