@@ -431,7 +431,9 @@
             </div>
 
             <div class="tab-pane" id="10a">
-                <p>&nbsp;</p>
+                <p class="padding-sm" style="text-align: right">
+                    <input type="submit" class="btn btn-info" name="submit" value="Send Test Notification">
+                </p>
                 <fieldset>
                     <legend>Email</legend>
                     <label for="email_enabled">Enabled:</label>
@@ -488,10 +490,37 @@
                     <input type="password" autocomplete="off" class="form-control" name="email_password"
                            aria-describedby="basic-addon1"
                            value="{{ settings.get('notifications', 'email_password') }}">
-                    <p>&nbsp;</p>
-                    <input type="submit" class="btn btn-info" name="submit" value="Send Test Email">
-            </div>
             </fieldset>
+            <p>&nbsp;</p>
+            <fieldset>
+                <legend>Push Notifications</legend>
+                <p>Push notifications are handled via <a href="https://github.com/caronc/apprise" rel="noreferer">Apprise</a>.</p>
+                <label for="email_enabled">Enabled:</label>
+                {% if settings.get('notifications', 'apprise_enabled') == '1' %}
+                    <input type="checkbox" class="form-control bootstrap_switch" name="apprise_enabled"
+                           data-size="small"
+                           checked>
+                {% else %}
+                    <input type="checkbox" class="form-control bootstrap_switch" name="apprise_enabled"
+                           data-size="small">
+                {% endif %}
+                <p>&nbsp;</p>
+                <label for="email_on_failure">Only on failure:</label>
+                {% if settings.get('notifications', 'apprise_push_on_failure') == '1' %}
+                    <input type="checkbox" class="form-control bootstrap_switch" name="apprise_push_on_failure"
+                           data-size="small"
+                           checked>
+                {% else %}
+                    <input type="checkbox" class="form-control bootstrap_switch" name="apprise_push_on_failure"
+                           data-size="small">
+                {% endif %}
+                <p>&nbsp;</p>
+                <label for="apprise_url"><a href="https://github.com/caronc/apprise#supported-notifications" rel="noreferer">Service URL</a>:</label>
+                <input type="text" autocomplete="off" class="form-control" name="apprise_url"
+                       placeholder="e.g. discord://12345/abcde"
+                       value="{{ settings.get('notifications', 'apprise_url') }}">
+        </fieldset>
+            
             <p>&nbsp;</p>
         </div>
     </form>

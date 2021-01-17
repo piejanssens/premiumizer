@@ -93,11 +93,14 @@ email_port =
 email_encryption = 0
 email_username =
 email_password =
+apprise_enabled = 0
+apprise_push_on_failure = 0
+apprise_url = 
 
 [update]
 #Do not change these values#
 updated = 1
 auto_update = 0
 update_date = Never
-config_version = 2.8
+config_version = 2.9
 req_version = 10.0
