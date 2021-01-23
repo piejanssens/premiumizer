@@ -920,6 +920,8 @@ def notify_nzbtomedia():
 
 def send_notification(subject, text=None, send_email=cfg.email_enabled, send_push=cfg.apprise_enabled):
     logger.debug('def send_notification started')
+    if not (cfg.email_enabled or cfg.apprise_enabled):
+        return
     global last_email
     if subject == 'download success':
         subject = 'Success for "%s"' % greenlet.task.name
