@@ -1,4 +1,4 @@
-APScheduler==3.6.3
+APScheduler==3.7.0
 MarkupSafe==1.1.1
 apprise==0.9.0
 bencode.py==4.0.0
@@ -10,8 +10,8 @@ flask==1.1.2
 flask_apscheduler==1.11.0
 flask_socketio==5.0.1
 gevent-websocket==0.10.1
-gevent==20.12.1
-greenlet==0.4.17
+gevent==21.1.2
+greenlet==1.0.0
 itsdangerous==1.1.0
 jinja2==2.11.2
 myjdapi==1.0.6
