@@ -262,6 +262,7 @@ if prem_config.getboolean('update', 'updated'):
 class PremConfig:
     def __init__(self):
         self.jd_update_available = 0
+        self.downloader_connection = 0
         self.jd_connected = 0
         self.aria2_connected = 0
         self.download_builtin = 0
@@ -358,11 +359,9 @@ class PremConfig:
                 self.jd = myjdapi.Myjdapi()
                 self.jd.set_app_key('https://git.io/vaDti')
                 self.jd.connect(self.jd_username, self.jd_password)
-                self.jd_connected = 1
             except BaseException as e:
                 logger.error('myjdapi : ' + str(e))
                 logger.error('Could not connect to My JDownloader')
-                self.jd_connected = 0
             try:
                 self.jd_device = self.jd.get_device(self.jd_device_name)
                 self.jd_connected = 1
@@ -491,38 +490,43 @@ class PremConfig:
 cfg = PremConfig()
 
 
-def jd_connect():
-    try:
-        cfg.jd = myjdapi.Myjdapi()
-        cfg.jd.set_app_key('https://git.io/vaDti')
-        cfg.jd.connect(cfg.jd_username, cfg.jd_password)
-        cfg.jd_connected = 1
-    except BaseException as e:
-        logger.error('myjdapi : ' + str(e))
-        logger.error('Could not connect to My JDownloader')
+def downloader_connection():
+    connection = 0
+    if cfg.jd_enabled:
         cfg.jd_connected = 0
-    try:
-        cfg.jd_device = cfg.jd.get_device(cfg.jd_device_name)
-        cfg.jd_connected = 1
-    except BaseException as e:
-        logger.error('myjdapi : ' + str(e))
-        logger.error('Could not get device name (%s) for My JDownloader', cfg.jd_device_name)
-        cfg.jd_connected = 0
-
-
-def aria2_connect():
-    try:
-        uri = ('http://' + cfg.aria2_host + ':' + cfg.aria2_port + '/rpc')
-        cfg.aria = xmlrpc.client.ServerProxy(uri, allow_none=True)
-        cfg.aria.aria2.getVersion(cfg.aria2_token)
-        cfg.aria2_connected = 1
-    except Exception as e:
-        logger.error('Could not connect to aria2 RPC: %s --- message: %s', uri, e)
         try:
-            greenlet.task.update(eta=' Could not connect to aria2 RPC')
-        except:
-            pass
+            cfg.jd = myjdapi.Myjdapi()
+            cfg.jd.set_app_key('https://git.io/vaDti')
+            cfg.jd.connect(cfg.jd_username, cfg.jd_password)
+            cfg.jd_connected = 1
+        except BaseException as e:
+            logger.error('myjdapi : ' + str(e))
+            logger.error('Could not connect to My JDownloader')
+        if cfg.jd_connected:
+            try:
+                cfg.jd_device = cfg.jd.get_device(cfg.jd_device_name)
+                connection = 1
+            except BaseException as e:
+                cfg.jd_connected = 0
+                logger.error('myjdapi : ' + str(e))
+                logger.error('Could not get device name (%s) for My JDownloader', cfg.jd_device_name)
+
+    if cfg.aria2_enabled:
         cfg.aria2_connected = 0
+        try:
+            uri = ('http://' + cfg.aria2_host + ':' + cfg.aria2_port + '/rpc')
+            cfg.aria = xmlrpc.client.ServerProxy(uri, allow_none=True)
+            cfg.aria.aria2.getVersion(cfg.aria2_token)
+            cfg.aria2_connected = 1
+            connection = 1
+        except Exception as e:
+            logger.error('Could not connect to aria2 RPC: %s --- message: %s', uri, e)
+            try:
+                greenlet.task.update(eta=' Could not connect to aria2 RPC')
+            except:
+                pass
+    cfg.downloader_connection = connection
+    return connection
 
 
 # Automatic update checker
@@ -572,7 +576,7 @@ def check_update(auto_update=cfg.auto_update):
             try:
                 cfg.jd_update_available = cfg.jd_device.update.update_available()
             except:
-                jd_connect()
+                downloader_connection()
                 try:
                     cfg.jd_update_available = cfg.jd_device.update.update_available()
                 except:
@@ -997,7 +1001,7 @@ def send_notification(subject, text=None, send_email=cfg.email_enabled, send_pus
                 log = 'Email error for: %s' % subject
                 logger.info(log)
             logger.error(log)
-    
+
     if send_push:
         try:
             apobj = apprise.Apprise()
@@ -1029,7 +1033,7 @@ def jd_query_packages(id=None):
         try:
             response = cfg.jd_device.downloads.query_packages()
         except BaseException as e:
-            jd_connect()
+            downloader_connection()
             try:
                 response = cfg.jd_device.downloads.query_packages()
             except:
@@ -1239,7 +1243,7 @@ def download_file():
         try:
             query_links = cfg.jd_device.downloads.query_links()
         except BaseException as e:
-            jd_connect()
+            downloader_connection()
             if cfg.jd_connected:
                 try:
                     query_links = cfg.jd_device.downloads.query_links()
@@ -1257,7 +1261,7 @@ def download_file():
                 return 1
         package_name = str(re.sub('[^0-9a-zA-Z]+', ' ', greenlet.task.name).lower())
     if cfg.aria2_enabled:
-        aria2_connect()
+        downloader_connection()
         if not cfg.aria2_connected:
             return 1
 
@@ -1506,7 +1510,7 @@ def download_task(task):
     if task.local_status != 'stopped' and task.local_status != 'waiting' and task.local_status != 'paused':
         if not failed:
             send_notification(
-                'download success', 
+                'download success',
                 send_email=cfg.email_enabled and not cfg.email_on_failure,
                 send_push=cfg.apprise_enabled and not cfg.apprise_push_on_failure
             )
@@ -1675,7 +1679,7 @@ def parse_tasks(transfers):
                             speed=speed + ' --- ', eta=eta, folder_id=folder_id, file_id=file_id)
                 idle = False
             elif task.cloud_status == 'finished' or task.cloud_status == 'seeding':
-                if cfg.download_enabled:
+                if cfg.download_enabled and downloader_connection():
                     if task.category == '':
                         if cfg.download_rss and transfer['folder_id']:
                             try:
@@ -1730,6 +1734,10 @@ def parse_tasks(transfers):
                         task.update(name=name, cloud_status=transfer['status'], local_status='waiting', progress=100,
                                     folder_id=folder_id, file_id=file_id)
                 else:
+                    if cfg.download_enabled and not cfg.downloader_connection:
+                        msg = 'Download failure due to downloader connection error while trying to download: %s ' % task.name
+                        logger.error(msg)
+                        send_notification('Downloader connection error', msg)
                     task.update(name=name, cloud_status=transfer['status'], local_status='download_disabled',
                                 speed=None, folder_id=folder_id, file_id=file_id)
         else:
@@ -2049,7 +2057,7 @@ def watchdir():
 def home():
     if cfg.jd_enabled:
         if not cfg.jd_connected:
-            jd_connect()
+            downloader_connection()
         try:
             download_speed = cfg.jd_device.toolbar.get_status().get('limitspeed')
             if download_speed == 0:
@@ -2059,7 +2067,7 @@ def home():
         except:
             pass
     if cfg.aria2_enabled and not cfg.aria2_connected:
-        aria2_connect()
+        downloader_connection()
     if not cfg.download_speed == -1:
         download_speed = utils.sizeof_human(cfg.download_speed)
     else:
