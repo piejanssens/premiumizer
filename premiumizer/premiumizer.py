@@ -510,8 +510,7 @@ def downloader_connection():
                 cfg.jd_connected = 0
                 logger.error('myjdapi : ' + str(e))
                 logger.error('Could not get device name (%s) for My JDownloader', cfg.jd_device_name)
-
-    if cfg.aria2_enabled:
+    elif cfg.aria2_enabled:
         cfg.aria2_connected = 0
         try:
             uri = ('http://' + cfg.aria2_host + ':' + cfg.aria2_port + '/rpc')
@@ -525,6 +524,10 @@ def downloader_connection():
                 greenlet.task.update(eta=' Could not connect to aria2 RPC')
             except:
                 pass
+            connection = 0
+    else:
+        #pySmartDL
+        connection = 1
     cfg.downloader_connection = connection
     return connection
 
