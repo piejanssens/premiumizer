@@ -8,4 +8,7 @@ usermod -o -u "$PUID" premiumizer || true
 
 chown -R premiumizer:premiumizer /conf || true
 
+# Allow write access on downloaded files to group and others
+umask 0000
+
 exec su-exec premiumizer "$@"
