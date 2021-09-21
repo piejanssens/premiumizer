@@ -1,24 +1,28 @@
 # Premiumizer
 
-Premiumizer is a download management tool for premiumize.me cloud downloads.
+Premiumizer is a download management tool for premiumize.me cloud downloads, which allows automatic downloading to your local network.
 
   - Web interface to manage premiumize.me downloads: cloud Torrent & Nzb and Filehosts links
   - Category based automatic downloader of finished cloud tasks to local file system
   - Picks up new taks through black hole
   - Integrates with nzbToMedia (post processing)
 
+Enjoying it so far? Great! If you want to show your appreciation, feel free to:  
+
+<a href="https://ko-fi.com/M4M7694D5"><img src="https://uploads-ssl.webflow.com/5c14e387dab576fe667689cf/5cbed8a4ae2b88347c06c923_BuyMeACoffee_blue-p-500.png" width="250px"></a>
+
 ## About premiumize.me
 Premiumize.me combines anonymous cloud torrent downloads, usenet and premium hosters in one subscription. Cloud torrent downloads are cached, meaning if some other premiumize.me member downloaded the torrent through premiumize.me before, you can immediately download the files from that torrent over HTTPS at top speeds.
 
 Get your account [right here](https://www.premiumize.me/ref/198754075).
 
-## How does this thing work?
-This tool will monitor your download tasks on premiumize.me.
-Once the download in the cloud finishes and the download task has a category that needs to be automatically downloaded premiumizer will start downloading all the files to your local premiumizer server. Download tasks without a category will not be automatically downloaded to the local server. 
-You can add/change a category whilst it's downloading through the web interface, but third party tools like CouchPotato and SickRage will automatically submit download tasks with a specific category. 
+
+
+## How does it work?
+Premiumizer will monitor download tasks on premiumize.me.
+Once the download in the cloud finishes and the download task has a category that needs to be automatically downloaded premiumizer will start downloading all the files to your local computer where premiumizer is running. Download tasks without a category will not be automatically downloaded locally. Categories can be setup through the web interface's setup page.
 
 When enabled, premiumizer can inform nzbToMedia whenever the local download is finished.
-Categories can be setup through the web interface's setup page.
 
 ## Web Interface
 By default, premiumizer's web interface listens on port 5000.
