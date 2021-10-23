@@ -314,7 +314,6 @@ class PremConfig:
         self.web_login_enabled = prem_config.getboolean('security', 'login_enabled')
         self.web_username = prem_config.get('security', 'username')
         self.web_password = prem_config.get('security', 'password')
-
         self.update_available = 0
         self.update_localcommit = ''
         self.update_diffcommit = ''
@@ -2273,10 +2272,10 @@ def settings():
                 prem_config.set('downloads', 'jd_enabled', '0')
             else:
                 prem_config.set('downloads', 'aria2_enabled', '0')
-            if request.form.get('watchdir_enabled'):
+            if request.form.get('watchdir_enabled') and request.form.get('watchdir_location'):
                 prem_config.set('upload', 'watchdir_enabled', '1')
-#                if not cfg.watchdir_enabled:
-#                    enable_watchdir = 1
+                if not cfg.watchdir_enabled:
+                    enable_watchdir = 1
             else:
                 prem_config.set('upload', 'watchdir_enabled', '0')
             if request.form.get('watchdir_walk_enabled'):
@@ -2300,7 +2299,6 @@ def settings():
                 prem_config.set('update', 'auto_update', '1')
             else:
                 prem_config.set('update', 'auto_update', '0')
-
             if request.form.get('apprise_enabled'):
                 prem_config.set('notifications', 'apprise_enabled', '1')
             else:
@@ -2361,8 +2359,8 @@ def settings():
                 prem_config.write(configfile)
             logger.info('Settings saved, reloading configuration')
             cfg.check_config()
-            if cfg.watchdir_enabled:
-                watchdir()
+            if enable_watchdir:
+                gevent.spawn_later(2, watchdir)
             flash('settings saved', 'info')
     # get_prem_folders()
     categories_amount = len(cfg.download_categories) + 1
