@@ -412,11 +412,16 @@ class PremConfig:
         self.watchdir_enabled = prem_config.getboolean('upload', 'watchdir_enabled')
         self.watchdir_location = prem_config.get('upload', 'watchdir_location')
         if self.watchdir_enabled:
-            self.watchdir_walk_enabled = prem_config.getboolean('upload', 'watchdir_walk_enabled')
-            self.watchdir_walk_interval = prem_config.getint('upload', 'watchdir_walk_interval')
-            logger.info('Watchdir is enabled at: %s', self.watchdir_location)
-            if not os.path.exists(self.watchdir_location):
-                os.makedirs(self.watchdir_location)
+            if not self.watchdir_location:
+                logger.info('Watchdir location is empty, disabling watchdir')
+                self.watchdir_enabled = 0
+            else:
+                self.watchdir_walk_enabled = prem_config.getboolean('upload', 'watchdir_walk_enabled')
+                self.watchdir_walk_interval = prem_config.getint('upload', 'watchdir_walk_interval')
+                if not os.path.exists(self.watchdir_location):
+                    os.makedirs(self.watchdir_location)
+                logger.info('Watchdir is enabled at: %s', self.watchdir_location)
+
 
         self.categories = []
         self.download_categories = ''
@@ -689,6 +694,7 @@ class MyHandler(events.PatternMatchingEventHandler):
     # noinspection PyMethodMayBeStatic
     def process(self, event):
         failed = 0
+        name2 = ''
         if event.event_type == 'created' and event.is_directory is False:
             gevent.sleep(10)
             watchdir_file = event.src_path
@@ -704,7 +710,7 @@ class MyHandler(events.PatternMatchingEventHandler):
             else:
                 category = ''
             if watchdir_file.endswith('.torrent'):
-                id = upload_torrent(watchdir_file)
+                id, name2 = upload_torrent(watchdir_file)
                 if id == 'duplicate':
                     failed = 1
                     logger.debug(
@@ -719,6 +725,9 @@ class MyHandler(events.PatternMatchingEventHandler):
                     failed = 1
                 else:
                     name = torrent_metainfo(watchdir_file)
+                    #
+                    if name2:
+                        name = name2
                     type = 'Torrent'
                     task = add_task(id, 0, name, category, type=type)
             elif watchdir_file.endswith('.magnet'):
@@ -733,7 +742,10 @@ class MyHandler(events.PatternMatchingEventHandler):
                         except AttributeError:
                             name = os.path.basename(watchdir_file).replace(".magnet", "")
                         name = name.replace('+', '%20')
-                        id = upload_magnet(magnet)
+                        id, name2 = upload_magnet(magnet)
+                        #
+                        if name2:
+                            name = name2
                         if id == 'duplicate':
                             failed = 1
                             logger.debug('Deleting duplicate file from watchdir: %s', watchdir_file)
@@ -767,6 +779,9 @@ class MyHandler(events.PatternMatchingEventHandler):
                 else:
                     name = os.path.basename(watchdir_file)
                     name = os.path.splitext(name)[0]
+                    #
+                    if name2:
+                        name = name2
                     type = 'NZB'
                     task = add_task(id, 0, name, category, type=type)
             else:
@@ -1631,7 +1646,7 @@ def parse_tasks(transfers):
         eta = ' '
         speed = ' '
         size = ' '
-        task = get_task(transfer['id'])
+        task = get_task(transfer['id'], name)
         try:
             if 'ETA is' in transfer['message']:
                 eta = transfer['message'].split("ETA is", 1)[1]
@@ -1672,7 +1687,7 @@ def parse_tasks(transfers):
                 add_task(transfer['id'], size, name, 'default', folder_id=folder_id)
             else:
                 add_task(transfer['id'], size, name, '', folder_id=folder_id)
-            task = get_task(transfer['id'])
+            task = get_task(transfer['id'], name)
             id_local.append(task.id)
             task.update(name=name, progress=progress, cloud_status=transfer['status'], dlsize=size + ' --- ',
                         speed=speed + ' --- ', eta=eta, file_id=file_id)
@@ -1746,7 +1761,7 @@ def parse_tasks(transfers):
         else:
             if task.local_status == 'downloading':
                 if task.name not in str(scheduler.scheduler.get_jobs('check_downloads')):
-                    scheduler.scheduler.add_job(check_downloads, args=(task.dlsize, task.id), id=task.id,
+                    scheduler.scheduler.add_job(check_downloads, args=(task.dlsize, task.id, task.name), id=task.id,
                                                 name=(task.name + ' check_downloads'), misfire_grace_time=7200,
                                                 jobstore='check_downloads', replace_existing=True, max_instances=1,
                                                 coalesce=True, next_run_time=(datetime.now() + timedelta(minutes=10)))
@@ -1783,10 +1798,10 @@ def parse_tasks(transfers):
     return idle
 
 
-def check_downloads(dlsize, id):
+def check_downloads(dlsize, id, name):
     logger.debug('def check_downloads started')
     try:
-        task = get_task(id)
+        task = get_task(id, name)
     except:
         return
     if task.local_status == 'downloading':
@@ -1800,10 +1815,13 @@ def check_downloads(dlsize, id):
             scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
 
 
-def get_task(id):
+def get_task(id, name=None):
     logger.debug('def get_task started')
     for task in tasks:
         if task.id == id:
+            return task
+        elif task.name == name:
+            task.update(id=id)
             return task
     return None
 
@@ -1832,7 +1850,7 @@ def get_cat_var(category):
 
 def add_task(id, size, name, category, type='', folder_id=None):
     logger.debug('def add_task started')
-    exists = get_task(id)
+    exists = get_task(id, name)
     if not exists:
         dldir, dlext, dlext_blacklist, delsample, dlnzbtomedia = get_cat_var(category)
         try:
@@ -1868,7 +1886,7 @@ def upload_torrent(torrent):
         response_content = json.loads(r.content)
         if response_content['status'] == "success":
             logger.debug('Upload successful: %s', torrent)
-            return response_content['id']
+            return response_content['id'], response_content['name']
         elif response_content['message'] == \
                 'An error occured. Please try again and contact customer service if the problem persists.':
             gevent.sleep(10)
@@ -1876,18 +1894,18 @@ def upload_torrent(torrent):
             if 'failed' not in r:
                 response_content = json.loads(r.content)
                 if response_content['status'] == \
-                        "success" or response_content['message'] == 'You already have this job added.':
+                        "success" or response_content['message'] == 'You already added this job.':
                     logger.debug('Upload successful: %s', torrent)
-                    return response_content['id']
+                    return response_content['id'], response_content['name']
         else:
             msg = 'Upload of torrent: %s failed, message: %s' % (torrent, response_content['message'])
             logger.error(msg)
             if response_content['message'] == 'You already have this job added.':
-                return 'duplicate'
+                return 'duplicate', 'duplicate'
             send_notification('Upload of torrent failed', msg)
-            return 'failed'
+            return 'failed', 'duplicate'
     else:
-        return 'failed'
+        return 'failed', 'duplicate'
 
 
 def upload_magnet(magnet):
@@ -1898,7 +1916,7 @@ def upload_magnet(magnet):
         response_content = json.loads(r.content)
         if response_content['status'] == "success":
             logger.debug('Upload magnet successful')
-            return response_content['id']
+            return response_content['id'], response_content['name']
         elif response_content[
             'message'] == 'An error occured. Please try again and contact customer service if the problem persists.':
             gevent.sleep(10)
@@ -1908,7 +1926,7 @@ def upload_magnet(magnet):
                 if response_content['status'] == "success" or response_content[
                     'message'] == 'You already have this job added.':
                     logger.debug('Upload magnet successful')
-                    return response_content['id']
+                    return response_content['id'], response_content['name']
         else:
             msg = 'Upload of magnet: %s failed, message: %s' % (magnet, response_content['message'])
             logger.error(msg)
@@ -2257,8 +2275,8 @@ def settings():
                 prem_config.set('downloads', 'aria2_enabled', '0')
             if request.form.get('watchdir_enabled'):
                 prem_config.set('upload', 'watchdir_enabled', '1')
-                if not cfg.watchdir_enabled:
-                    enable_watchdir = 1
+#                if not cfg.watchdir_enabled:
+#                    enable_watchdir = 1
             else:
                 prem_config.set('upload', 'watchdir_enabled', '0')
             if request.form.get('watchdir_walk_enabled'):
@@ -2343,7 +2361,7 @@ def settings():
                 prem_config.write(configfile)
             logger.info('Settings saved, reloading configuration')
             cfg.check_config()
-            if enable_watchdir:
+            if cfg.watchdir_enabled:
                 watchdir()
             flash('settings saved', 'info')
     # get_prem_folders()
@@ -2590,7 +2608,7 @@ def handle_json(json):
 @socketio.on('change_category')
 def change_category(message):
     data = message['data']
-    task = get_task(data['id'])
+    task = get_task(data['id'], data['name'])
     dldir, dlext, dlext_blacklist, delsample, dlnzbtomedia = get_cat_var(data['category'])
     if task.type == 'Filehost':
         if task.local_status != 'failed: Filehost':
