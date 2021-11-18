@@ -47,10 +47,12 @@ Open services.msc & edit Premiumizer service to logon using your account that is
 
 1. Install [Git](https://git-scm.com/download/win)
 2. Install [Python](https://www.python.org/downloads/) Check Add Python to PATH
-3. WIN+R cmd
+3. Install [Vc_redist.x64](https://aka.ms/vs/17/release/vc_redist.x64.exe)
+4. WIN+R cmd
 ```
 git clone https://github.com/piejanssens/premiumizer.git C:\Premiumizer
 python -m pip install --upgrade pip
+python -m pip install -pywin32
 python -m pip install -r c:\Premiumizer\requirements.txt
 python C:\Premiumizer\premiumizer\premiumizer.py
 ```
