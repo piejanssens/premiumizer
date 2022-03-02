@@ -1,18 +1,14 @@
-FROM python:3.7-alpine as base
-FROM base as builder
+FROM python:3-alpine
+
+RUN apk add --update --no-cache libffi-dev openssl-dev python3-dev py-pip build-base tzdata ffmpeg unrar p7zip su-exec shadow libstdc++
+RUN pip install --no-cache-dir --prefix /install -r requirements.txt
 
 RUN mkdir /install
 WORKDIR /install
 COPY requirements.txt ./premiumizer /install/
 
-RUN apk add --update --no-cache libffi-dev openssl-dev python3-dev py-pip build-base tzdata ffmpeg unrar p7zip
-RUN pip install --no-cache-dir --prefix /install -r requirements.txt
-
-FROM base
-
-RUN apk add --update --no-cache su-exec shadow libstdc++ \
-	&& addgroup -S -g 6006 premiumizer \
-	&& adduser -S -D -u 6006 -G premiumizer -s /bin/sh premiumizer
+RUN addgroup -S -g 6006 premiumizer &&
+	adduser -S -D -u 6006 -G premiumizer -s /bin/sh premiumizer
 
 COPY --from=builder /install /usr/local
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
