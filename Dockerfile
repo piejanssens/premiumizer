@@ -4,7 +4,8 @@ WORKDIR /app
 COPY requirements.txt requirements.txt
 COPY premiumizer .
 
-RUN apk add --update --no-cache libffi-dev openssl-dev python3-dev py-pip build-base tzdata ffmpeg p7zip su-exec shadow libstdc++
+RUN apk add --update --no-cache libffi-dev openssl-dev build-base su-exec shadow
+
 RUN pip install --no-cache-dir -r requirements.txt
 
 RUN addgroup -S -g 6006 premiumizer
