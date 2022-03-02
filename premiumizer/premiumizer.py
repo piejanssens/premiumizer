@@ -1460,19 +1460,20 @@ def download_process():
         greenlet.task.dldir = os.path.join(greenlet.task.dldir, name)
     if not greenlet.task.type == 'Filehost':
         if greenlet.task.file_id:
-            r = prem_connection("post", "https://www.premiumize.me/api/folder/list", {'apikey': cfg.prem_apikey})
-            dir_content = []
-            for x in json.loads(r.content)['content']:
-                if x['id'] == greenlet.task.file_id:
-                    dir_content.append(x)
-                    break
+            r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
+            {'apikey': cfg.prem_apikey})
+            def is_match(folder_list_item): return folder_list_item['id'] == greenlet.task.file_id
+            dir_content = [next(filter(is_match,json.loads(r.content)['content']))]
         else:
             r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
-                                {'apikey': cfg.prem_apikey, 'id': greenlet.task.folder_id})
+                            {'apikey': cfg.prem_apikey, 'id': greenlet.task.folder_id})
             dir_content = json.loads(r.content)['content']
         if 'failed' in r:
             return 1
-        process_dir(dir_content, greenlet.task.dldir)
+        if not dir_content:
+            logger.debug('Could not find any content to download for task %s', greenlet.task.name)
+        else: 
+            process_dir(dir_content, greenlet.task.dldir)
     if greenlet.task.download_list:
         logger.info('Downloading: %s -- id: %s', greenlet.task.name, greenlet.task.id)
         returncode = download_file()
