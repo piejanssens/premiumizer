@@ -7,8 +7,8 @@ RUN mkdir /install
 WORKDIR /install
 COPY requirements.txt ./premiumizer /install/
 
-RUN addgroup -S -g 6006 premiumizer &&
-	adduser -S -D -u 6006 -G premiumizer -s /bin/sh premiumizer
+RUN addgroup -S -g 6006 premiumizer
+RUN adduser -S -D -u 6006 -G premiumizer -s /bin/sh premiumizer
 
 COPY --from=builder /install /usr/local
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
