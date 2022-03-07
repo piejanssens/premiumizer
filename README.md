@@ -1,5 +1,7 @@
 # Premiumizer
 
+![Docker Cloud Build Status](https://img.shields.io/docker/cloud/build/piejanssens/premiumizer) ![GitHub contributors](https://img.shields.io/github/contributors/piejanssens/premiumizer)
+
 Premiumizer is a download management tool for premiumize.me cloud downloads, which allows automatic downloading to your personal computer/server.
 
 - Web interface to manage premiumize.me downloads: cloud Torrent & Nzb and Filehosts links
@@ -31,7 +33,7 @@ When premiumizer is running you can access it at http://localhost:5000/
 
 ## Installation using Docker
 
-We have provide images for `amd64`, `arm32v7` & `arm64v8`. If you have a different architecture, you can build this yourself using our Dockerfile.
+We have provide images for `amd64` & `arm64v8`. If you have a different architecture, you can build this yourself using our Dockerfile.
 
 You need to set the correct PUID and PGID equal to the user that has rw access to the mounted volumes.
 
