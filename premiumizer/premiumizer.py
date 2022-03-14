@@ -1673,7 +1673,10 @@ def parse_tasks(transfers):
             else:
                 progress = int(round(float(transfer['progress']) * 100))
         except:
-            progress = int(round(float(transfer['progress']) * 100))
+            if transfer['progress']:
+                progress = int(round(float(transfer['progress']) * 100))
+            else:
+                progress = 100
         try:
             folder_id = transfer['folder_id']
         except:
