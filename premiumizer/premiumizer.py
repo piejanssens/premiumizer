@@ -1648,6 +1648,15 @@ def parse_tasks(transfers):
         size = ' '
         task = get_task(transfer['id'], name)
         try:
+            if 'download.php?id=' in name:
+                name = name.split("&f=", 1)[1]
+            if name.endswith('.torrent'):
+                name = name.split('.torrent', 1)[0]
+            elif name.endswith('.nzb'):
+                name = name.split('.nzb', 1)[0]
+        except:
+            pass
+        try:
             if 'ETA is' in transfer['message']:
                 eta = transfer['message'].split("ETA is", 1)[1]
             elif 'peers,' in transfer['message'] or 'peer,' in transfer['message'] or 'usenet,' in transfer['message']:
