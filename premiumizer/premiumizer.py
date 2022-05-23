@@ -908,7 +908,7 @@ def ek(original, *args):
 #
 def clean_name(original):
     logger.debug('def clean_name started')
-    valid_chars = "-_.,()[]{}&!@ %s%s" % (ascii_letters, digits)
+    valid_chars = "'-_.,()[]{}&!@ %s%s" % (ascii_letters, digits)
     cleaned_filename = unicodedata.normalize('NFKD', to_unicode(original)).encode('ASCII', 'ignore').decode('utf8')
     valid_string = ''.join(c for c in cleaned_filename if c in valid_chars)
     return ' '.join(valid_string.split())
@@ -1648,6 +1648,8 @@ def parse_tasks(transfers):
         size = ' '
         task = get_task(transfer['id'], name)
         try:
+            name = urllib.parse.unquote(name)
+            name = clean_name(name)
             if 'download.php?id=' in name:
                 name = name.split("&f=", 1)[1]
             if name.endswith('.torrent'):
