@@ -1912,7 +1912,7 @@ def upload_torrent(torrent):
         else:
             msg = 'Upload of torrent: %s failed, message: %s' % (torrent, response_content['message'])
             logger.error(msg)
-            if response_content['message'] == 'You already have this job added.':
+            if response_content['message'] == 'You already added this job.':
                 return 'duplicate', 'duplicate'
             send_notification('Upload of torrent failed', msg)
             return 'failed', 'duplicate'
