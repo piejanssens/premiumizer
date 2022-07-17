@@ -2031,13 +2031,13 @@ def upload_magnet(magnet):
             if 'failed' not in r:
                 response_content = json.loads(r.content)
                 if response_content['status'] == "success" or response_content[
-                    'message'] == 'You already have this job added.':
+                    'message'] == 'You already added this job.':
                     logger.debug('Upload magnet successful')
                     return response_content['id'], response_content['name']
         else:
             msg = 'Upload of magnet: %s failed, message: %s' % (magnet, response_content['message'])
             logger.error(msg)
-            if response_content['message'] == 'You already have this job added.':
+            if response_content['message'] == 'You already added this job.':
                 return 'duplicate'
             send_notification('Upload of magnet failed', msg)
             return 'failed'
@@ -2115,13 +2115,13 @@ def upload_nzb(filename):
             if 'failed' not in r:
                 response_content = json.loads(r.content)
                 if response_content['status'] == "success" or response_content[
-                    'message'] == 'You already have this job added.':
+                    'message'] == 'You already added this job.':
                     logger.debug('Upload nzb successful: %s', filename)
                     return response_content['id']
         else:
             msg = 'Upload of nzb: %s failed, message: %s' % (filename, response_content['message'])
             logger.error(msg)
-            if response_content['message'] == 'You already have this job added.':
+            if response_content['message'] == 'You already added this job.':
                 return 'duplicate'
             send_notification('Upload of nzb failed', msg)
             return 'failed'
