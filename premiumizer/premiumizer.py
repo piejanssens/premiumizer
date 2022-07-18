@@ -11,7 +11,6 @@ import smtplib
 import subprocess
 import sys
 import time
-import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -29,6 +28,7 @@ import gevent
 import myjdapi
 import requests
 import six
+import unicodedata
 from apscheduler.schedulers.gevent import GeventScheduler
 from chardet import detect
 from flask import Flask, flash, request, redirect, url_for, render_template, send_from_directory
@@ -45,7 +45,6 @@ from werkzeug.utils import secure_filename
 import DownloadTask
 from DownloadTask import DownloadTask
 
-# "https://www.premiumize.me/api"
 print('------------------------------------------------------------------------------------------------------------')
 print('|                                                                                                           |')
 print('-------------------------------------------WELCOME TO PREMIUMIZER-------------------------------------------')
@@ -404,7 +403,7 @@ class PremConfig:
         if os.path.isfile(os.path.join(rootdir, 'nzbtomedia', 'NzbToMedia.py')):
             self.nzbtomedia_location = (os.path.join(rootdir, 'nzbtomedia', 'NzbToMedia.py'))
             prem_config.set('downloads', 'nzbtomedia_location', self.nzbtomedia_location)
-            with open(os.path.join(ConfDir, 'settings.cfg'), 'w') as configfile:  # save
+            with open(os.path.join(ConfDir, 'settings.cfg'), 'w') as configfile:
                 prem_config.write(configfile)
         else:
             self.nzbtomedia_location = prem_config.get('downloads', 'nzbtomedia_location')
@@ -420,7 +419,6 @@ class PremConfig:
                 if not os.path.exists(self.watchdir_location):
                     os.makedirs(self.watchdir_location)
                 logger.info('Watchdir is enabled at: %s', self.watchdir_location)
-
 
         self.categories = []
         self.download_categories = ''
@@ -530,7 +528,7 @@ def downloader_connection():
                 pass
             connection = 0
     else:
-        #pySmartDL
+        # pySmartDL
         connection = 1
     cfg.downloader_connection = connection
     return connection
@@ -597,7 +595,7 @@ def update_self():
     logger.info('Update - will restart')
     cfg.update_date = datetime.now().strftime("%d-%m %H:%M:%S")
     prem_config.set('update', 'update_date', cfg.update_date)
-    with open(os.path.join(ConfDir, 'settings.cfg'), 'w') as configfile:  # save
+    with open(os.path.join(ConfDir, 'settings.cfg'), 'w') as configfile:
         prem_config.write(configfile)
     db.close()
     socketio.stop()
@@ -724,7 +722,6 @@ class MyHandler(events.PatternMatchingEventHandler):
                     failed = 1
                 else:
                     name = torrent_metainfo(watchdir_file)
-                    #
                     if name2:
                         name = name2
                     type = 'Torrent'
@@ -742,7 +739,6 @@ class MyHandler(events.PatternMatchingEventHandler):
                             name = os.path.basename(watchdir_file).replace(".magnet", "")
                         name = name.replace('+', '%20')
                         id, name2 = upload_magnet(magnet)
-                        #
                         if name2:
                             name = name2
                         if id == 'duplicate':
@@ -778,7 +774,6 @@ class MyHandler(events.PatternMatchingEventHandler):
                 else:
                     name = os.path.basename(watchdir_file)
                     name = os.path.splitext(name)[0]
-                    #
                     if name2:
                         name = name2
                     type = 'NZB'
@@ -908,7 +903,7 @@ def ek(original, *args):
 #
 def clean_name(original):
     logger.debug('def clean_name started')
-    valid_chars = "'-_.,()[]{}&!@ %s%s" % (ascii_letters, digits)
+    valid_chars = "#$+;=^`~'-_.,()[]{}&!@ %s%s" % (ascii_letters, digits)
     cleaned_filename = unicodedata.normalize('NFKD', to_unicode(original)).encode('ASCII', 'ignore').decode('utf8')
     valid_string = ''.join(c for c in cleaned_filename if c in valid_chars)
     return ' '.join(valid_string.split())
@@ -954,7 +949,7 @@ def send_notification(subject, text=None, send_email=cfg.email_enabled, send_pus
         text += '\nDownload speed: %s' % greenlet.avgspeed
         text += '\n\nFiles:'
         for download in greenlet.task.download_list:
-            text += '\n' + os.path.basename(download['path'])
+            text += '\n' + os.path.basename(download['combined_path'])
         text += '\n\nLocation:'
         text += '\n' + greenlet.task.dldir
 
@@ -1066,7 +1061,7 @@ def jd_query_packages(id=None):
                 except BaseException as e:
                     logger.error('myjdapi : ' + str(e))
             count += 1
-            if count == 6:
+            if count == 20:
                 logger.error('JD did not return package status for: %s', greenlet.task.name)
                 return False
         while not len(response):
@@ -1112,31 +1107,88 @@ def jd_query_packages(id=None):
     return jd_packages['packages']
 
 
-def get_download_stats_jd(package_name):
+def get_download_stats_jd(package_name, package_ids):
     count = 0
+    eta_status = ''
+    total_speed = []
+    total_eta = []
+    total_progress = []
+    total_bytesloaded = []
+    total_bytestotal = []
+    task_total_speed = 0
+    task_total_eta = ''
+    task_total_progress = 0
+    task_total_bytesloaded = 0
+    task_total_bytestotal = 0
     gevent.sleep(10)
-    query_packages = jd_query_packages()
+    query_packages = jd_query_packages(package_ids)
+    if not query_packages:
+        return 1
     while not any(package['name'] in package_name for package in query_packages):
         gevent.sleep(5)
-        query_packages = jd_query_packages()
+        query_packages = jd_query_packages(package_ids)
         count += 1
         if count == 10:
             logger.error('Could not find package in JD for: %s', greenlet.task.name)
             return 1
-    for package in query_packages:
-        if package['name'] in package_name:
-            start_time = time.time()
-            package_id = str(package['uuid'])
+    start_time = time.time()
+
+    while not task_total_progress == 100:
+        task_total_speed = 0
+        task_total_progress = 0
+        task_total_bytesloaded = 0
+        task_total_bytestotal = 0
+
+        for x in range(len(total_bytestotal)):
+            task_total_bytestotal += total_bytestotal[x]
             try:
-                x = package['status']
+                task_total_speed += total_speed[x]
+                task_total_eta = total_eta[x]
+                task_total_progress += total_progress[x]
+                task_total_bytesloaded += total_bytesloaded[x]
+
             except:
-                logger.error('JDownloader did not return package[status]')
-                return 1
-            while 'finished' not in package and package['status'] != 'Failed':
+                pass
+        try:
+            task_total_progress = task_total_progress / len(total_bytestotal)
+            if eta_status:
+                task_total_eta = eta_status
+            elif len(package_ids) > 2:
+                try:
+                    task_total_eta = utils.time_human(
+                        (task_total_bytestotal - task_total_bytesloaded) / task_total_speed, fmt_short=True)
+                except:
+                    pass
+            greenlet.task.update(speed=(utils.sizeof_human(task_total_speed) + '/s --- '), dlsize=utils.sizeof_human(
+                task_total_bytesloaded) + ' / ' + utils.sizeof_human(
+                task_total_bytestotal) + ' --- ', progress=round(task_total_progress, 1), eta=task_total_eta)
+        except:
+            pass
+        if task_total_progress == 100:
+            continue
+        for count, package in enumerate(query_packages):
+            if package['name'] in package_name:
+                if str(package['uuid']) not in package_ids:
+                    package_ids.append(str(package['uuid']))
+                try:
+                    x = package['status']
+                except:
+                    if package['bytesLoaded'] == 0:
+                        try:
+                            total_bytestotal[count] = package["bytesTotal"]
+                        except:
+                            total_bytestotal.append(package["bytesTotal"])
+                        continue
+                    logger.error('JDownloader did not return package[status]')
+                    return 1
+                if package['status'] == 'Failed':
+                    logger.error('JD returned failed for: %s', greenlet.task.name)
+                    greenlet.task.update(eta=' JD returned failed')
+                    return 1
                 if greenlet.task.local_status == 'stopped':
                     try:
                         cfg.jd_device.downloads.cleanup("DELETE_ALL", "REMOVE_LINKS_AND_DELETE_FILES", "SELECTED",
-                                                        package_ids=[package_id])
+                                                        package_ids=package_ids)
                     except BaseException as e:
                         logger.error('myjdapi : ' + str(e))
                         logger.error('Could not delete package in JD for : %s', greenlet.task.name)
@@ -1144,7 +1196,7 @@ def get_download_stats_jd(package_name):
                     return 1
                 if greenlet.task.local_status == 'paused':
                     try:
-                        cfg.jd_device.downloads.set_enabled(0, package_ids=[package_id])
+                        cfg.jd_device.downloads.set_enabled(0, package_ids=package_ids)
                         logger.warning('Download paused for: %s', greenlet.task.name)
                     except BaseException as e:
                         logger.error('myjdapi : ' + str(e))
@@ -1155,7 +1207,7 @@ def get_download_stats_jd(package_name):
                     if greenlet.task.local_status != 'downloading':
                         continue
                     try:
-                        cfg.jd_device.downloads.force_download(package_ids=[package_id])
+                        cfg.jd_device.downloads.force_download(package_ids=package_ids)
                         logger.info('Download resumed for: %s', greenlet.task.name)
                     except BaseException as e:
                         logger.error('myjdapi : ' + str(e))
@@ -1171,20 +1223,34 @@ def get_download_stats_jd(package_name):
                         eta = ' '
                 else:
                     eta = " " + utils.time_human(package['eta'], fmt_short=True)
+
+                if len(eta) > 10 and eta != 'Skipped - File already exists' and not eta_status:
+                    eta_status = eta
                 try:
-                    bytestotal = utils.sizeof_human(package["bytesTotal"])
+                    bytestotal = package["bytesTotal"]
                 except:
                     logger.error('JD did not return package bytesTotal for: %s', greenlet.task.name)
                     return 1
-                progress = round(float(package['bytesLoaded']) * 100 / package["bytesTotal"], 1)
-                greenlet.task.update(speed=(utils.sizeof_human(speed) + '/s --- '), dlsize=utils.sizeof_human(
-                    package['bytesLoaded']) + ' / ' + bytestotal + ' --- ', progress=progress, eta=eta)
-                gevent_sleep_time()
-                package = jd_query_packages(package_id)
-            stop_time = time.time()
-            dltime = int(stop_time - start_time)
-            greenlet.task.update(dltime=dltime)
-
+                try:
+                    package_finished = package['finished']
+                except:
+                    package_finished = False
+                if package_finished or package['status'] == 'Skipped - File already exists':
+                    tmp_total_progress = 100
+                else:
+                    tmp_total_progress = round(float(package['bytesLoaded']) * 100 / package["bytesTotal"], 1)
+                try:
+                    total_speed[count] = speed
+                    total_eta[count] = eta
+                    total_progress[count] = tmp_total_progress
+                    total_bytesloaded[count] = package['bytesLoaded']
+                    total_bytestotal[count] = bytestotal
+                except:
+                    total_speed.append(speed)
+                    total_eta.append(eta)
+                    total_progress.append(tmp_total_progress)
+                    total_bytesloaded.append(package['bytesLoaded'])
+                    total_bytestotal.append(bytestotal)
             while 'Extracting' in package['status']:
                 try:
                     eta = package['status'].split('ETA: ', 1)[1].split(')', 1)[0]
@@ -1192,20 +1258,20 @@ def get_download_stats_jd(package_name):
                     eta = ''
                 greenlet.task.update(speed=" ", progress=99, eta=' Extracting ' + eta)
                 gevent_sleep_time()
-                package = jd_query_packages(package_id)
 
-            if package['status'] == 'Failed':
-                logger.error('JD returned failed for: %s', greenlet.task.name)
-                greenlet.task.update(eta=' JD returned failed')
-                return 1
+        gevent_sleep_time()
+        query_packages = jd_query_packages(package_ids)
 
-            try:
-                cfg.jd_device.downloads.cleanup("DELETE_FINISHED", "REMOVE_LINKS_ONLY", "ALL", package_ids=[package_id])
-            except BaseException as e:
-                logger.error('myjdapi : ' + str(e))
-                logger.error('Could not delete package in JD for: %s', greenlet.task.name)
-                pass
-            return 0
+    stop_time = time.time()
+    dltime = int(stop_time - start_time)
+    greenlet.task.update(dltime=dltime)
+    try:
+        cfg.jd_device.downloads.cleanup("DELETE_ALL", "REMOVE_LINKS_ONLY", "SELECTED", package_ids=package_ids)
+    except BaseException as e:
+        logger.error('myjdapi : ' + str(e))
+        logger.error('Could not delete packages in JD for: %s', greenlet.task.name)
+        pass
+    return 0
 
 
 def get_download_stats(downloader, total_size_downloaded):
@@ -1256,6 +1322,7 @@ def download_file():
     total_size_downloaded = 0
     dltime = 0
     returncode = 0
+    package_ids = []
     if cfg.jd_enabled:
         try:
             query_links = cfg.jd_device.downloads.query_links()
@@ -1276,7 +1343,6 @@ def download_file():
                         return 1
             else:
                 return 1
-        package_name = str(re.sub('[^0-9a-zA-Z]+', ' ', greenlet.task.name).lower())
     if cfg.aria2_enabled:
         downloader_connection()
         if not cfg.aria2_connected:
@@ -1291,14 +1357,14 @@ def download_file():
                 download['url'] = response_content['location']
             except:
                 return 1
-            download['path'] = os.path.join(greenlet.task.dldir, download['path'])
-        logger.debug('Downloading file: %s', download['path'])
-        filename = os.path.basename(download['path'])
-        if not os.path.isfile(download['path']) or not os.path.isfile(os.path.join(greenlet.task.dldir, filename)):
+            download['combined_path'] = os.path.join(greenlet.task.dldir, download['combined_path'])
+        logger.debug('Downloading file: %s', download['combined_path'])
+        if not os.path.isfile(download['combined_path']) and not os.path.isfile(
+                os.path.join(greenlet.task.dldir, download['name'])):
             url = str(download['url'])
             files_downloaded = 1
             if cfg.download_builtin:
-                downloader = SmartDL(url, download['path'], progress_bar=False, logger=logger,
+                downloader = SmartDL(url, download['combined_path'], progress_bar=False, logger=logger,
                                      threads=cfg.download_threads, fix_urls=False)
                 downloader.start(blocking=False)
                 while not downloader.isFinished():
@@ -1321,10 +1387,11 @@ def download_file():
                 if downloader.isSuccessful():
                     dltime += downloader.get_dl_time()
                     total_size_downloaded += downloader.get_dl_size()
-                    logger.debug('Finished downloading file: %s', download['path'])
+                    logger.debug('Finished downloading file: %s', download['combined_path'])
                     greenlet.task.update(dltime=dltime)
                 else:
-                    logger.error('Error for %s: while downloading file: %s', greenlet.task.name, download['path'])
+                    logger.error('Error for %s: while downloading file: %s', greenlet.task.name,
+                                 download['combined_path'])
                     for e in downloader.get_errors():
                         logger.error(str(greenlet.task.name + ": " + e))
                     returncode = 1
@@ -1332,16 +1399,10 @@ def download_file():
             elif cfg.jd_enabled:
                 if cfg.jd_connected:
                     if len(query_links):
-                        if any(link['name'] == filename for link in query_links):
+                        if any(link['name'] == download['name'] for link in query_links):
                             continue
-                    try:
-                        cfg.jd_device.linkgrabber.add_links([{"autostart": True, "links": url,
-                                                              "packageName": package_name,
-                                                              "destinationFolder": greenlet.task.dldir,
-                                                              "overwritePackagizerRules": True}])
-                    except BaseException as e:
-                        logger.error('myjdapi error: ' + str(e))
-
+                    else:
+                        download['download_ok'] = True
             elif cfg.aria2_enabled:
                 if cfg.aria2_connected:
                     transfers = cfg.aria.aria2.tellActive(cfg.aria2_token) + cfg.aria.aria2.tellWaiting(cfg.aria2_token,
@@ -1349,11 +1410,11 @@ def download_file():
                                                                                                         99) + cfg.aria.aria2.tellStopped(
                         cfg.aria2_token, -1, 99)
                     if len(transfers):
-                        if any(transfer['dir'] == download['path'] for transfer in transfers):
+                        if any(transfer['dir'] == download['combined_path'] for transfer in transfers):
                             continue
                     start_time = time.time()
                     try:
-                        options = {'dir': os.path.dirname(download['path'])}
+                        options = {'dir': os.path.dirname(download['combined_path'])}
                         gid = cfg.aria.aria2.addUri(cfg.aria2_token, [url], options)
                     except BaseException as e:
                         gid = 0
@@ -1362,7 +1423,7 @@ def download_file():
                     while not aria2_download["status"] == 'complete':
                         if aria2_download['status'] == 'error':
                             logger.error('aria2 error for %s: while downloading file: %s', greenlet.task.name,
-                                         download['path'])
+                                         download['combined_path'])
                             greenlet.task.update(eta=' aria2 error')
                             return 1
                         elif greenlet.task.local_status == "paused":
@@ -1382,15 +1443,42 @@ def download_file():
                     dltime = int(stop_time - start_time)
                     total_size_downloaded += int(aria2_download['totalLength'])
                     cfg.aria.aria2.removeDownloadResult(cfg.aria2_token, gid)
-                    logger.debug('Finished downloading file: %s', download['path'])
+                    logger.debug('Finished downloading file: %s', download['combined_path'])
                     greenlet.task.update(dltime=greenlet.task.dltime + dltime)
 
         else:
-            logger.info('File not downloaded it already exists at: %s', download['path'])
+            logger.info('File not downloaded it already exists at: %s', download['combined_path'])
 
     if cfg.jd_enabled and files_downloaded:
         if cfg.jd_connected:
-            returncode = get_download_stats_jd(package_name)
+            folder_downloadlist = []
+            for x in greenlet.task.download_list:
+                if x['download_ok']:
+                    ok = 0
+                    for z in folder_downloadlist:
+                        if x['path'] == z['path']:
+                            z['url'] += x['url']
+                            ok = 1
+                            break
+                    if not ok:
+                        folder_downloadlist.append(x)
+
+            package_name = 'Premiumizer_ ' + clean_name(greenlet.task.name)
+            if not len(folder_downloadlist):
+                logger.error('Nothing to download / link already exists ? for : %s', greenlet.task.name)
+            for download in folder_downloadlist:
+                try:
+                    url = str(download['url'])
+                    jd_jobid = cfg.jd_device.linkgrabber.add_links(
+                        [{"assignJobID": True, "autostart": True, "links": url,
+                          "packageName": package_name,
+                          "destinationFolder": (download['path']),
+                          "overwritePackagizerRules": True}])
+                    package_ids.append(jd_jobid['id'])
+                except BaseException as e:
+                    logger.error('myjdapi error: ' + str(e))
+
+            returncode = get_download_stats_jd(package_name, package_ids)
 
     return returncode
 
@@ -1441,7 +1529,8 @@ def process_dir(dir_content, path):
                     if sample:
                         continue
                 logger.debug('Starting download of file %s to directory %s', x['name'], path)
-                download = {'path': os.path.join(path, clean_name(x['name'])), 'url': x['link']}
+                download = {'id': x['id'], 'name': x['name'], 'path': path, 'size': x['size'], 'download_ok': False,
+                            'combined_path': os.path.join(path, clean_name(x['name'])), 'url': x['link']}
                 download_list.append(download)
                 total_size = greenlet.task.size
                 total_size += x['size']
@@ -1461,18 +1550,21 @@ def download_process():
     if not greenlet.task.type == 'Filehost':
         if greenlet.task.file_id:
             r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
-            {'apikey': cfg.prem_apikey})
-            def is_match(folder_list_item): return folder_list_item['id'] == greenlet.task.file_id
-            dir_content = [next(filter(is_match,json.loads(r.content)['content']))]
+                                {'apikey': cfg.prem_apikey})
+
+            def is_match(folder_list_item):
+                return folder_list_item['id'] == greenlet.task.file_id
+
+            dir_content = [next(filter(is_match, json.loads(r.content)['content']))]
         else:
             r = prem_connection("post", "https://www.premiumize.me/api/folder/list",
-                            {'apikey': cfg.prem_apikey, 'id': greenlet.task.folder_id})
+                                {'apikey': cfg.prem_apikey, 'id': greenlet.task.folder_id})
             dir_content = json.loads(r.content)['content']
         if 'failed' in r:
             return 1
         if not dir_content:
             logger.debug('Could not find any content to download for task %s', greenlet.task.name)
-        else: 
+        else:
             process_dir(dir_content, greenlet.task.dldir)
     if greenlet.task.download_list:
         logger.info('Downloading: %s -- id: %s', greenlet.task.name, greenlet.task.id)
@@ -1502,6 +1594,7 @@ def download_task(task):
             logger.error('Download failed for: %s -- id: %s', task.name, task.id)
     elif task.local_status == 'stopped':
         logger.warning('Download stopped for: %s', greenlet.task.name)
+        task.update(progress=100)
         gevent.sleep(3)
         try:
             shutil.rmtree(task.dldir)
@@ -1938,13 +2031,13 @@ def upload_magnet(magnet):
             if 'failed' not in r:
                 response_content = json.loads(r.content)
                 if response_content['status'] == "success" or response_content[
-                    'message'] == 'You already have this job added.':
+                    'message'] == 'You already added this job.':
                     logger.debug('Upload magnet successful')
                     return response_content['id'], response_content['name']
         else:
             msg = 'Upload of magnet: %s failed, message: %s' % (magnet, response_content['message'])
             logger.error(msg)
-            if response_content['message'] == 'You already have this job added.':
+            if response_content['message'] == 'You already added this job.':
                 return 'duplicate'
             send_notification('Upload of magnet failed', msg)
             return 'failed'
@@ -2022,13 +2115,13 @@ def upload_nzb(filename):
             if 'failed' not in r:
                 response_content = json.loads(r.content)
                 if response_content['status'] == "success" or response_content[
-                    'message'] == 'You already have this job added.':
+                    'message'] == 'You already added this job.':
                     logger.debug('Upload nzb successful: %s', filename)
                     return response_content['id']
         else:
             msg = 'Upload of nzb: %s failed, message: %s' % (filename, response_content['message'])
             logger.error(msg)
-            if response_content['message'] == 'You already have this job added.':
+            if response_content['message'] == 'You already added this job.':
                 return 'duplicate'
             send_notification('Upload of nzb failed', msg)
             return 'failed'
