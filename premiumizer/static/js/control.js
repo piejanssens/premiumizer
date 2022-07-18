@@ -28,11 +28,10 @@ function show_premiumize_connect_error() {
     $('#main_container').attr('style', 'display: none');
 }
 
-function category_selected(id, name, category) {
+function category_selected(id, category) {
     socket.emit('change_category', {
         data: {
             id: id,
-            name: name,
             category: category
         }
     });
@@ -158,7 +157,7 @@ function update_task(task) {
     var dropDown = '<div class="dropdown"><button class="btn btn-xs btn-primary dropdown-toggle' + categoryState + '" type="button" data-toggle="dropdown">' +
         (task.category ? task.category : 'Category ') + '<span class="caret"></span></button><ul class="dropdown-menu">';
     for (category in download_categories) {
-        dropDown += '<li><a href="javascript:category_selected(\'' + task.id + '\', \'' + task.name + '\', \'' + download_categories[category] + '\')" class="download_category">' + download_categories[category] + '</a></li>';
+        dropDown += `<li><a href="javascript:category_selected('${task.id}','${download_categories[category]}')" class="download_category">${download_categories[category]}</a></li>`;
     }
     dropDown += '</ul></div>';
 

@@ -11,6 +11,7 @@ import smtplib
 import subprocess
 import sys
 import time
+import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -28,13 +29,14 @@ import gevent
 import myjdapi
 import requests
 import six
-import unicodedata
 from apscheduler.schedulers.gevent import GeventScheduler
 from chardet import detect
-from flask import Flask, flash, request, redirect, url_for, render_template, send_from_directory
+from flask import (Flask, flash, redirect, render_template, request,
+                   send_from_directory, url_for)
 from flask_apscheduler import APScheduler
 from flask_compress import Compress
-from flask_login import LoginManager, login_required, login_user, logout_user, UserMixin
+from flask_login import (LoginManager, UserMixin, login_required, login_user,
+                         logout_user)
 from flask_socketio import SocketIO, emit
 from gevent import local
 from pySmartDL import SmartDL, utils
@@ -2714,7 +2716,7 @@ def handle_json(json):
 @socketio.on('change_category')
 def change_category(message):
     data = message['data']
-    task = get_task(data['id'], data['name'])
+    task = get_task(data['id'])
     dldir, dlext, dlext_blacklist, delsample, dlnzbtomedia = get_cat_var(data['category'])
     if task.type == 'Filehost':
         if task.local_status != 'failed: Filehost':
