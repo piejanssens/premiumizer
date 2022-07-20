@@ -1152,7 +1152,10 @@ def get_download_stats_jd(package_name, package_ids):
             except:
                 pass
         try:
-            task_total_progress = task_total_progress / len(total_bytestotal)
+            task_total_progress = round((task_total_bytesloaded / task_total_bytestotal) * 100, 1)
+        except:
+            task_total_progress = 0
+        try:
             if eta_status:
                 task_total_eta = eta_status
             elif len(package_ids) > 2:
@@ -1163,7 +1166,7 @@ def get_download_stats_jd(package_name, package_ids):
                     pass
             greenlet.task.update(speed=(utils.sizeof_human(task_total_speed) + '/s --- '), dlsize=utils.sizeof_human(
                 task_total_bytesloaded) + ' / ' + utils.sizeof_human(
-                task_total_bytestotal) + ' --- ', progress=round(task_total_progress, 1), eta=task_total_eta)
+                task_total_bytestotal) + ' --- ', progress=task_total_progress, eta=task_total_eta)
         except:
             pass
         eta_status = ''
