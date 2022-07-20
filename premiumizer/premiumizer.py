@@ -1166,6 +1166,7 @@ def get_download_stats_jd(package_name, package_ids):
                 task_total_bytestotal) + ' --- ', progress=round(task_total_progress, 1), eta=task_total_eta)
         except:
             pass
+        eta_status = ''
         if task_total_progress == 100:
             continue
         for count, package in enumerate(query_packages):
