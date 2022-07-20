@@ -1145,7 +1145,8 @@ def get_download_stats_jd(package_name, package_ids):
             task_total_bytestotal += total_bytestotal[x]
             try:
                 task_total_speed += total_speed[x]
-                task_total_eta = total_eta[x]
+                if not total_eta[x] == 'Finished':
+                    task_total_eta = total_eta[x]
                 task_total_progress += total_progress[x]
                 task_total_bytesloaded += total_bytesloaded[x]
 
