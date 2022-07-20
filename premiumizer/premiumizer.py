@@ -1461,6 +1461,8 @@ def download_file():
             folder_downloadlist = []
             for x in greenlet.task.download_list:
                 if x['download_ok']:
+                    tmp = x['url']
+                    x['url'] = f'"{tmp}"'
                     ok = 0
                     for z in folder_downloadlist:
                         if x['path'] == z['path']:
