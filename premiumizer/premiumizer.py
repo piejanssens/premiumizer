@@ -1145,17 +1145,21 @@ def get_download_stats_jd(package_name, package_ids):
             task_total_bytestotal += total_bytestotal[x]
             try:
                 task_total_speed += total_speed[x]
-                task_total_eta = total_eta[x]
+                if not total_eta[x] == 'Finished':
+                    task_total_eta = total_eta[x]
                 task_total_progress += total_progress[x]
                 task_total_bytesloaded += total_bytesloaded[x]
 
             except:
                 pass
         try:
-            task_total_progress = task_total_progress / len(total_bytestotal)
+            task_total_progress = round((task_total_bytesloaded / task_total_bytestotal) * 100, 1)
+        except:
+            task_total_progress = 0
+        try:
             if eta_status:
                 task_total_eta = eta_status
-            elif len(package_ids) > 2:
+            elif len(package_ids) > 1:
                 try:
                     task_total_eta = utils.time_human(
                         (task_total_bytestotal - task_total_bytesloaded) / task_total_speed, fmt_short=True)
@@ -1163,9 +1167,10 @@ def get_download_stats_jd(package_name, package_ids):
                     pass
             greenlet.task.update(speed=(utils.sizeof_human(task_total_speed) + '/s --- '), dlsize=utils.sizeof_human(
                 task_total_bytesloaded) + ' / ' + utils.sizeof_human(
-                task_total_bytestotal) + ' --- ', progress=round(task_total_progress, 1), eta=task_total_eta)
+                task_total_bytestotal) + ' --- ', progress=task_total_progress, eta=task_total_eta)
         except:
             pass
+        eta_status = ''
         if task_total_progress == 100:
             continue
         for count, package in enumerate(query_packages):
@@ -1456,6 +1461,8 @@ def download_file():
             folder_downloadlist = []
             for x in greenlet.task.download_list:
                 if x['download_ok']:
+                    tmp = x['url']
+                    x['url'] = f'"{tmp}"'
                     ok = 0
                     for z in folder_downloadlist:
                         if x['path'] == z['path']:
