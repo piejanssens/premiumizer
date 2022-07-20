@@ -1158,7 +1158,7 @@ def get_download_stats_jd(package_name, package_ids):
         try:
             if eta_status:
                 task_total_eta = eta_status
-            elif len(package_ids) > 2:
+            elif len(package_ids) > 1:
                 try:
                     task_total_eta = utils.time_human(
                         (task_total_bytestotal - task_total_bytesloaded) / task_total_speed, fmt_short=True)
