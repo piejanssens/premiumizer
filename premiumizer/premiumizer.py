@@ -692,6 +692,8 @@ class MyHandler(events.PatternMatchingEventHandler):
 
     # noinspection PyMethodMayBeStatic
     def process(self, event):
+        if cfg.watchdir_walk_enabled:
+            scheduler.scheduler.get_job('walk_watchdir').pause()
         failed = 0
         name2 = ''
         if event.event_type == 'created' and event.is_directory is False:
@@ -760,7 +762,7 @@ class MyHandler(events.PatternMatchingEventHandler):
                             task = add_task(id, 0, name, category, type=type)
 
             elif watchdir_file.endswith('.nzb'):
-                id = upload_nzb(watchdir_file)
+                id, name2 = upload_nzb(watchdir_file)
                 if id == 'duplicate':
                     failed = 1
                     logger.debug(
@@ -813,7 +815,8 @@ class MyHandler(events.PatternMatchingEventHandler):
                         logger.error(
                             'Could not remove file from watchdir: %s --- error: %s', watchdir_file, err)
                 scheduler.scheduler.reschedule_job('update', trigger='interval', seconds=1)
-
+            if cfg.watchdir_walk_enabled:
+                scheduler.scheduler.get_job('walk_watchdir').resume()
     def on_created(self, event):
         self.process(event)
 
@@ -1669,11 +1672,11 @@ def prem_connection(method, url, payload, files=None):
         r_count += 1
         try:
             if method == 'post':
-                r = prem_session.post(url, payload, timeout=5)
+                r = prem_session.post(url, payload, timeout=60)
             elif method == 'postfile':
-                r = prem_session.post(url, payload, files=files, timeout=5)
+                r = prem_session.post(url, payload, files=files, timeout=60)
             elif method == 'get':
-                r = prem_session.get(url, params=payload, timeout=5)
+                r = prem_session.get(url, params=payload, timeout=60)
             if 'Not logged in. Please log in first' in r.text:
                 msg = 'premiumize.me login error: %s' % r.text
                 logger.error(msg)
@@ -1682,7 +1685,7 @@ def prem_connection(method, url, payload, files=None):
             if r.status_code != 200:
                 raise Exception('status_code != 200')
         except:
-            if r_count == 10:
+            if r_count == 3:
                 try:
                     message = r.text
                 except:
@@ -2012,16 +2015,16 @@ def upload_torrent(torrent):
                 if response_content['status'] == \
                         "success" or response_content['message'] == 'You already added this job.':
                     logger.debug('Upload successful: %s', torrent)
-                    return response_content['id'], response_content['name']
+                    return response_content['id'], ''
         else:
             msg = 'Upload of torrent: %s failed, message: %s' % (torrent, response_content['message'])
             logger.error(msg)
             if response_content['message'] == 'You already added this job.':
-                return 'duplicate', 'duplicate'
+                return 'duplicate', ''
             send_notification('Upload of torrent failed', msg)
-            return 'failed', 'duplicate'
+            return 'failed', ''
     else:
-        return 'failed', 'duplicate'
+        return 'failed', ''
 
 
 def upload_magnet(magnet):
@@ -2042,16 +2045,16 @@ def upload_magnet(magnet):
                 if response_content['status'] == "success" or response_content[
                     'message'] == 'You already added this job.':
                     logger.debug('Upload magnet successful')
-                    return response_content['id'], response_content['name']
+                    return response_content['id'], ''
         else:
             msg = 'Upload of magnet: %s failed, message: %s' % (magnet, response_content['message'])
             logger.error(msg)
             if response_content['message'] == 'You already added this job.':
-                return 'duplicate'
+                return 'duplicate', ''
             send_notification('Upload of magnet failed', msg)
-            return 'failed'
+            return 'failed', ''
     else:
-        return 'failed'
+        return 'failed', ''
 
 
 def upload_filehost(urls):
@@ -2116,7 +2119,7 @@ def upload_nzb(filename):
         response_content = json.loads(r.content)
         if response_content['status'] == "success":
             logger.debug('Upload nzb successful: %s', filename)
-            return response_content['id']
+            return response_content['id'], response_content['name']
         elif response_content[
             'message'] == 'An error occured. Please try again and contact customer service if the problem persists.':
             gevent.sleep(10)
@@ -2126,16 +2129,16 @@ def upload_nzb(filename):
                 if response_content['status'] == "success" or response_content[
                     'message'] == 'You already added this job.':
                     logger.debug('Upload nzb successful: %s', filename)
-                    return response_content['id']
+                    return response_content['id'], ''
         else:
             msg = 'Upload of nzb: %s failed, message: %s' % (filename, response_content['message'])
             logger.error(msg)
             if response_content['message'] == 'You already added this job.':
-                return 'duplicate'
+                return 'duplicate', ''
             send_notification('Upload of nzb failed', msg)
-            return 'failed'
+            return 'failed', ''
     else:
-        return 'failed'
+        return 'failed', ''
 
 
 def walk_watchdir():
