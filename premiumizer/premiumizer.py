@@ -1261,14 +1261,16 @@ def get_download_stats_jd(package_name, package_ids):
                     total_progress.append(tmp_total_progress)
                     total_bytesloaded.append(package['bytesLoaded'])
                     total_bytestotal.append(bytestotal)
-            while 'Extracting' in package['status']:
-                try:
-                    eta = package['status'].split('ETA: ', 1)[1].split(')', 1)[0]
-                except:
-                    eta = ''
-                greenlet.task.update(speed=" ", progress=99, eta=' Extracting ' + eta)
-                gevent_sleep_time()
-
+            try:
+                while 'Extracting' in package['status']:
+                    try:
+                        eta = package['status'].split('ETA: ', 1)[1].split(')', 1)[0]
+                    except:
+                        eta = ''
+                    greenlet.task.update(speed=" ", progress=99, eta=' Extracting ' + eta)
+                    gevent_sleep_time()
+            except:
+                pass
         gevent_sleep_time()
         query_packages = jd_query_packages(package_ids)
 
