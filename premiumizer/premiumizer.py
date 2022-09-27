@@ -1477,7 +1477,6 @@ def download_file():
             package_name = 'Premiumizer_ ' + clean_name(greenlet.task.name)
             if not len(folder_downloadlist):
                 logger.error('Nothing to download / link already exists ? for : %s', greenlet.task.name)
-                returncode = 1
             for download in folder_downloadlist:
                 try:
                     url = str(download['url'])
@@ -1489,8 +1488,7 @@ def download_file():
                     package_ids.append(jd_jobid['id'])
                 except BaseException as e:
                     logger.error('myjdapi error: ' + str(e))
-            if not returncode:
-                returncode = get_download_stats_jd(package_name, package_ids)
+            returncode = get_download_stats_jd(package_name, package_ids)
 
     return returncode
 
