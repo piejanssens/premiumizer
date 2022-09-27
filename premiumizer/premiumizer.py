@@ -1410,9 +1410,8 @@ def download_file():
                 if cfg.jd_connected:
                     if len(query_links):
                         if any(link['name'] == download['name'] for link in query_links):
+                            download['download_ok'] = False
                             continue
-                    else:
-                        download['download_ok'] = True
             elif cfg.aria2_enabled:
                 if cfg.aria2_connected:
                     transfers = cfg.aria.aria2.tellActive(cfg.aria2_token) + cfg.aria.aria2.tellWaiting(cfg.aria2_token,
@@ -1478,6 +1477,7 @@ def download_file():
             package_name = 'Premiumizer_ ' + clean_name(greenlet.task.name)
             if not len(folder_downloadlist):
                 logger.error('Nothing to download / link already exists ? for : %s', greenlet.task.name)
+                returncode = 1
             for download in folder_downloadlist:
                 try:
                     url = str(download['url'])
@@ -1489,8 +1489,8 @@ def download_file():
                     package_ids.append(jd_jobid['id'])
                 except BaseException as e:
                     logger.error('myjdapi error: ' + str(e))
-
-            returncode = get_download_stats_jd(package_name, package_ids)
+            if not returncode:
+                returncode = get_download_stats_jd(package_name, package_ids)
 
     return returncode
 
@@ -1541,7 +1541,7 @@ def process_dir(dir_content, path):
                     if sample:
                         continue
                 logger.debug('Starting download of file %s to directory %s', x['name'], path)
-                download = {'id': x['id'], 'name': x['name'], 'path': path, 'size': x['size'], 'download_ok': False,
+                download = {'id': x['id'], 'name': x['name'], 'path': path, 'size': x['size'], 'download_ok': True,
                             'combined_path': os.path.join(path, clean_name(x['name'])), 'url': x['link']}
                 download_list.append(download)
                 total_size = greenlet.task.size
