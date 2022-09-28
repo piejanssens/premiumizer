@@ -1261,14 +1261,16 @@ def get_download_stats_jd(package_name, package_ids):
                     total_progress.append(tmp_total_progress)
                     total_bytesloaded.append(package['bytesLoaded'])
                     total_bytestotal.append(bytestotal)
-            while 'Extracting' in package['status']:
-                try:
-                    eta = package['status'].split('ETA: ', 1)[1].split(')', 1)[0]
-                except:
-                    eta = ''
-                greenlet.task.update(speed=" ", progress=99, eta=' Extracting ' + eta)
-                gevent_sleep_time()
-
+            try:
+                while 'Extracting' in package['status']:
+                    try:
+                        eta = package['status'].split('ETA: ', 1)[1].split(')', 1)[0]
+                    except:
+                        eta = ''
+                    greenlet.task.update(speed=" ", progress=99, eta=' Extracting ' + eta)
+                    gevent_sleep_time()
+            except:
+                pass
         gevent_sleep_time()
         query_packages = jd_query_packages(package_ids)
 
@@ -1410,9 +1412,8 @@ def download_file():
                 if cfg.jd_connected:
                     if len(query_links):
                         if any(link['name'] == download['name'] for link in query_links):
+                            download['download_ok'] = False
                             continue
-                    else:
-                        download['download_ok'] = True
             elif cfg.aria2_enabled:
                 if cfg.aria2_connected:
                     transfers = cfg.aria.aria2.tellActive(cfg.aria2_token) + cfg.aria.aria2.tellWaiting(cfg.aria2_token,
@@ -1489,7 +1490,6 @@ def download_file():
                     package_ids.append(jd_jobid['id'])
                 except BaseException as e:
                     logger.error('myjdapi error: ' + str(e))
-
             returncode = get_download_stats_jd(package_name, package_ids)
 
     return returncode
@@ -1541,7 +1541,7 @@ def process_dir(dir_content, path):
                     if sample:
                         continue
                 logger.debug('Starting download of file %s to directory %s', x['name'], path)
-                download = {'id': x['id'], 'name': x['name'], 'path': path, 'size': x['size'], 'download_ok': False,
+                download = {'id': x['id'], 'name': x['name'], 'path': path, 'size': x['size'], 'download_ok': True,
                             'combined_path': os.path.join(path, clean_name(x['name'])), 'url': x['link']}
                 download_list.append(download)
                 total_size = greenlet.task.size
